@@ -15,6 +15,8 @@
 package perses
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path"
 	"strings"
@@ -26,76 +28,83 @@ import (
 
 func TestBundledDashboardsHaveSpecConfig(t *testing.T) {
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
-	for _, def := range ProductDashboards {
-		data, err := LoadDashboardYAML(fsys, def)
-		if err != nil {
-			t.Fatalf("LoadDashboardYAML(%s): %v", def.Filename, err)
-		}
+	err := forEachDashboardYAML(fsys, func(filePath string, data []byte) error {
 		dashboard, err := ParseDashboard(data)
 		if err != nil {
-			t.Fatalf("ParseDashboard(%s): %v", def.Filename, err)
+			t.Fatalf("ParseDashboard(%s): %v", filePath, err)
+		}
+		if dashboard.GetName() == "" {
+			t.Fatalf("dashboard %s missing metadata.name", filePath)
 		}
 		spec, ok := dashboard.Object["spec"]
 		if !ok || spec == nil {
-			t.Fatalf("dashboard %s missing spec", def.Name)
+			t.Fatalf("dashboard %s missing spec", filePath)
 		}
 		config, ok := spec.(map[string]interface{})["config"]
 		if !ok || config == nil {
-			t.Fatalf("dashboard %s missing spec.config", def.Name)
+			t.Fatalf("dashboard %s missing spec.config", filePath)
 		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestEmbeddedDashboardsReadable(t *testing.T) {
-	for _, def := range ProductDashboards {
-		data, err := LoadDashboardYAML(persesresources.FS, def)
-		if err != nil {
-			t.Fatalf("LoadDashboardYAML(%s): %v", def.Filename, err)
-		}
+	count := 0
+	err := forEachDashboardYAML(persesresources.FS, func(_ string, data []byte) error {
 		if len(data) == 0 {
-			t.Fatalf("dashboard %s is empty", def.Name)
+			t.Fatal("found empty dashboard")
 		}
+		count++
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count == 0 {
+		t.Fatal("expected embedded dashboards")
 	}
 }
 
 func TestBundledDashboardsReferenceRequiredDatasource(t *testing.T) {
-	for _, def := range ProductDashboards {
-		data, err := LoadDashboardYAML(persesresources.FS, def)
-		if err != nil {
-			t.Fatalf("LoadDashboardYAML(%s): %v", def.Filename, err)
-		}
+	err := forEachDashboardYAML(persesresources.FS, func(filePath string, data []byte) error {
 		if !strings.Contains(string(data), RequiredDatasourceName) {
-			t.Fatalf("dashboard %s does not reference required datasource %q", def.Name, RequiredDatasourceName)
+			t.Fatalf("dashboard %s does not reference required datasource %q", filePath, RequiredDatasourceName)
 		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestPrepareDashboardSetsNamespaceAndClearsOwners(t *testing.T) {
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
-	def := ProductDashboards[0]
-	data, err := LoadDashboardYAML(fsys, def)
-	if err != nil {
-		t.Fatalf("LoadDashboardYAML: %v", err)
+	var data []byte
+	err := forEachDashboardYAML(fsys, func(_ string, d []byte) error {
+		data = d
+		return fs.SkipAll
+	})
+	if err != nil && !errors.Is(err, fs.SkipAll) {
+		t.Fatalf("load dashboard: %v", err)
 	}
-	dashboard, err := PrepareDashboard(data, "sail-operator", def)
+	if data == nil {
+		t.Fatal("no dashboard YAML found")
+	}
+	dashboard, err := PrepareDashboard(data, "sail-operator")
 	if err != nil {
 		t.Fatalf("PrepareDashboard: %v", err)
 	}
 	if dashboard.GetNamespace() != "sail-operator" {
 		t.Fatalf("namespace = %q, want sail-operator", dashboard.GetNamespace())
 	}
-	if dashboard.GetName() != def.Name {
-		t.Fatalf("name = %q, want %q", dashboard.GetName(), def.Name)
+	if dashboard.GetName() == "" {
+		t.Fatal("expected name from YAML metadata")
 	}
 	if len(dashboard.GetOwnerReferences()) != 0 {
 		t.Fatal("expected no ownerReferences")
-	}
-}
-
-func TestLoadDashboardYAMLMissing(t *testing.T) {
-	_, err := LoadDashboardYAML(os.DirFS(t.TempDir()), DashboardDefinition{Filename: "missing.yaml"})
-	if err == nil {
-		t.Fatal("expected error for missing dashboard file")
 	}
 }
 
@@ -107,8 +116,28 @@ func TestParseDashboardInvalid(t *testing.T) {
 }
 
 func TestPrepareDashboardInvalid(t *testing.T) {
-	_, err := PrepareDashboard([]byte("{"), "ns", ProductDashboards[0])
+	_, err := PrepareDashboard([]byte("{"), "ns")
 	if err == nil {
 		t.Fatal("expected prepare error for invalid YAML")
 	}
+}
+
+func TestPrepareDashboardMissingName(t *testing.T) {
+	_, err := PrepareDashboard([]byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata: {}\n"), "ns")
+	if err == nil {
+		t.Fatal("expected error for missing metadata.name")
+	}
+}
+
+func countDashboardYAMLs(t *testing.T, fsys fs.FS) int {
+	t.Helper()
+	count := 0
+	err := forEachDashboardYAML(fsys, func(string, []byte) error {
+		count++
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("count dashboards: %v", err)
+	}
+	return count
 }

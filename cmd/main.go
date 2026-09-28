@@ -28,12 +28,12 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/controllers/monitoring"
-	"github.com/istio-ecosystem/sail-operator/controllers/persesdashboard"
 	"github.com/istio-ecosystem/sail-operator/controllers/webhook"
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/perses"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
@@ -73,6 +73,8 @@ func main() {
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&reconcilerCfg.EnablePersesDashboards, "enable-perses-dashboards", true,
+		"When true, wait for the PersesDashboard CRD and create bundled Istio dashboards in the operator namespace. Disable if Perses will never be installed.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
 
@@ -265,11 +267,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = persesdashboard.NewInstaller(reconcilerCfg, mgr.GetClient(), mgr.GetCache(), reconcilerCfg.PersesDashboardFS).
-		SetupWithManager(mgr)
-	if err != nil {
-		setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")
-		os.Exit(1)
+	if reconcilerCfg.EnablePersesDashboards {
+		err = perses.NewInstaller(reconcilerCfg, mgr.GetClient(), mgr.GetCache(), reconcilerCfg.PersesDashboardFS).
+			SetupWithManager(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("Perses dashboard installation disabled")
 	}
 
 	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {

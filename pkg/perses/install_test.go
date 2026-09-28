@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package persesdashboard
+package perses
 
 import (
 	"context"
@@ -23,11 +23,8 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/perses"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -45,6 +42,7 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 	namespace := "sail-operator"
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	want := countDashboardYAMLs(t, fsys)
 
 	ready := make(chan struct{})
 	var once sync.Once
@@ -52,7 +50,6 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 		Client:      cl,
 		DashboardFS: fsys,
 		Namespace:   namespace,
-		Interval:    20 * time.Millisecond,
 		waitForCRDs: func(ctx context.Context, _ cache.Cache, _ ...string) error {
 			select {
 			case <-ctx.Done():
@@ -68,60 +65,44 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 
 	// While CRD is unavailable, no dashboards should exist.
 	time.Sleep(50 * time.Millisecond)
-	assertDashboardCount(t, cl, namespace, 0)
+	assertDashboardCount(t, cl, 0)
 
 	once.Do(func() { close(ready) })
 
-	Eventually(t, 2*time.Second, func() bool {
-		return dashboardCount(t, cl, namespace) == len(perses.ProductDashboards)
-	})
-
-	cancel()
 	select {
 	case err := <-done:
 		if err != nil {
 			t.Fatalf("Start() error = %v", err)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("Start did not return after cancel")
+		t.Fatal("Start did not return after CRD became ready")
 	}
+
+	assertDashboardCount(t, cl, want)
 }
 
 func TestStartIdempotentCreation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	want := countDashboardYAMLs(t, fsys)
 
 	installer := &Installer{
 		Client:      cl,
 		DashboardFS: fsys,
 		Namespace:   namespace,
-		Interval:    20 * time.Millisecond,
 		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- installer.Start(ctx) }()
-
-	Eventually(t, 2*time.Second, func() bool {
-		return dashboardCount(t, cl, namespace) == len(perses.ProductDashboards)
-	})
-	// Second reconcile cycle should preserve the same set.
-	time.Sleep(50 * time.Millisecond)
-	assertDashboardCount(t, cl, namespace, len(perses.ProductDashboards))
-
-	cancel()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("Start() error = %v", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("Start did not return after cancel")
+	if err := installer.Start(context.Background()); err != nil {
+		t.Fatalf("first Start: %v", err)
 	}
+	assertDashboardCount(t, cl, want)
+
+	if err := installer.Start(context.Background()); err != nil {
+		t.Fatalf("second Start: %v", err)
+	}
+	assertDashboardCount(t, cl, want)
 }
 
 func TestNewInstallerUsesOperatorNamespace(t *testing.T) {
@@ -148,29 +129,15 @@ func TestStartWaitError(t *testing.T) {
 	}
 }
 
-func TestStartReconcileErrorUsesDefaultInterval(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func TestStartInstallErrorDoesNotFailOperator(t *testing.T) {
 	installer := &Installer{
 		Client:      fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(),
-		DashboardFS: os.DirFS(t.TempDir()), // missing dashboards → reconcile error path
+		DashboardFS: os.DirFS(t.TempDir()), // missing dashboards → install error path
 		Namespace:   "sail-operator",
-		Interval:    0, // exercise default interval
 		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
 	}
-
-	done := make(chan error, 1)
-	go func() { done <- installer.Start(ctx) }()
-	time.Sleep(30 * time.Millisecond)
-	cancel()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("Start() error = %v", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("Start did not return after cancel")
+	if err := installer.Start(context.Background()); err != nil {
+		t.Fatalf("Start() error = %v, want nil (install failures must not take down the operator)", err)
 	}
 }
 
@@ -200,72 +167,14 @@ func TestSetupWithManager(t *testing.T) {
 	}
 }
 
-func Eventually(t *testing.T, timeout time.Duration, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatal("condition not met before timeout")
-}
-
-func dashboardCount(t *testing.T, cl client.Client, namespace string) int {
+func assertDashboardCount(t *testing.T, cl client.Client, want int) {
 	t.Helper()
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: "perses.dev", Version: "v1alpha2", Kind: "PersesDashboardList"})
-	if err := cl.List(context.Background(), list, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.Background(), list, client.InNamespace("sail-operator")); err != nil {
 		t.Fatalf("list dashboards: %v", err)
 	}
-	return len(list.Items)
-}
-
-func assertDashboardCount(t *testing.T, cl client.Client, namespace string, want int) {
-	t.Helper()
-	if got := dashboardCount(t, cl, namespace); got != want {
+	if got := len(list.Items); got != want {
 		t.Fatalf("dashboard count = %d, want %d", got, want)
-	}
-}
-
-func newPersesTestClient(t *testing.T, objects ...client.Object) client.Client {
-	t.Helper()
-	return fake.NewClientBuilder().
-		WithScheme(scheme.Scheme).
-		WithObjects(objects...).
-		Build()
-}
-
-func testPersesDashboardCRD() *apiextensionsv1.CustomResourceDefinition {
-	preserve := true
-	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: perses.PersesDashboardCRD},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: "perses.dev",
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Kind:     "PersesDashboard",
-				ListKind: "PersesDashboardList",
-				Plural:   "persesdashboards",
-				Singular: "persesdashboard",
-			},
-			Scope: apiextensionsv1.NamespaceScoped,
-			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
-				Name:    "v1alpha2",
-				Served:  true,
-				Storage: true,
-				Schema: &apiextensionsv1.CustomResourceValidation{
-					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
-						Type:                   "object",
-						XPreserveUnknownFields: &preserve,
-					},
-				},
-			}},
-		},
-		Status: apiextensionsv1.CustomResourceDefinitionStatus{
-			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{{
-				Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue,
-			}},
-		},
 	}
 }

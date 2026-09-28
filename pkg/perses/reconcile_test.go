@@ -24,6 +24,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 )
 
 func TestReconcileDashboardsCreatesAll(t *testing.T) {
@@ -42,6 +41,7 @@ func TestReconcileDashboardsCreatesAll(t *testing.T) {
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	want := countDashboardYAMLs(t, fsys)
 
 	result, err := ReconcileDashboards(ctx, cl, fsys, namespace)
 	if err != nil {
@@ -50,14 +50,17 @@ func TestReconcileDashboardsCreatesAll(t *testing.T) {
 	if !result.AllCreated {
 		t.Fatal("expected all dashboards to be created")
 	}
+	if result.CreatedCount != want {
+		t.Fatalf("CreatedCount = %d, want %d", result.CreatedCount, want)
+	}
 
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: "perses.dev", Version: "v1alpha2", Kind: "PersesDashboardList"})
 	if err := cl.List(ctx, list, client.InNamespace(namespace)); err != nil {
 		t.Fatalf("list dashboards: %v", err)
 	}
-	if len(list.Items) != len(ProductDashboards) {
-		t.Fatalf("expected %d dashboards, got %d", len(ProductDashboards), len(list.Items))
+	if len(list.Items) != want {
+		t.Fatalf("expected %d dashboards, got %d", want, len(list.Items))
 	}
 	for _, item := range list.Items {
 		if len(item.GetOwnerReferences()) != 0 {
@@ -106,6 +109,7 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	want := countDashboardYAMLs(t, fsys)
 
 	if _, err := ReconcileDashboards(ctx, cl, fsys, namespace); err != nil {
 		t.Fatalf("first reconcile: %v", err)
@@ -119,8 +123,8 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 	if err := cl.List(ctx, list, client.InNamespace(namespace)); err != nil {
 		t.Fatalf("list dashboards: %v", err)
 	}
-	if len(list.Items) != len(ProductDashboards) {
-		t.Fatalf("expected %d dashboards after idempotent reconcile, got %d", len(ProductDashboards), len(list.Items))
+	if len(list.Items) != want {
+		t.Fatalf("expected %d dashboards after idempotent reconcile, got %d", want, len(list.Items))
 	}
 }
 
@@ -132,10 +136,21 @@ func TestReconcileDashboardsLoadError(t *testing.T) {
 	}
 }
 
+func TestReconcileDashboardsEmptyDir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(path.Join(dir, "dashboards"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cl := newPersesTestClient(t, testPersesDashboardCRD())
+	_, err := ReconcileDashboards(context.Background(), cl, os.DirFS(dir), "sail-operator")
+	if err == nil {
+		t.Fatal("expected error when no YAML found")
+	}
+}
+
 func TestReconcileDashboardsPrepareError(t *testing.T) {
-	def := ProductDashboards[0]
 	fsys := fstest.MapFS{
-		path.Join("dashboards", def.Filename): &fstest.MapFile{Data: []byte(":::")},
+		"dashboards/broken.yaml": &fstest.MapFile{Data: []byte(":::")},
 	}
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	_, err := ReconcileDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")

@@ -48,6 +48,7 @@ type ReconcilerConfig struct {
 	DefaultProfile          string
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
+	EnablePersesDashboards  bool
 	TLSConfig               *TLSConfig
 }
 
