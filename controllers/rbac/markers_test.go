@@ -15,12 +15,16 @@
 package rbac
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
+
+	"sigs.k8s.io/yaml"
 )
 
 var remoteIstioResourcePattern = regexp.MustCompile(`(?m)^\s*-\s+remoteistios?(?:/(?:finalizers|status))?\s*$`)
@@ -81,6 +85,70 @@ func TestShippedRBACNoLongerGrantsRemoteIstioPermissions(t *testing.T) {
 			t.Fatalf("%s still grants remoteistios RBAC", path)
 		}
 	}
+}
+
+// TestCSVClusterPermissionsIsSupersetOfHelmRole asserts that every rule in the
+// generated Helm ClusterRole also appears in the OLM CSV clusterPermissions.
+// This catches the case where the two install paths drift after a marker rewrite.
+func TestCSVClusterPermissionsIsSupersetOfHelmRole(t *testing.T) {
+	repoRoot := repositoryRoot(t)
+
+	helmRoleRaw := mustReadFile(t, filepath.Join(repoRoot, "chart", "templates", "rbac", "role.yaml"))
+	// Strip Helm template expressions so the file parses as plain YAML.
+	stripped := regexp.MustCompile(`\{\{.*?\}\}`).ReplaceAllString(helmRoleRaw, "placeholder")
+
+	var helmRole struct {
+		Rules []rbacRule `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal([]byte(stripped), &helmRole); err != nil {
+		t.Fatalf("failed to parse Helm role: %v", err)
+	}
+
+	csvRaw := mustReadFile(t, filepath.Join(repoRoot, "bundle", "manifests", "sailoperator.clusterserviceversion.yaml"))
+	var csv struct {
+		Spec struct {
+			Install struct {
+				Spec struct {
+					ClusterPermissions []struct {
+						Rules []rbacRule `yaml:"rules"`
+					} `yaml:"clusterPermissions"`
+				} `yaml:"spec"`
+			} `yaml:"install"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal([]byte(csvRaw), &csv); err != nil {
+		t.Fatalf("failed to parse CSV: %v", err)
+	}
+
+	csvSet := make(map[string]struct{})
+	for _, perm := range csv.Spec.Install.Spec.ClusterPermissions {
+		for _, r := range perm.Rules {
+			csvSet[r.key()] = struct{}{}
+		}
+	}
+
+	for _, r := range helmRole.Rules {
+		if _, ok := csvSet[r.key()]; !ok {
+			t.Errorf("Helm role rule not found in CSV clusterPermissions: %s", r.key())
+		}
+	}
+}
+
+type rbacRule struct {
+	APIGroups     []string `yaml:"apiGroups"`
+	Resources     []string `yaml:"resources"`
+	ResourceNames []string `yaml:"resourceNames"`
+	Verbs         []string `yaml:"verbs"`
+}
+
+func (r rbacRule) key() string {
+	sorted := func(s []string) []string {
+		cp := append([]string(nil), s...)
+		sort.Strings(cp)
+		return cp
+	}
+	return fmt.Sprintf("groups=%v resources=%v resourceNames=%v verbs=%v",
+		sorted(r.APIGroups), sorted(r.Resources), sorted(r.ResourceNames), sorted(r.Verbs))
 }
 
 func repositoryRoot(t *testing.T) string {
