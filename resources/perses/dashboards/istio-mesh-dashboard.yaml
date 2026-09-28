@@ -226,23 +226,48 @@ spec:
             kind: Table
             spec:
               columnSettings:
-              - header: Requests
-                name: 'Value #requests'
-              - header: P50 Latency
-                name: 'Value #p50'
-              - header: P90 Latency
-                name: 'Value #p90'
-              - header: P99 Latency
-                name: 'Value #p99'
-              - header: Success Rate
-                name: 'Value #success'
-              - header: Workload
-                name: destination_workload_var
-              - header: Service
+              - align: left
+                header: Service
                 name: destination_service
-              - name: destination_workload_namespace
-              - name: destination_workload
-              - name: timestamp
+              - align: left
+                header: Workload
+                name: destination_workload_var
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: requests/sec
+                header: Requests
+                name: 'value #1'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P50 Latency
+                name: 'value #2'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P90 Latency
+                name: 'value #3'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P99 Latency
+                name: 'value #4'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: percent-decimal
+                header: Success Rate
+                name: 'value #5'
+              - hide: true
+                name: destination_workload_namespace
+              - hide: true
+                name: destination_workload
+              - hide: true
+                name: timestamp
               transforms:
               - kind: MergeSeries
                 spec: {}
@@ -279,7 +304,7 @@ spec:
                     label_join(
                       histogram_quantile(
                         0.5,
-                        sum by (le, destination_workload, destination_workload_namespace) (
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
                           rate(istio_request_duration_milliseconds_bucket{reporter=~"source|waypoint"}[$__rate_interval])
                         )
                       ),
@@ -302,7 +327,7 @@ spec:
                     label_join(
                       histogram_quantile(
                         0.9,
-                        sum by (le, destination_workload, destination_workload_namespace) (
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
                           rate(istio_request_duration_milliseconds_bucket{reporter=~"source|waypoint"}[$__rate_interval])
                         )
                       ),
@@ -325,7 +350,7 @@ spec:
                     label_join(
                       histogram_quantile(
                         0.99,
-                        sum by (le, destination_workload, destination_workload_namespace) (
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
                           rate(istio_request_duration_milliseconds_bucket{reporter=~"source|waypoint"}[$__rate_interval])
                         )
                       ),
@@ -346,11 +371,11 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     label_join(
-                        sum by (destination_workload, destination_workload_namespace) (
+                        sum by (destination_workload, destination_workload_namespace, destination_service) (
                           rate(istio_requests_total{reporter=~"source|waypoint",response_code!~"5.."}[$__rate_interval])
                         )
                       /
-                        sum by (destination_workload, destination_workload_namespace) (
+                        sum by (destination_workload, destination_workload_namespace, destination_service) (
                           rate(istio_requests_total{reporter=~"source|waypoint"}[$__rate_interval])
                         ),
                       "destination_workload_var",
@@ -370,17 +395,30 @@ spec:
             kind: Table
             spec:
               columnSettings:
-              - header: Bytes Received
-                name: 'Value #recv'
-              - header: Bytes Sent
-                name: 'Value #sent'
-              - header: Workload
-                name: destination_workload_var
-              - header: Service
+              - align: left
+                header: Service
                 name: destination_service
-              - name: destination_workload_namespace
-              - name: destination_workload
-              - name: timestamp
+              - align: left
+                header: Workload
+                name: destination_workload_var
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: bytes/sec
+                header: Bytes Received
+                name: 'value #1'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: bytes/sec
+                header: Bytes Sent
+                name: 'value #2'
+              - hide: true
+                name: destination_workload_namespace
+              - hide: true
+                name: destination_workload
+              - hide: true
+                name: timestamp
               transforms:
               - kind: MergeSeries
                 spec: {}
