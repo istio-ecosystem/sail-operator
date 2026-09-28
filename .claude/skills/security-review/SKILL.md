@@ -8,9 +8,9 @@
 - No credentials, tokens, or keys in any committed file — including YAML manifests and test fixtures.
 
 ## 2. RBAC
-- RBAC is defined by `+kubebuilder:rbac` markers in `controllers/*` and generated into a single operator ClusterRole at `chart/templates/rbac/role.yaml`. Review both the markers and the generated role.
+- The single operator ClusterRole is manually maintained in `chart/templates/rbac/role.yaml` — the `+kubebuilder:rbac` markers in `controllers/*` are not wired to any generation step. Review `role.yaml` for the actual permissions in effect.
 - No `*` verbs on cluster-scoped resources — flag any wildcard verb with **Critical** severity.
-- New permissions must be justified by an actual code path in the reconciler that requires them.
+- New permissions must be justified by an actual code path in the reconciler that requires them; run `make bundle` after editing `role.yaml` to propagate changes into the CSV.
 - Check for resource-level constraints (`resourceNames`) where possible.
 
 ## 3. Webhook configuration

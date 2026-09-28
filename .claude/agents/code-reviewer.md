@@ -52,7 +52,7 @@ Note: controller-runtime starts these controllers concurrently, so do not assume
 - Avoid full-object re-fetches inside reconcile loops; use the cached client.
 
 **Security**
-- RBAC changes: the source of truth is the `+kubebuilder:rbac` markers in `controllers/*`, which generate the single operator ClusterRole in `chart/templates/rbac/role.yaml`. No wildcard verbs on cluster-scoped resources.
+- RBAC changes: the single operator ClusterRole is manually maintained in `chart/templates/rbac/role.yaml`. The `+kubebuilder:rbac` markers in `controllers/*` are not wired to any generation step, so editing them alone has no effect — changes must be made directly in `role.yaml`. No wildcard verbs on cluster-scoped resources.
 - Secrets must never appear in logs or in ConfigMaps.
 
 ## Output format
