@@ -86,12 +86,14 @@ build_and_push_operator_image() {
     BUILD_WITH_CONTAINER=0 TARGET_OS=linux TARGET_ARCH=${TARGET_ARCH} \
       make -C "${repo_root}" build
 
+    # Use a minimal tmp build context with only the Dockerfile and binary, so podman doesn't
+    # send the entire repo as context (which is slow and can hit file descriptor limits).
     tmp_ctx=$(mktemp -d)
     cp "${repo_root}/Dockerfile" "${tmp_ctx}/Dockerfile"
     mkdir -p "${tmp_ctx}/out/linux_${TARGET_ARCH}"
     cp "${repo_root}/out/linux_${TARGET_ARCH}/sail-operator" "${tmp_ctx}/out/linux_${TARGET_ARCH}/sail-operator"
 
-    docker build \
+    podman build \
       ${DOCKER_BUILD_FLAGS} \
       --push \
       --build-arg TARGETOS=linux \
