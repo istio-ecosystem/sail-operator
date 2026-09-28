@@ -9,12 +9,9 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.name }}-role
+  name: {{ .Values.name }}-metrics-reader
 subjects:
 - kind: ServiceAccount
-  name: prometheus-k8s  # SA used by OpenShift Prometheus. It must have get, list, watch permissions on secrets across ns
+  name: prometheus-k8s  # SA used by OpenShift Prometheus
   namespace: openshift-monitoring
-- kind: ServiceAccount
-  name: prometheus-user-workload  # SA used by OpenShift user workload monitoring
-  namespace: openshift-user-workload-monitoring
 {{ end }}

@@ -9,11 +9,8 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: sailoperator-role
+  name: sailoperator-metrics-reader
 subjects:
 - kind: ServiceAccount
   name: prometheus-k8s
   namespace: openshift-monitoring
-- kind: ServiceAccount
-  name: prometheus-user-workload
-  namespace: openshift-user-workload-monitoring

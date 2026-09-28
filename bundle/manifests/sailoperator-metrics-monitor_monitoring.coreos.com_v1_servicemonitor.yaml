@@ -2,15 +2,16 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
+    app.kubernetes.io/component: sailoperator
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/name: sailoperator
+    app.kubernetes.io/part-of: sailoperator
     release: prometheus
-  name: sail-operator-metrics-monitor
+  name: sailoperator-metrics-monitor
 spec:
   endpoints:
-  - authorization:
-      credentials:
-        key: token
-        name: sail-operator
-      type: Bearer
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
     interval: 30s
     path: /metrics
     port: https

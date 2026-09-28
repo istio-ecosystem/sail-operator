@@ -11,7 +11,14 @@ metadata:
     app.kubernetes.io/part-of: sailoperator
   name: sailoperator-metrics-reader
 rules:
-- nonResourceURLs:
-  - /metrics
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - pods
+  - namespaces
   verbs:
   - get
+  - list
+  - watch
