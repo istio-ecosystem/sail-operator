@@ -310,7 +310,11 @@ func main() {
 
 	// Record custom resources and Istio namespaces counts every 5 minutes
 	// those custom metrics are registered in the default metric server
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient())
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient(), reconcilerCfg.Platform)
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		recorder.EnsureNamespaceLabel(ctx)
+	}
+
 	recorder.Start(ctx)
 	setupLog.Info("Collecting custom resource metrics")
 	// Wait for context timeout or operator shutdown

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	model "github.com/prometheus/client_model/go"
 	corev1 "k8s.io/api/core/v1"
@@ -148,7 +149,7 @@ func TestRecordMetrics(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(initObjects...).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient)
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.PlatformKubernetes)
 
 	ctx := context.Background()
 	recorder.recordMetrics(ctx)
@@ -180,7 +181,7 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	scheme := createScheme(t)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient)
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.PlatformKubernetes)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

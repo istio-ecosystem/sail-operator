@@ -16,12 +16,16 @@ package analyze
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -37,35 +41,39 @@ type MetricDescription struct {
 // MetricsRecorder manages periodic metrics collection
 type MetricsRecorder struct {
 	client.Client
+	platform config.Platform
 	interval time.Duration
 	ticker   *time.Ticker
 	done     chan struct{}
 }
 
+// metricPrefix will be populated at build time via -ldflags
+var metricPrefix = "sail_operator"
+
 // metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
 var metricDescription = map[string]MetricDescription{
 	"IstioVersionTotal": {
-		Name: "servicemesh_istiod_total",
+		Name: fmt.Sprintf("%s_istiod_total", metricPrefix),
 		Help: "Total number of Istiod control planes at each Istio version.",
 		Type: "GaugeVec",
 	},
 	"SidecarProxyTotal": {
-		Name: "servicemesh_sidecar_proxy_total",
+		Name: fmt.Sprintf("%s_sidecar_proxy_total", metricPrefix),
 		Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
 		Type: "Gauge",
 	},
 	"SidecarNamespaceTotal": {
-		Name: "servicemesh_sidecar_namespace_total",
+		Name: fmt.Sprintf("%s_sidecar_namespace_total", metricPrefix),
 		Help: "Total number of namespaces enrolled in Istio sidecar mode.",
 		Type: "Gauge",
 	},
 	"ZTunnelVersionTotal": {
-		Name: "servicemesh_ztunnel_total",
+		Name: fmt.Sprintf("%s_ztunnel_total", metricPrefix),
 		Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
 		Type: "GaugeVec",
 	},
 	"AmbientNamespaceTotal": {
-		Name: "servicemesh_ambient_namespace_total",
+		Name: fmt.Sprintf("%s_ambient_namespace_total", metricPrefix),
 		Help: "Total number of namespaces enrolled in Istio Ambient mode.",
 		Type: "Gauge",
 	},
@@ -133,9 +141,10 @@ func ListMetrics() []MetricDescription {
 	return v
 }
 
-func NewMetricsRecorder(interval time.Duration, client client.Client) *MetricsRecorder {
+func NewMetricsRecorder(interval time.Duration, client client.Client, platform config.Platform) *MetricsRecorder {
 	return &MetricsRecorder{
 		Client:   client,
+		platform: platform,
 		interval: interval,
 		done:     make(chan struct{}),
 	}
@@ -269,4 +278,27 @@ func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
 		log.V(4).Error(err, "failed to list namespace")
 	}
 	return float64(len(ambientNsList.Items) + len(waypointNsList.Items) + len(ingressNsList.Items))
+}
+
+// EnsureNamespaceLabel ensures label openshift.io/cluster-monitoring=true for the operator namespace
+// When the operator is running on OpenShift
+func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) {
+	log := logf.FromContext(ctx)
+	name := "sail-operator"
+	if m.platform == config.PlatformOpenShift {
+		name = "openshift-operators"
+	}
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, m.Client, ns, func() error {
+		if ns.Labels == nil {
+			ns.Labels = make(map[string]string)
+		}
+		ns.Labels["openshift.io/cluster-monitoring"] = "true"
+		return nil
+	})
+	if err != nil {
+		log.V(4).Error(err, "failed to ensure OpenShift namespace label")
+	}
 }
