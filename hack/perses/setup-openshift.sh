@@ -26,6 +26,7 @@ set -euo pipefail
 #
 # Environment:
 #   OPERATOR_NAMESPACE  Namespace where Sail runs (default: sail-operator)
+#   PERSES_NAMESPACE    Namespace of Perses backend (default: openshift-cluster-observability-operator)
 #   ISTIO_VERSION       Istio/Sail version for Istio + IstioCNI (default: v1.31.0)
 #   HUB / TAG           Image for make deploy (optional; used when step=operator|all)
 #   SKIP_OPERATOR_BUILD If set to 1, deploy without rebuilding (default: 0)
@@ -79,9 +80,24 @@ step_perses() {
   apply_file "${MANIFESTS}/uiplugin-monitoring.yaml"
   log "Waiting for PersesDashboard CRD"
   "${OC}" wait --for=condition=Established crd/persesdashboards.perses.dev --timeout=5m
+  # CRD Established is not enough: PersesDashboard sync needs the Perses backend up.
+  local perses_ns="${PERSES_NAMESPACE:-openshift-cluster-observability-operator}"
+  log "Waiting for Perses backend pod in ${perses_ns}"
+  if ! "${OC}" wait -n "${perses_ns}" --for=condition=Ready pod -l app.kubernetes.io/name=perses --timeout=5m; then
+    echo "Perses pod not Ready in ${perses_ns}; dashboards may stay Degraded until it is" >&2
+    "${OC}" get pods -n "${perses_ns}" -l app.kubernetes.io/name=perses || true
+    exit 1
+  fi
   log "Creating PersesDatasource in ${OPERATOR_NAMESPACE}"
   "${OC}" get ns "${OPERATOR_NAMESPACE}" >/dev/null 2>&1 || "${OC}" create ns "${OPERATOR_NAMESPACE}"
   apply_operator_ns_manifest "${MANIFESTS}/perses-datasource.yaml"
+  log "Waiting for PersesDatasource to become Available"
+  if ! "${OC}" wait -n "${OPERATOR_NAMESPACE}" --for=jsonpath='{.status.conditions[?(@.type=="Available")].status}'=True \
+    persesdatasource/prometheus-datasource --timeout=3m; then
+    echo "PersesDatasource not Available yet; check perses-operator logs" >&2
+    "${OC}" get persesdatasource prometheus-datasource -n "${OPERATOR_NAMESPACE}" -o yaml || true
+    exit 1
+  fi
 }
 
 step_operator() {
@@ -150,12 +166,21 @@ step_validate() {
     istio-ztunnel-dashboard
   )
   local missing=0
+  local degraded=0
   for name in "${expected[@]}"; do
     if ! "${OC}" get persesdashboard "${name}" -n "${OPERATOR_NAMESPACE}" >/dev/null 2>&1; then
       echo "MISSING: ${name}"
       missing=1
+      continue
+    fi
+    local available
+    available="$("${OC}" get persesdashboard "${name}" -n "${OPERATOR_NAMESPACE}" \
+      -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || true)"
+    if [[ "${available}" == "True" ]]; then
+      echo "OK: ${name} (Available)"
     else
-      echo "OK: ${name}"
+      echo "DEGRADED: ${name} (Available=${available:-unknown})"
+      degraded=1
     fi
   done
   echo
@@ -165,7 +190,11 @@ step_validate() {
     echo "Validation failed: not all dashboards are present" >&2
     exit 1
   fi
-  log "Dashboards present. Generate bookinfo traffic and check Observe → Monitoring (Perses) in the OpenShift console."
+  if [[ "${degraded}" -ne 0 ]]; then
+    echo "Validation failed: some dashboards are not Available (Perses backend sync)" >&2
+    exit 1
+  fi
+  log "Dashboards present and Available. Generate bookinfo traffic and check Observe → Monitoring (Perses) in the OpenShift console (project ${OPERATOR_NAMESPACE})."
 }
 
 usage() {
@@ -174,14 +203,15 @@ Usage: $0 [all|uwm|perses|operator|istio|monitoring|bookinfo|validate]
 
 Order for 'all':
   1. uwm         Enable User Workload Monitoring
-  2. operator    Build/deploy Sail Operator
-  3. perses      UIPlugin + PersesDatasource in OPERATOR_NAMESPACE
+  2. perses      UIPlugin + wait Perses ready + PersesDatasource
+  3. operator    Build/deploy Sail Operator (after Perses backend is up)
   4. istio       Istio + IstioCNI (ISTIO_VERSION)
   5. monitoring  ServiceMonitor / PodMonitors / Telemetry
   6. bookinfo    Sample app + gateway + route
-  7. validate    Check CRD, datasource, and 6 dashboards
+  7. validate    Check CRD, datasource, and dashboards Available
 
 Prereq: oc login + Cluster Observability Operator installed.
+Optional: PERSES_NAMESPACE (default openshift-cluster-observability-operator)
 EOF
 }
 
@@ -190,8 +220,8 @@ main() {
   case "${STEP}" in
     all)
       step_uwm
-      step_operator
       step_perses
+      step_operator
       step_istio
       step_monitoring
       step_bookinfo

@@ -74,14 +74,15 @@ export ISTIO_VERSION=v1.31.1          # must be a version your binary supports
 export OPERATOR_NAMESPACE=sail-operator
 
 hack/perses/setup-openshift.sh uwm
-hack/perses/setup-openshift.sh perses
+hack/perses/setup-openshift.sh perses      # waits for Perses pod + datasource Available
 hack/perses/setup-openshift.sh istio
 hack/perses/setup-openshift.sh monitoring
 hack/perses/setup-openshift.sh bookinfo
-hack/perses/setup-openshift.sh validate
+hack/perses/setup-openshift.sh validate    # requires dashboards Available=True
 ```
 
-Order: UWM → Perses datasource (operator NS) → Istio/CNI → monitors → bookinfo → validate.
+Order: UWM → Perses (backend ready) → Istio/CNI → monitors → bookinfo → validate.
+Prefer enabling Perses **before** deploying Sail so dashboards are not created while the Perses backend is still down.
 
 Skip `setup-openshift.sh operator` / `all` unless you have adapted that step; prefer the manual build/push/deploy flow above.
 
@@ -95,9 +96,9 @@ Dashboards assume a `PersesDatasource` named `prometheus-datasource` in the **Sa
 
 - `persesdashboards.perses.dev` CRD exists
 - `prometheus-datasource` exists in `OPERATOR_NAMESPACE`
-- All six `PersesDashboard` CRs exist in `OPERATOR_NAMESPACE`
+- All six `PersesDashboard` CRs exist in `OPERATOR_NAMESPACE` with `Available=True`
 
-Then generate bookinfo traffic (hit the `productpage` route) and open **Observe → Monitoring** (Perses UI plugin) in the OpenShift console.
+Then generate bookinfo traffic (hit the `productpage` route) and open **Observe → Monitoring** (Perses UI plugin) in the OpenShift console, project **`sail-operator`**.
 
 ```bash
 oc get persesdashboards -n sail-operator

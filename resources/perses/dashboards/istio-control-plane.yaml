@@ -3,10 +3,10 @@ kind: PersesDashboard
 metadata:
   labels:
     app.kubernetes.io/component: dashboard
-    app.kubernetes.io/instance: istio-control-plane
+    app.kubernetes.io/instance: istio-control-plane-dashboard
     app.kubernetes.io/name: perses-dashboard
     app.kubernetes.io/part-of: perses-operator
-  name: istio-control-plane
+  name: istio-control-plane-dashboard
   namespace: perses-dev
 spec:
   config:
