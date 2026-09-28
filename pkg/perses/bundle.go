@@ -18,22 +18,32 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"path"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// LoadDashboardYAML returns vendored PersesDashboard manifest bytes.
-func LoadDashboardYAML(fsys fs.FS, def DashboardDefinition) ([]byte, error) {
-	filePath := path.Join("dashboards", def.Filename)
-	data, err := fs.ReadFile(fsys, filePath)
-	if err != nil {
-		return nil, fmt.Errorf("read dashboard %s: %w", def.Filename, err)
-	}
-	return data, nil
+// forEachDashboardYAML walks dashboards/ and invokes fn for each YAML file.
+func forEachDashboardYAML(fsys fs.FS, fn func(path string, data []byte) error) error {
+	return fs.WalkDir(fsys, dashboardsDir, func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		lower := strings.ToLower(name)
+		if !strings.HasSuffix(lower, ".yaml") && !strings.HasSuffix(lower, ".yml") {
+			return nil
+		}
+		data, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return fmt.Errorf("read dashboard %s: %w", name, err)
+		}
+		return fn(name, data)
+	})
 }
 
 // ParseDashboard unmarshals a PersesDashboard YAML manifest.
@@ -47,15 +57,18 @@ func ParseDashboard(data []byte) (*unstructured.Unstructured, error) {
 }
 
 // PrepareDashboard prepares a PersesDashboard for creation in the target namespace.
-// Existing ownerReferences from the vendored YAML are cleared; dashboards are not owned
-// by any Sail resource and are never deleted by the operator.
-func PrepareDashboard(data []byte, namespace string, def DashboardDefinition) (*unstructured.Unstructured, error) {
+// The dashboard name is taken from the YAML metadata. Existing ownerReferences from the
+// vendored YAML are cleared; dashboards are not owned by any Sail resource and are never
+// deleted by the operator.
+func PrepareDashboard(data []byte, namespace string) (*unstructured.Unstructured, error) {
 	dashboard, err := ParseDashboard(data)
 	if err != nil {
 		return nil, err
 	}
+	if dashboard.GetName() == "" {
+		return nil, fmt.Errorf("dashboard missing metadata.name")
+	}
 	dashboard.SetGroupVersionKind(DashboardGVK)
-	dashboard.SetName(def.Name)
 	dashboard.SetNamespace(namespace)
 	dashboard.SetOwnerReferences(nil)
 	dashboard.SetLabels(map[string]string{

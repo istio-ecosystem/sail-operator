@@ -28,12 +28,14 @@ import (
 type ReconcileResult struct {
 	CRDsAvailable bool
 	AllCreated    bool
+	CreatedCount  int
 	FailedNames   []string
 }
 
 // ReconcileDashboards creates PersesDashboard resources in the target namespace when they do not exist.
-// Existing dashboards are left unchanged. The CRD must already be available; callers that need to wait
-// for the CRD should use kube.WaitForCRDs first.
+// Existing dashboards are left unchanged. Dashboard YAML is discovered by walking dashboards/ under
+// fsys. The CRD must already be available; callers that need to wait for the CRD should use
+// kube.WaitForCRDs first.
 func ReconcileDashboards(
 	ctx context.Context,
 	cl client.Client,
@@ -42,20 +44,24 @@ func ReconcileDashboards(
 ) (ReconcileResult, error) {
 	result := ReconcileResult{CRDsAvailable: true, AllCreated: true}
 
-	for _, def := range ProductDashboards {
-		raw, err := LoadDashboardYAML(fsys, def)
+	err := forEachDashboardYAML(fsys, func(path string, data []byte) error {
+		dashboard, err := PrepareDashboard(data, namespace)
 		if err != nil {
-			return result, err
-		}
-		dashboard, err := PrepareDashboard(raw, namespace, def)
-		if err != nil {
-			return result, err
+			return fmt.Errorf("prepare dashboard %s: %w", path, err)
 		}
 		if err := createIfNotExists(ctx, cl, dashboard); err != nil {
 			result.AllCreated = false
-			result.FailedNames = append(result.FailedNames, def.Name)
-			return result, fmt.Errorf("create dashboard %s: %w", def.Name, err)
+			result.FailedNames = append(result.FailedNames, dashboard.GetName())
+			return fmt.Errorf("create dashboard %s: %w", dashboard.GetName(), err)
 		}
+		result.CreatedCount++
+		return nil
+	})
+	if err != nil {
+		return result, err
+	}
+	if result.CreatedCount == 0 {
+		return result, fmt.Errorf("no Perses dashboard YAML found under %s/", dashboardsDir)
 	}
 
 	return result, nil

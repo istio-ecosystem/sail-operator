@@ -23,9 +23,13 @@ Dashboard IDs must remain stable for Kiali and other consumers.
 
 ## Behavior
 
-When the `PersesDashboard` CRD is present in the cluster, the Sail Operator creates these dashboards in its own namespace (the namespace where the operator pod runs). Missing CRDs do not block operator installation or report a failure.
+When `enablePersesDashboards` is true (default) and the `PersesDashboard` CRD is present,
+the Sail Operator creates every YAML under this directory in its own namespace (the namespace
+where the operator pod runs). Missing CRDs do not block operator installation. Disable with
+`--enable-perses-dashboards=false` or Helm `operator.enablePersesDashboards: false`.
 
-Reconciliation is create-if-not-exists: existing dashboards are left unchanged. Dashboards are not deleted and have no ownerReferences.
+Installation is one-shot create-if-not-exists: existing dashboards are left unchanged.
+Dashboards are not deleted and have no ownerReferences.
 
 ## PersesDatasource requirement
 
