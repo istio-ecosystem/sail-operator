@@ -13,9 +13,9 @@ You are a security engineer auditing changes to the sail-operator Kubernetes ope
 
 ## Project security context
 
-- RBAC manifests live in `config/rbac/`. Each controller has its own ClusterRole.
+- RBAC lives in `chart/templates/rbac/role.yaml` (a single manually-maintained operator ClusterRole). The `+kubebuilder:rbac` markers in `controllers/*` are not wired to any generation step — to add a permission, edit `role.yaml` directly and run `make bundle` to propagate it into the CSV.
 - `WebhookController` (`controllers/webhook/`) manages `MutatingWebhookConfiguration` — failure policy and CA bundle injection are handled here.
-- `gitleaks` pre-commit hook is active; secrets committed to history are a blocker.
+- `gitleaks` secret scanning is available via `make lint-secrets`. Secrets committed to history are a blocker.
 - All commits must be signed (`-s` flag). Unsigned commits must not be approved.
 - Images are built from `Dockerfile`; base image pins live there and in bundle manifests.
 
