@@ -15,7 +15,6 @@
 package revision
 
 import (
-	"io/fs"
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -23,53 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// mockComputeValues returns the input values without any computation
-// this simulates what ComputeValues would do but without requiring actual files
-func mockComputeValues(
-	values *v1.Values,
-	_, _ string,
-	platform config.Platform,
-	defaultProfile, userProfile string, _ fs.FS, _ string,
-	_ *config.TLSConfig,
-) (*v1.Values, error) {
-	if values == nil {
-		values = &v1.Values{}
-	}
-
-	// If platform is OpenShift and there is no explicit CNI configured, enable CNI
-	if platform == config.PlatformOpenShift && (values.Pilot == nil || values.Pilot.Cni == nil || values.Pilot.Cni.Enabled == nil) {
-		if values.Pilot == nil {
-			values.Pilot = &v1.PilotConfig{}
-		}
-		if values.Pilot.Cni == nil {
-			values.Pilot.Cni = &v1.CNIUsageConfig{}
-		}
-		values.Pilot.Cni.Enabled = new(true)
-	}
-
-	profile := userProfile
-	if profile == "" {
-		profile = defaultProfile
-	}
-
-	// If profile is ambient, set the profile in values and enable PILOT_ENABLE_AMBIENT
-	if profile == "ambient" {
-		values.Profile = new("ambient")
-		if values.Pilot == nil {
-			values.Pilot = &v1.PilotConfig{}
-		}
-		if values.Pilot.Env == nil {
-			values.Pilot.Env = make(map[string]string)
-		}
-		values.Pilot.Env["PILOT_ENABLE_AMBIENT"] = "true"
-	}
-
-	return values, nil
-}
-
 func TestDependsOnIstioCNI(t *testing.T) {
-	// Replace ComputeValues with mock for testing
-	defaultComputeValues = mockComputeValues
 	defaultCfg := config.ReconcilerConfig{
 		Platform:       config.PlatformKubernetes,
 		DefaultProfile: "default",
@@ -220,6 +173,20 @@ func TestDependsOnIstioCNI(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "OpenshiftPlatformWithoutGlobalPlatformInValues",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Pilot: &v1.PilotConfig{},
+					},
+				},
+			},
+			cfg: config.ReconcilerConfig{
+				Platform: config.PlatformOpenShift,
+			},
+			expected: true,
+		},
+		{
 			name: "OpenshiftPlatformCNINotConfigured",
 			rev: &v1.IstioRevision{
 				Spec: v1.IstioRevisionSpec{
@@ -247,7 +214,6 @@ func TestDependsOnIstioCNI(t *testing.T) {
 }
 
 func TestDependsOnZTunnel(t *testing.T) {
-	defaultComputeValues = mockComputeValues
 	defaultCfg := config.ReconcilerConfig{
 		Platform:       config.PlatformKubernetes,
 		DefaultProfile: "default",

@@ -15,30 +15,22 @@
 package revision
 
 import (
-	"io/fs"
-
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 )
 
-type computeValuesFunc func(
-	*v1.Values, string, string, config.Platform,
-	string, string, fs.FS, string, *config.TLSConfig,
-) (*v1.Values, error)
-
-var defaultComputeValues computeValuesFunc = ComputeValues
-
 // DependsOnIstioCNI returns true if CNI is enabled in the revision
 func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
-	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
-		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
-	if err != nil || values == nil {
-		return false
+	values := rev.Spec.Values
+	if values == nil {
+		return cfg.Platform == config.PlatformOpenShift
 	}
+
 	global := values.Global
 	pilot := values.Pilot
 
-	isOCPPlatform := global != nil && global.Platform != nil && *global.Platform == "openshift"
+	isOCPPlatform := cfg.Platform == config.PlatformOpenShift ||
+		global != nil && global.Platform != nil && *global.Platform == "openshift"
 	isCNIEnabled := pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && *pilot.Cni.Enabled
 	isCNIExplicitlyDisabled := pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && !*pilot.Cni.Enabled
 
@@ -52,9 +44,8 @@ func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool 
 
 // DependsOnZTunnel returns true if the revision is configured for ambient mode and requires ZTunnel
 func DependsOnZTunnel(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
-	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
-		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
-	if err != nil || values == nil {
+	values := rev.Spec.Values
+	if values == nil {
 		return false
 	}
 
