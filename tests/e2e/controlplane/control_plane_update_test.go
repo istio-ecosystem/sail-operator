@@ -282,7 +282,7 @@ spec:
 						}
 
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := common.GetProxyVersionFromPod(pod.Name, sampleNamespace)
 							if err != nil || !sidecarVersion.Equal(istioversion.Map[istioversion.New].Version) {
 								return false
 							}
