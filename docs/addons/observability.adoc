@@ -16,6 +16,8 @@ link:../README.adoc[Return to Project Root]
     - <<integrating-kiali-with-the-openshift-monitoring-stack>>
     - <<integrating-kiali-with-openshift-distributed-tracing>>
 
+For bundled Istio Perses dashboards and OpenShift validation, see link:perses.adoc#perses-dashboards[Perses Dashboards].
+
 [[observability-integrations]]
 == Observability Integrations
 

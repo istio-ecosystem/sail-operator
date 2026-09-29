@@ -19,17 +19,9 @@
 //   - dashboards/README.md
 package perses
 
-import (
-	"embed"
-	"io/fs"
-)
+import "embed"
 
 // FS contains embedded Perses dashboard manifests.
 //
 //go:embed dashboards
 var FS embed.FS
-
-// SubFS creates a sub-filesystem rooted at the specified directory.
-func SubFS(fsys fs.FS, dir string) (fs.FS, error) {
-	return fs.Sub(fsys, dir)
-}

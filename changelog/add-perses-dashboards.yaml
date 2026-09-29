@@ -2,7 +2,7 @@ category: added
 title: Provision Perses dashboards in the operator namespace
 description: |
   Bundles Istio PersesDashboard manifests from community-mixins and creates them
-  once in the Sail Operator namespace when the PersesDashboard CRD is available,
-  without blocking startup when Perses is absent. Existing dashboards are left
-  unchanged. Disable with --enable-perses-dashboards=false (Helm:
-  operator.enablePersesDashboards).
+  once in the Sail Operator namespace when enablePersesDashboards is true and the
+  PersesDashboard CRD is available, without blocking startup when Perses is absent.
+  Disabled by default upstream; enable with --enable-perses-dashboards=true (Helm:
+  operator.enablePersesDashboards: true). Existing dashboards are left unchanged.

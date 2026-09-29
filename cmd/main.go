@@ -73,8 +73,8 @@ func main() {
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
-	flag.BoolVar(&reconcilerCfg.EnablePersesDashboards, "enable-perses-dashboards", true,
-		"When true, wait for the PersesDashboard CRD and create bundled Istio dashboards in the operator namespace. Disable if Perses will never be installed.")
+	flag.BoolVar(&reconcilerCfg.EnablePersesDashboards, "enable-perses-dashboards", false,
+		"When true, wait for the PersesDashboard CRD and create bundled Istio dashboards in the operator namespace. Disabled by default; enable when Perses is installed.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
 

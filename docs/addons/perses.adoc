@@ -1,0 +1,278 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.31.1
+:istio_latest_version_revision_format: 1-31-1
+:istio_latest_tag: v1.31-latest
+:istio_latest_minus_one_version: 1.31.0
+:istio_latest_minus_one_version_revision_format: 1-31-0
+
+link:../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+- <<perses-dashboards>>
+  - <<enabling-perses-dashboard-installation>>
+  - <<updating-vendored-dashboards>>
+  - <<openshift-validation>>
+    - <<prerequisites>>
+    - <<enable-user-workload-monitoring>>
+    - <<enable-perses>>
+    - <<create-persesdatasource>>
+    - <<install-istio-and-scraping>>
+    - <<validate-dashboards>>
+
+[[perses-dashboards]]
+== Perses Dashboards
+
+The Sail Operator can create bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `resources/perses/dashboards/`.
+
+Installation is *create-if-not-exists*: existing dashboards are left unchanged, are not deleted, and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
+
+[[enabling-perses-dashboard-installation]]
+=== Enabling Perses dashboard installation
+
+Perses dashboard installation is *disabled by default* upstream. Enable it with the operator flag or Helm value:
+
+[source,yaml]
+----
+operator:
+  enablePersesDashboards: true
+----
+
+Or pass `--enable-perses-dashboards=true` to the operator binary.
+
+When enabled, the operator waits for the `persesdashboards.perses.dev` CRD and creates the bundled dashboards once in the operator namespace (default `sail-operator`). Missing CRDs do not block operator startup.
+
+[[updating-vendored-dashboards]]
+=== Updating vendored dashboards
+
+The manifests under `resources/perses/dashboards/` are copied from
+link:https://github.com/perses/community-mixins[perses/community-mixins]
+(`examples/dashboards/operator/istio/`). That repository has no release tags; pin a
+commit SHA when you refresh.
+
+. Choose a commit from community-mixins (for example the tip of `main`):
++
+[source,bash,subs="attributes+"]
+----
+REF=$(git ls-remote https://github.com/perses/community-mixins.git refs/heads/main | cut -f1)
+echo "${REF}"
+----
+
+. Fetch that commit and copy the Istio operator dashboards into the Sail tree:
++
+[source,bash,subs="attributes+"]
+----
+TMP=$(mktemp -d)
+git -C "${TMP}" init -q
+git -C "${TMP}" remote add origin https://github.com/perses/community-mixins.git
+git -C "${TMP}" fetch --depth 1 origin "${REF}"
+git -C "${TMP}" checkout -q FETCH_HEAD
+
+OUT=resources/perses/dashboards
+find "${OUT}" -maxdepth 1 -type f -name '*.yaml' -delete
+for f in \
+  istio-control-plane-dashboard.yaml \
+  istio-mesh-dashboard.yaml \
+  istio-performance-dashboard.yaml \
+  istio-service-dashboard.yaml \
+  istio-workload-dashboard.yaml \
+  istio-ztunnel-dashboard.yaml
+do
+  cp "${TMP}/examples/dashboards/operator/istio/${f}" "${OUT}/${f}"
+done
+rm -rf "${TMP}"
+----
+
+. Update the `Ref` / `Last updated` fields in `resources/perses/dashboards/README.md` to match `${REF}` and today's date, then commit the refreshed YAML.
+
+[[openshift-validation]]
+=== OpenShift validation
+
+The following steps set up an OpenShift cluster so you can verify the dashboards in the console under *Observe → Monitoring* (Perses UI plugin), project `sail-operator`.
+
+[[prerequisites]]
+==== Prerequisites
+
+* Logged into the cluster with `oc`
+* link:https://docs.openshift.com/container-platform/latest/observability/cluster_observability_operator/cluster-observability-operator-overview.html[Cluster Observability Operator] installed from OperatorHub
+* Sail Operator deployed with `operator.enablePersesDashboards: true`
+* Prefer enabling Perses *before* deploying Sail so dashboards are not created while the Perses backend is still starting
+
+[[enable-user-workload-monitoring]]
+==== Enable User Workload Monitoring
+
+. Enable User Workload Monitoring:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+----
++
+[source,bash,subs="attributes+"]
+----
+oc apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+EOF
+----
+
+You can also follow link:observability.adoc#scraping-metrics-using-the-openshift-monitoring-stack[Scraping metrics using the OpenShift monitoring stack] for ServiceMonitor / PodMonitor setup.
+
+[[enable-perses]]
+==== Enable Perses
+
+. Create the Monitoring UIPlugin with Perses enabled:
++
+[source,bash,subs="attributes+"]
+----
+oc apply -f - <<'EOF'
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: monitoring
+spec:
+  type: Monitoring
+  monitoring:
+    perses:
+      enabled: true
+EOF
+----
+
+. Wait for the PersesDashboard CRD and Perses backend:
++
+[source,bash,subs="attributes+"]
+----
+oc wait --for=condition=Established crd/persesdashboards.perses.dev --timeout=5m
+oc wait -n openshift-cluster-observability-operator --for=condition=Ready pod -l app.kubernetes.io/name=perses --timeout=5m
+----
+
+[[create-persesdatasource]]
+==== Create PersesDatasource
+
+Dashboards expect a `PersesDatasource` named `prometheus-datasource` in the *operator namespace*. On OpenShift, point it at the Thanos Querier:
+
+[source,bash,subs="attributes+"]
+----
+oc get ns sail-operator >/dev/null 2>&1 || oc create ns sail-operator
+oc apply -f - <<'EOF'
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: prometheus-datasource
+  namespace: sail-operator
+spec:
+  config:
+    display:
+      name: "Thanos Querier Datasource"
+    default: true
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
+            secret: prometheus-datasource-secret
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt
+EOF
+oc wait -n sail-operator --for=jsonpath='{.status.conditions[?(@.type=="Available")].status}'=True \
+  persesdatasource/prometheus-datasource --timeout=3m
+----
+
+[[install-istio-and-scraping]]
+==== Install Istio and metrics scraping
+
+. Create an `Istio` and `IstioCNI` (adjust the version to one supported by your operator binary):
++
+[source,bash,subs="attributes+"]
+----
+oc get ns istio-system >/dev/null 2>&1 || oc create ns istio-system
+oc get ns istio-cni >/dev/null 2>&1 || oc create ns istio-cni
+oc apply -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v{istio_latest_version}
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+---
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: v{istio_latest_version}
+  namespace: istio-cni
+EOF
+oc wait --for=condition=Ready istios/default --timeout=5m
+----
+
+. Create ServiceMonitor / PodMonitor resources as described in link:observability.adoc#scraping-metrics-using-the-openshift-monitoring-stack[Scraping metrics using the OpenShift monitoring stack]. Optionally enable Prometheus metrics via Telemetry:
++
+[source,bash,subs="attributes+"]
+----
+oc apply -f - <<'EOF'
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: enable-prometheus-metrics
+  namespace: istio-system
+spec:
+  metrics:
+    - providers:
+        - name: prometheus
+EOF
+----
+
+. Deploy a sample application (for example link:addons.adoc#deploy-gateway-and-bookinfo[Bookinfo]) and generate traffic.
+
+[[validate-dashboards]]
+==== Validate dashboards
+
+. Confirm the CRD, datasource, and dashboards:
++
+[source,bash,subs="attributes+"]
+----
+oc get crd persesdashboards.perses.dev
+oc get persesdatasource prometheus-datasource -n sail-operator
+oc get persesdashboards -n sail-operator
+----
+
+Expected dashboard names:
+
+* `istio-control-plane-dashboard`
+* `istio-mesh-dashboard`
+* `istio-performance-dashboard`
+* `istio-service-dashboard`
+* `istio-workload-dashboard`
+* `istio-ztunnel-dashboard`
+
+. Check operator logs for installation messages:
++
+[source,bash,subs="attributes+"]
+----
+oc logs -n sail-operator deploy/sail-operator --tail=100 | grep -i perses
+----
+
+. Open *Observe → Monitoring* in the OpenShift console and select the `sail-operator` project to view the dashboards.
