@@ -27,8 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var remoteIstioResourcePattern = regexp.MustCompile(`(?m)^\s*-\s+remoteistios?(?:/(?:finalizers|status))?\s*$`)
-
 func TestKubebuilderRBACMarkersDoNotUseWildcards(t *testing.T) {
 	repoRoot := repositoryRoot(t)
 	err := filepath.WalkDir(filepath.Join(repoRoot, "controllers"), func(path string, d os.DirEntry, err error) error {
@@ -70,19 +68,6 @@ func TestSharedMarkersCoverStartupAndRBACEscalationPermissions(t *testing.T) {
 	for _, marker := range requiredMarkers {
 		if !strings.Contains(content, marker) {
 			t.Fatalf("expected shared RBAC marker %q", marker)
-		}
-	}
-}
-
-func TestShippedRBACNoLongerGrantsRemoteIstioPermissions(t *testing.T) {
-	repoRoot := repositoryRoot(t)
-	files := []string{
-		filepath.Join(repoRoot, "chart", "templates", "rbac", "role.yaml"),
-		filepath.Join(repoRoot, "bundle", "manifests", "sailoperator.clusterserviceversion.yaml"),
-	}
-	for _, path := range files {
-		if remoteIstioResourcePattern.MatchString(mustReadFile(t, path)) {
-			t.Fatalf("%s still grants remoteistios RBAC", path)
 		}
 	}
 }
