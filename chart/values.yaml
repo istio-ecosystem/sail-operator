@@ -143,8 +143,8 @@ image: quay.io/sail-dev/sail-operator:1.31-latest
 # imagePullPolicy: Always
 operator:
   # When true, the operator waits for the PersesDashboard CRD and creates bundled Istio
-  # dashboards in the operator namespace. Set to false if Perses will never be installed.
-  enablePersesDashboards: true
+  # dashboards in the operator namespace. Disabled by default upstream; enable when Perses is installed.
+  enablePersesDashboards: false
   # env:
   # - name: GOMAXPROCS
   #   valueFrom:

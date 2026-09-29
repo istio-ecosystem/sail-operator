@@ -23,6 +23,11 @@ function removeOldVersions() {
     versions=$(yq eval '.versions[] | select(.ref == null) | select(.eol != true) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr $'\n' ' ')
     for subdirectory in resources/*/; do
         version=$(basename "$subdirectory")
+        # Only manage Istio version directories (vX.Y.Z). Other dirs under resources/
+        # (e.g. perses) are unrelated to the version lifecycle.
+        if [[ ! "$version" =~ ^v ]]; then
+            continue
+        fi
         if [[ ! " ${versions} " == *" $version "* ]]; then
             echo "Removing: $subdirectory"
             rm -r "$subdirectory"

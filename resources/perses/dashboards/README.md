@@ -5,16 +5,16 @@ Vendored `PersesDashboard` manifests from [perses/community-mixins](https://gith
 | Field | Value |
 |-------|-------|
 | Source | `examples/dashboards/operator/istio/` |
-| Ref | `v0.7.0` |
-| Last updated | `2026-09-23` |
+| Ref | `d4e23ad64ea8087c74b94ffc4bd2aae1122f2386` |
+| Last updated | `2026-09-28` |
 
 ## Bundled dashboards
 
 | Dashboard ID | Display name |
 |--------------|--------------|
-| `istio-control-plane` | Istio Control Plane Dashboard |
+| `istio-control-plane-dashboard` | Istio Control Plane Dashboard |
 | `istio-mesh-dashboard` | Istio Mesh Dashboard |
-| `istio-performance` | Istio Performance Dashboard |
+| `istio-performance-dashboard` | Istio Performance Dashboard |
 | `istio-service-dashboard` | Istio Service Dashboard |
 | `istio-workload-dashboard` | Istio Workload Dashboard |
 | `istio-ztunnel-dashboard` | Istio Ztunnel Dashboard |
@@ -23,10 +23,11 @@ Dashboard IDs must remain stable for Kiali and other consumers.
 
 ## Behavior
 
-When `enablePersesDashboards` is true (default) and the `PersesDashboard` CRD is present,
+When `enablePersesDashboards` is true and the `PersesDashboard` CRD is present,
 the Sail Operator creates every YAML under this directory in its own namespace (the namespace
-where the operator pod runs). Missing CRDs do not block operator installation. Disable with
-`--enable-perses-dashboards=false` or Helm `operator.enablePersesDashboards: false`.
+where the operator pod runs). The feature is disabled by default upstream. Enable with
+`--enable-perses-dashboards=true` or Helm `operator.enablePersesDashboards: true`.
+Missing CRDs do not block operator installation.
 
 Installation is one-shot create-if-not-exists: existing dashboards are left unchanged.
 Dashboards are not deleted and have no ownerReferences.
@@ -47,6 +48,4 @@ spec:
   # configure your Prometheus/Thanos endpoint
 ```
 
-Regenerate these files with `hack/perses/update-dashboards.sh [COMMUNITY_MIXINS_REF]`.
-
-For an OpenShift validation environment, see `hack/perses/README.md`.
+To refresh these files from upstream, see `docs/addons/perses.adoc`.
