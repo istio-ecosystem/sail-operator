@@ -45,7 +45,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.31-latest
-    createdAt: "2026-09-23T05:08:07Z"
+    createdAt: "2026-09-30T21:40:38Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -175,6 +175,9 @@ spec:
       - kind: Telemetry
         name: telemetries.telemetry.istio.io
         version: v1alpha1
+      - kind: ServiceMonitor
+        name: servicemonitors.monitoring.coreos.com
+        version: v1
       - description: IstioCNI represents a deployment of the Istio CNI component.
         displayName: Istio CNI
         kind: IstioCNI
