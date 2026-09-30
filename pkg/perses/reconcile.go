@@ -36,7 +36,7 @@ type ReconcileResult struct {
 // Existing dashboards are left unchanged. Dashboard YAML is discovered by walking dashboards/ under
 // fsys. The CRD must already be available; callers that need to wait for the CRD should use
 // kube.WaitForCRDs first.
-func ReconcileDashboards(
+func reconcileDashboards(
 	ctx context.Context,
 	cl client.Client,
 	fsys fs.FS,
