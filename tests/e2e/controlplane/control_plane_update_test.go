@@ -17,6 +17,7 @@
 package controlplane
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -29,7 +30,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/update"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -56,7 +56,7 @@ var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow
 
 		BeforeAll(func() {
 			var err error
-			baseVersion, newVersion, err = update.GetTwoConsecutiveSidecarVersions()
+			baseVersion, newVersion, err = istioversion.GetTwoConsecutiveMinorVersions(istioversion.Sidecar)
 			if err != nil {
 				Skip(fmt.Sprintf("Skipping update tests: %v", err))
 			}
@@ -176,12 +176,23 @@ spec:
 				BeforeAll(func(ctx SpecContext) {
 					Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 					Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
-					Expect(k.WithNamespace(sampleNamespace).
-						ApplyKustomize("helloworld", "version=v1")).
-						To(Succeed(), "Error deploying sample")
+					// sleep and httpbin are the client/server pair used to measure traffic continuity
+					// across the update. Both live in the sample namespace so that the restart step
+					// below moves them to the new revision together; a workload left on the old
+					// revision would keep it in use and it would never be pruned.
+					Expect(k.WithNamespace(sampleNamespace).ApplyKustomize(common.SleepContainerName)).
+						To(Succeed(), "Error deploying sleep client")
+					Expect(k.WithNamespace(sampleNamespace).ApplyKustomize(common.HttpbinContainerName)).
+						To(Succeed(), "Error deploying httpbin server")
 					Success("sample deployed")
 
 					samplePods := &corev1.PodList{}
+					// CheckSamplePodsReady is satisfied by whatever pods exist at that moment, so wait
+					// for both deployments to have created theirs first.
+					Eventually(func(g Gomega) {
+						g.Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+						g.Expect(samplePods.Items).To(HaveLen(2), "expected the sleep and httpbin pods")
+					}).Should(Succeed(), "sample pods were not created")
 					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
@@ -204,9 +215,23 @@ spec:
 			})
 
 			When("the Istio CR is updated to the new Istio version", func() {
-				BeforeAll(func() {
+				var traffic *trafficMonitor
+
+				BeforeAll(func(ctx SpecContext) {
+					// Start traffic between the already-running workloads before the control plane is
+					// touched, so the whole update happens with requests in flight. The workloads are
+					// never restarted within this block, so every request that fails from here on is
+					// attributable to the control plane update itself.
+					traffic = startTrafficMonitor(ctx, sampleNamespace,
+						fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", sampleNamespace))
+					Success("Continuous traffic established before the update")
+
 					Expect(k.Patch("istio", "default", "merge", `{"spec":{"version":"`+newVersion.Name+`"}}`)).To(Succeed(), "Error updating Istio CR to new Istio version")
 					Success("Istio CR updated")
+				})
+
+				AfterAll(func() {
+					traffic.stop()
 				})
 
 				It("Istio resource has revisions in use equal to two", func(ctx SpecContext) {
@@ -272,6 +297,24 @@ spec:
 						}).Should(Succeed(), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected Istio version")
+				})
+
+				It("should not disrupt traffic between running workloads", func() {
+					// Traffic has been running since before the version patch and the new revision is
+					// fully rolled out by now, so the measured window covers the whole update. It ends
+					// here rather than extending over the workload migration in the next block only
+					// because of how the traffic is generated: the generator execs into a single fixed
+					// pod name, sleep runs one replica and the next block deletes every pod at once,
+					// so the client itself goes down. Covering the migration would need a multi-replica
+					// client, a rolling restart, and a generator that re-resolves the pod per request.
+					failures := traffic.stopAndGetFailures()
+
+					// Proxies of already-running workloads stay attached to the old revision while the
+					// new one is rolled out, so a RevisionBased control plane update must not drop a
+					// single request.
+					Expect(failures).To(BeEmpty(),
+						"RevisionBased control plane update disrupted traffic between already-running workloads")
+					Success("Traffic was uninterrupted throughout the RevisionBased update")
 				})
 			})
 
@@ -343,12 +386,266 @@ spec:
 		})
 	})
 
+	// Jumps from the oldest supported minor straight to the newest one in a single patch,
+	// leaving out every minor in between.
+	Describe("skipping intermediate versions", func() {
+		oldestVersion, newestVersion, versionErr := istioversion.GetOldestAndNewestMinorVersions(istioversion.Sidecar)
+
+		BeforeAll(func() {
+			if versionErr != nil {
+				Skip(fmt.Sprintf("Skipping skip-version update tests: %v", versionErr))
+			}
+		})
+
+		Context(fmt.Sprintf("updating from %s to %s in a single step", oldestVersion.Name, newestVersion.Name), func() {
+			clr := cleaner.New(cl)
+
+			BeforeAll(func(ctx SpecContext) {
+				clr.Record(ctx)
+				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+
+				common.CreateIstioCNI(k, oldestVersion.Name)
+				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
+			})
+
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.ControlPlane, k)
+				}
+			})
+
+			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for the oldest version %s", oldestVersion.Name), func() {
+				BeforeAll(func() {
+					common.CreateIstio(k, oldestVersion.Name, `
+updateStrategy:
+  type: RevisionBased
+  inactiveRevisionDeletionGracePeriodSeconds: 30`)
+
+					// Workloads are injected via the istio-injection=enabled label, which resolves to
+					// the "default" tag. With RevisionBased the revisions are named after the version,
+					// so without this tag nothing would ever be injected.
+					IstioRevisionTagYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio
+    name: default`
+					Log("IstioRevisionTag YAML:", common.Indent(IstioRevisionTagYAML))
+					Expect(k.CreateFromString(IstioRevisionTagYAML)).To(Succeed(), "IstioRevisionTag CR failed to be created")
+				})
+
+				It("deploys istiod and pod is Ready", func(ctx SpecContext) {
+					common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key("default"), &v1.Istio{}, k, cl)
+				})
+			})
+
+			When("sample pods are deployed", func() {
+				BeforeAll(func(ctx SpecContext) {
+					Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
+					Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
+					Expect(k.WithNamespace(sampleNamespace).ApplyKustomize(common.SleepContainerName)).
+						To(Succeed(), "Error deploying sleep client")
+					Expect(k.WithNamespace(sampleNamespace).ApplyKustomize(common.HttpbinContainerName)).
+						To(Succeed(), "Error deploying httpbin server")
+					Success("sample deployed")
+
+					samplePods := &corev1.PodList{}
+					Eventually(func(g Gomega) {
+						g.Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+						g.Expect(samplePods.Items).To(HaveLen(2), "expected the sleep and httpbin pods")
+					}).Should(Succeed(), "sample pods were not created")
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
+					Success("sample pods are ready")
+				})
+
+				It("injects sidecars of the oldest version", func(ctx SpecContext) {
+					samplePods := &corev1.PodList{}
+					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
+
+					for _, pod := range samplePods.Items {
+						podName := pod.Name
+						Eventually(func(g Gomega) {
+							sidecarVersion, err := common.GetProxyVersionFromPod(podName, sampleNamespace)
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(oldestVersion.Version))
+						}).Should(Succeed(), "Error verifying sidecar version for pod "+podName)
+					}
+					Success("Istio sidecar version matches the oldest supported Istio version")
+				})
+			})
+
+			When("the Istio CR is updated to the newest version in a single step", func() {
+				var traffic *trafficMonitor
+
+				BeforeAll(func(ctx SpecContext) {
+					// Start traffic between the already-running workloads before the control plane is
+					// touched, so the whole update happens with requests in flight.
+					traffic = startTrafficMonitor(ctx, sampleNamespace,
+						fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", sampleNamespace))
+					Success("Continuous traffic established before the update")
+
+					Expect(k.Patch("istio", "default", "merge", `{"spec":{"version":"`+newestVersion.Name+`"}}`)).
+						To(Succeed(), "Error updating Istio CR to the newest Istio version")
+					Success("Istio CR updated")
+				})
+
+				AfterAll(func() {
+					traffic.stop()
+				})
+
+				It("creates a second IstioRevision for the newest version", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						istioRevisions := &v1.IstioRevisionList{}
+						g.Expect(cl.List(ctx, istioRevisions)).To(Succeed())
+						g.Expect(istioRevisions.Items).To(HaveLen(2), "Unexpected number of IstioRevisions; expected 2")
+						g.Expect(istioRevisions.Items).To(ContainElement(
+							HaveField("Spec", HaveField("Version", ContainSubstring(oldestVersion.Name)))),
+							"Expected a revision with the oldest version")
+						g.Expect(istioRevisions.Items).To(ContainElement(
+							HaveField("Spec", HaveField("Version", ContainSubstring(newestVersion.Name)))),
+							"Expected a revision with the newest version")
+					}).Should(Succeed())
+					Success("Both IstioRevisions exist")
+				})
+
+				It("rolls out a second istiod and becomes Ready", func(ctx SpecContext) {
+					// The istiod rollout has to be waited for explicitly. The Istio CR keeps
+					// reporting Ready from the old revision until the controller reconciles the new
+					// one, so asserting on that condition alone is satisfied by a stale status
+					// before the new control plane exists. It would also close the traffic window
+					// below while the update is still in flight.
+					Eventually(func(g Gomega) {
+						istiodPods := &corev1.PodList{}
+						g.Expect(cl.List(ctx, istiodPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"app": "istiod"})).To(Succeed())
+						g.Expect(istiodPods.Items).To(HaveLen(2), "expected one istiod pod per revision")
+						for _, pod := range istiodPods.Items {
+							g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning), "istiod pod "+pod.Name+" is not Running")
+						}
+					}).Should(Succeed(), "The istiod of the newest version did not roll out")
+
+					Eventually(func(g Gomega) {
+						istio := &v1.Istio{}
+						g.Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
+						g.Expect(istio.Status.Revisions.Ready).To(BeNumerically("==", 2), "Both revisions should be Ready")
+					}).Should(Succeed())
+
+					common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key("default"), &v1.Istio{}, k, cl)
+					Success("Both control planes are running and the Istio CR is Ready")
+				})
+
+				It("keeps the proxies of running workloads on the oldest version", func(ctx SpecContext) {
+					samplePods := &corev1.PodList{}
+					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
+
+					for _, pod := range samplePods.Items {
+						podName := pod.Name
+						Eventually(func(g Gomega) {
+							sidecarVersion, err := common.GetProxyVersionFromPod(podName, sampleNamespace)
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(oldestVersion.Version))
+						}).Should(Succeed(), "Sidecar Istio version does not match the expected version")
+					}
+					Success("Running workloads stayed on the old revision")
+				})
+
+				It("should not disrupt traffic between running workloads", func() {
+					// Same measurement window as in the consecutive-version suite: from before the
+					// version patch until the new revision is rolled out. The workloads are migrated
+					// in the next block, which is not covered here because the traffic generator
+					// execs into the single sleep pod that the migration deletes.
+					failures := traffic.stopAndGetFailures()
+
+					// Proxies of already-running workloads stay attached to the old revision while the
+					// new one is rolled out, so how many minors the update spans must make no
+					// difference to them.
+					Expect(failures).To(BeEmpty(),
+						"Skip-version control plane update disrupted traffic between already-running workloads")
+					Success("Traffic was uninterrupted throughout the skip-version update")
+				})
+			})
+
+			When("the IstioCNI is updated and the sample pods are restarted", func() {
+				BeforeAll(func(ctx SpecContext) {
+					// The CNI is updated after the control plane, this is the order we support
+					Expect(k.Patch("istiocni", istioCniName, "merge", `{"spec":{"version":"`+newestVersion.Name+`"}}`)).
+						To(Succeed(), "Error updating IstioCNI CR to the newest Istio version")
+					common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
+					Success("IstioCNI updated to the newest Istio version")
+
+					samplePods := &corev1.PodList{}
+					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
+
+					for _, pod := range samplePods.Items {
+						Expect(cl.Delete(ctx, &pod)).To(Succeed())
+					}
+
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
+					Success("sample pods restarted and are ready")
+				})
+
+				It("updates the proxy version to the newest Istio version", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						samplePods := &corev1.PodList{}
+						g.Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+						g.Expect(samplePods.Items).ToNot(BeEmpty())
+
+						for _, pod := range samplePods.Items {
+							sidecarVersion, err := common.GetProxyVersionFromPod(pod.Name, sampleNamespace)
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(newestVersion.Version))
+						}
+					}).Should(Succeed(), "Sidecar Istio version does not match the expected version")
+					Success("Istio sidecar version matches the newest Istio version")
+				})
+
+				It("prunes the IstioRevision and istiod pod of the oldest version", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						istioRevisions := &v1.IstioRevisionList{}
+						g.Expect(cl.List(ctx, istioRevisions)).To(Succeed())
+						g.Expect(istioRevisions.Items).To(HaveLen(1), "The old IstioRevision was not pruned")
+						g.Expect(istioRevisions.Items[0].Spec.Version).To(Equal(newestVersion.Name))
+
+						istiodPods := &corev1.PodList{}
+						g.Expect(cl.List(ctx, istiodPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"app": "istiod"})).To(Succeed())
+						g.Expect(istiodPods.Items).To(HaveLen(1), "The old istiod pod was not removed")
+					}).Should(Succeed())
+					Success("Old IstioRevision and istiod pod were pruned")
+				})
+
+				It("points the IstioRevisionTag at the IstioRevision of the newest version", func(ctx SpecContext) {
+					revisionName := strings.Replace(newestVersion.Name, ".", "-", -1)
+					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
+						Should(HaveField("Status.IstioRevision", ContainSubstring(revisionName)),
+							"IstioRevisionTag does not point to the IstioRevision of the newest version")
+					Success("IstioRevisionTag points to the new IstioRevision")
+				})
+			})
+
+			AfterAll(func(ctx SpecContext) {
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
+				}
+
+				clr.Cleanup(ctx)
+			})
+		})
+	})
+
 	Describe("In-Place Updates", func() {
 		var baseVersion, newVersion istioversion.VersionInfo
 
 		BeforeAll(func() {
 			var err error
-			baseVersion, newVersion, err = update.GetTwoConsecutiveSidecarVersions()
+			baseVersion, newVersion, err = istioversion.GetTwoConsecutiveMinorVersions(istioversion.Sidecar)
 			if err != nil {
 				Skip(fmt.Sprintf("Skipping update tests: %v", err))
 			}
@@ -428,10 +725,24 @@ updateStrategy:
 			})
 
 			When("Istio CR version is updated", func() {
-				BeforeAll(func() {
+				var traffic *trafficMonitor
+
+				BeforeAll(func(ctx SpecContext) {
+					// Start traffic between the already-running workloads before the control plane is
+					// touched, so the whole update happens with requests in flight. The workloads are
+					// never restarted within this block, so every request that fails from here on is
+					// attributable to the control plane update itself.
+					traffic = startTrafficMonitor(ctx, validator.Namespace,
+						fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", common.HttpbinNamespace))
+					Success("Continuous traffic established before the update")
+
 					Expect(k.Patch("istio", "default", "merge", `{"spec":{"version":"`+newVersion.Name+`"}}`)).
 						To(Succeed(), "Error updating Istio CR version")
 					Success("Istio CR version updated to " + newVersion.Name)
+				})
+
+				AfterAll(func() {
+					traffic.stop()
 				})
 
 				It("should remain a single IstioRevision", func(ctx SpecContext) {
@@ -463,7 +774,30 @@ updateStrategy:
 						g.Expect(err).NotTo(HaveOccurred())
 						g.Expect(version).To(Equal(newVersion.Version))
 					}).Should(Succeed(), "istiod deployment should be updated to new version")
+
+					// The check above only proves that some istiod pod answers with the new version.
+					// maxUnavailable floors to 0 for a single replica, so the new pod becomes ready
+					// before the old one is removed and the rollout may still be in progress here.
+					Eventually(func(g Gomega) {
+						deployment := &appsv1.Deployment{}
+						g.Expect(cl.Get(ctx, kube.Key("istiod", controlPlaneNamespace), deployment)).To(Succeed())
+						g.Expect(deployment.Status.AvailableReplicas).To(BeNumerically(">", 0))
+						g.Expect(deployment.Status.UpdatedReplicas).To(Equal(deployment.Status.Replicas))
+					}).Should(Succeed(), "istiod deployment should be fully rolled out")
 					Success("istiod deployment updated")
+				})
+
+				It("should not disrupt traffic between running workloads", func() {
+					// Traffic has been running since before the version patch and the rollout is
+					// complete by now, so the measured window covers the whole update.
+					failures := traffic.stopAndGetFailures()
+
+					// Existing sidecars keep their configuration across an istiod restart, so an
+					// in-place control plane update must not drop a single request from workloads
+					// that were already running.
+					Expect(failures).To(BeEmpty(),
+						"In-place control plane update disrupted traffic between already-running workloads")
+					Success("Traffic was uninterrupted throughout the in-place update")
 				})
 			})
 
@@ -523,7 +857,7 @@ updateStrategy:
 
 		BeforeAll(func() {
 			var err error
-			_, newVersion, err = update.GetTwoConsecutiveSidecarVersions()
+			_, newVersion, err = istioversion.GetTwoConsecutiveMinorVersions(istioversion.Sidecar)
 			if err != nil {
 				Skip(fmt.Sprintf("Skipping update tests: %v", err))
 			}
@@ -655,3 +989,58 @@ updateStrategy:
 		})
 	})
 })
+
+// trafficMonitor generates continuous HTTP traffic from a sleep pod for as long as an update is
+// in progress, so that the requests failed during the update can be counted afterwards.
+type trafficMonitor struct {
+	stats            *common.HTTPTrafficStats
+	cancel           context.CancelFunc
+	baselineFailures int
+}
+
+// startTrafficMonitor starts traffic from the sleep pod in clientNamespace to targetURL and returns
+// once a baseline of successful requests proves that the path works. Requests that failed while
+// traffic was warming up are excluded from what stopAndGetFailures reports, so only failures
+// recorded after this point count against whatever the caller does next.
+func startTrafficMonitor(ctx context.Context, clientNamespace, targetURL string) *trafficMonitor {
+	pods := &corev1.PodList{}
+	Expect(cl.List(ctx, pods, client.InNamespace(clientNamespace), client.MatchingLabels{"app": common.SleepContainerName})).To(Succeed())
+	Expect(pods.Items).ToNot(BeEmpty(), "No sleep pod available to generate traffic from")
+
+	// context.Background() keeps traffic flowing across the It blocks of the enclosing container;
+	// it is stopped by stopAndGetFailures and again in AfterAll as a safety net.
+	stats, cancel := common.StartContinuousHTTPTraffic(
+		context.Background(), k, clientNamespace, pods.Items[0].Name, common.SleepContainerName,
+		targetURL, 500*time.Millisecond, nil)
+	monitor := &trafficMonitor{stats: stats, cancel: cancel}
+
+	// Establish a baseline so that the assertion on the failures cannot pass merely because no
+	// traffic was ever sent.
+	Eventually(func(g Gomega) {
+		_, success, _, _ := stats.GetStats()
+		g.Expect(success).To(BeNumerically(">=", 5), "Baseline traffic should flow before the update starts")
+	}).WithTimeout(60 * time.Second).WithPolling(500 * time.Millisecond).Should(Succeed())
+
+	_, _, _, baselineErrors := stats.GetStats()
+	monitor.baselineFailures = len(baselineErrors)
+	return monitor
+}
+
+// stop ends the traffic. It is safe to call more than once, and on a monitor that was never started
+// because the setup that would have created it failed.
+func (m *trafficMonitor) stop() {
+	if m != nil && m.cancel != nil {
+		m.cancel()
+	}
+}
+
+// stopAndGetFailures stops the traffic and returns the requests that failed after the baseline.
+func (m *trafficMonitor) stopAndGetFailures() []string {
+	m.stop()
+	// Let requests that are already in flight finish and be recorded.
+	time.Sleep(2 * time.Second)
+
+	total, success, failed, errors := m.stats.GetStats()
+	Log(fmt.Sprintf("Traffic during update: %d total, %d success, %d failed", total, success, failed))
+	return errors[m.baselineFailures:]
+}
