@@ -302,25 +302,34 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Record custom resources and Istio namespaces counts every 5 minutes
+	// those custom metrics are registered in the default metric server
+	uncachedClient, err := client.New(cfg, client.Options{
+		Scheme: mgr.GetScheme(),
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to create uncached client")
+		os.Exit(1)
+	}
+
+	setupLog.Info("starting custom resource metrics recorder")
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg.Platform)
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		if err := recorder.EnsureNamespaceLabel(ctx); err != nil {
+			setupLog.Error(err, "problem adding cluster-monitoring label")
+		}
+	}
+
+	recorder.Start(ctx)
+	// Wait for context timeout or operator shutdown
+	<-ctx.Done()
+	recorder.Stop()
+
 	setupLog.Info("starting sail-operator manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
-
-	// Record custom resources and Istio namespaces counts every 5 minutes
-	// those custom metrics are registered in the default metric server
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient(), reconcilerCfg.Platform)
-	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		recorder.EnsureNamespaceLabel(ctx)
-	}
-
-	recorder.Start(ctx)
-	setupLog.Info("Collecting custom resource metrics")
-	// Wait for context timeout or operator shutdown
-	<-ctx.Done()
-	recorder.Stop()
-	setupLog.Info("Custom metrics collection stopped")
 }
 
 type requestLogger struct {

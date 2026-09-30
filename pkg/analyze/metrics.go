@@ -23,9 +23,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -282,23 +281,25 @@ func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
 
 // EnsureNamespaceLabel ensures label openshift.io/cluster-monitoring=true for the operator namespace
 // When the operator is running on OpenShift
-func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) {
-	log := logf.FromContext(ctx)
+func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
 	name := "sail-operator"
 	if m.platform == config.PlatformOpenShift {
 		name = "openshift-operators"
 	}
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+
+	ns := &corev1.Namespace{}
+	if err := m.Client.Get(ctx, types.NamespacedName{Name: name}, ns); err != nil {
+		return fmt.Errorf("failed to get namespace %s: %w", name, err)
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, m.Client, ns, func() error {
-		if ns.Labels == nil {
-			ns.Labels = make(map[string]string)
-		}
-		ns.Labels["openshift.io/cluster-monitoring"] = "true"
-		return nil
-	})
-	if err != nil {
-		log.V(4).Error(err, "failed to ensure OpenShift namespace label")
+
+	patchBase := client.MergeFrom(ns.DeepCopy())
+	if ns.Labels == nil {
+		ns.Labels = make(map[string]string)
 	}
+	ns.Labels["openshift.io/cluster-monitoring"] = "true"
+
+	if err := m.Client.Patch(ctx, ns, patchBase); err != nil {
+		return fmt.Errorf("failed to ensure OpenShift cluster-monitoring label: %w", err)
+	}
+	return nil
 }
