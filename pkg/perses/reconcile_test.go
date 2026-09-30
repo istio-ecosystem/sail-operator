@@ -40,18 +40,11 @@ func TestReconcileDashboardsCreatesAll(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
-	result, err := ReconcileDashboards(ctx, cl, fsys, namespace)
-	if err != nil {
-		t.Fatalf("ReconcileDashboards() error = %v", err)
-	}
-	if !result.AllCreated {
-		t.Fatal("expected all dashboards to be created")
-	}
-	if result.CreatedCount != want {
-		t.Fatalf("CreatedCount = %d, want %d", result.CreatedCount, want)
+	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("reconcileDashboards() error = %v", err)
 	}
 
 	list := &unstructured.UnstructuredList{}
@@ -84,14 +77,10 @@ func TestReconcileDashboardsSkipsExisting(t *testing.T) {
 	}
 
 	cl := newPersesTestClient(t, testPersesDashboardCRD(), existing)
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 
-	result, err := ReconcileDashboards(ctx, cl, fsys, namespace)
-	if err != nil {
-		t.Fatalf("ReconcileDashboards() error = %v", err)
-	}
-	if !result.AllCreated {
-		t.Fatal("expected reconciliation to succeed")
+	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("reconcileDashboards() error = %v", err)
 	}
 
 	got := &unstructured.Unstructured{}
@@ -108,13 +97,13 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
-	if _, err := ReconcileDashboards(ctx, cl, fsys, namespace); err != nil {
+	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-	if _, err := ReconcileDashboards(ctx, cl, fsys, namespace); err != nil {
+	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
 
@@ -130,7 +119,7 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 
 func TestReconcileDashboardsLoadError(t *testing.T) {
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	_, err := ReconcileDashboards(context.Background(), cl, os.DirFS(t.TempDir()), "sail-operator")
+	err := reconcileDashboards(context.Background(), cl, os.DirFS(t.TempDir()), "sail-operator")
 	if err == nil {
 		t.Fatal("expected load error")
 	}
@@ -142,7 +131,7 @@ func TestReconcileDashboardsEmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	_, err := ReconcileDashboards(context.Background(), cl, os.DirFS(dir), "sail-operator")
+	err := reconcileDashboards(context.Background(), cl, os.DirFS(dir), "sail-operator")
 	if err == nil {
 		t.Fatal("expected error when no YAML found")
 	}
@@ -153,7 +142,7 @@ func TestReconcileDashboardsPrepareError(t *testing.T) {
 		"dashboards/broken.yaml": &fstest.MapFile{Data: []byte(":::")},
 	}
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	_, err := ReconcileDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")
+	err := reconcileDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")
 	if err == nil {
 		t.Fatal("expected prepare error")
 	}
@@ -166,13 +155,10 @@ func TestReconcileDashboardsCreateError(t *testing.T) {
 				return fmt.Errorf("create failed")
 			},
 		}).Build()
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
-	result, err := ReconcileDashboards(context.Background(), cl, fsys, "sail-operator")
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
+	err := reconcileDashboards(context.Background(), cl, fsys, "sail-operator")
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if result.AllCreated || len(result.FailedNames) == 0 {
-		t.Fatalf("result = %+v; want AllCreated=false with FailedNames", result)
 	}
 }
 

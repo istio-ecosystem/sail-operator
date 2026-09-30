@@ -23,7 +23,7 @@ link:../README.adoc[Return to Project Root]
 [[perses-dashboards]]
 == Perses Dashboards
 
-The Sail Operator can create bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `resources/perses/dashboards/`.
+The Sail Operator can create bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `pkg/perses/resources/dashboards/`.
 
 Installation is *create-if-not-exists*: existing dashboards are left unchanged, are not deleted, and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
 
@@ -45,7 +45,7 @@ When enabled, the operator waits for the `persesdashboards.perses.dev` CRD and c
 [[updating-vendored-dashboards]]
 === Updating vendored dashboards
 
-The manifests under `resources/perses/dashboards/` are copied from
+The manifests under `pkg/perses/resources/dashboards/` are copied from
 link:https://github.com/perses/community-mixins[perses/community-mixins]
 (`examples/dashboards/operator/istio/`). That repository has no release tags; pin a
 commit SHA when you refresh.
@@ -68,7 +68,7 @@ git -C "${TMP}" remote add origin https://github.com/perses/community-mixins.git
 git -C "${TMP}" fetch --depth 1 origin "${REF}"
 git -C "${TMP}" checkout -q FETCH_HEAD
 
-OUT=resources/perses/dashboards
+OUT=pkg/perses/resources/dashboards
 find "${OUT}" -maxdepth 1 -type f -name '*.yaml' -delete
 for f in \
   istio-control-plane-dashboard.yaml \
@@ -83,7 +83,7 @@ done
 rm -rf "${TMP}"
 ----
 
-. Update the `Ref` / `Last updated` fields in `resources/perses/dashboards/README.md` to match `${REF}` and today's date, then commit the refreshed YAML.
+. Update the `Ref` / `Last updated` fields in `pkg/perses/resources/dashboards/README.md` to match `${REF}` and today's date, then commit the refreshed YAML.
 
 [[openshift-validation]]
 === OpenShift validation

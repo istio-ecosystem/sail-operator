@@ -41,7 +41,7 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 
 	namespace := "sail-operator"
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
 	ready := make(chan struct{})
@@ -84,7 +84,7 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 func TestStartIdempotentCreation(t *testing.T) {
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
 	installer := &Installer{

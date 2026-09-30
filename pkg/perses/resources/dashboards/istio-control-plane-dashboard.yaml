@@ -61,40 +61,40 @@ spec:
         items:
         - content:
             $ref: '#/spec/panels/2_0'
-          height: 10
+          height: 12
           width: 8
           x: 0
           "y": 0
         - content:
             $ref: '#/spec/panels/2_1'
-          height: 10
+          height: 12
           width: 8
           x: 8
           "y": 0
         - content:
             $ref: '#/spec/panels/2_2'
-          height: 10
+          height: 12
           width: 8
           x: 16
           "y": 0
         - content:
             $ref: '#/spec/panels/2_3'
-          height: 10
+          height: 12
           width: 8
           x: 0
-          "y": 10
+          "y": 12
         - content:
             $ref: '#/spec/panels/2_4'
-          height: 10
+          height: 12
           width: 8
           x: 8
-          "y": 10
+          "y": 12
         - content:
             $ref: '#/spec/panels/2_5'
-          height: 10
+          height: 12
           width: 8
           x: 16
-          "y": 10
+          "y": 12
     - kind: Grid
       spec:
         display:
@@ -102,13 +102,13 @@ spec:
         items:
         - content:
             $ref: '#/spec/panels/3_0'
-          height: 8
+          height: 10
           width: 12
           x: 0
           "y": 0
         - content:
             $ref: '#/spec/panels/3_1'
-          height: 8
+          height: 10
           width: 12
           x: 12
           "y": 0
@@ -125,6 +125,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -157,6 +158,7 @@ spec:
               legend:
                 mode: table
                 position: bottom
+                size: medium
                 values:
                 - last
                 - max
@@ -220,6 +222,7 @@ spec:
               legend:
                 mode: table
                 position: bottom
+                size: medium
                 values:
                 - last
                 - max
@@ -263,6 +266,7 @@ spec:
               legend:
                 mode: table
                 position: bottom
+                size: medium
                 values:
                 - last
                 - max
@@ -296,6 +300,7 @@ spec:
               legend:
                 mode: table
                 position: bottom
+                size: medium
                 values:
                 - last
                 - max
@@ -326,6 +331,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -345,7 +351,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type) (irate(pilot_xds_pushes[$__rate_interval]))
+                  query: sum by (type) (irate(label_replace(pilot_xds_pushes, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}}'
       "2_1":
         kind: Panel
@@ -359,6 +365,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -378,7 +385,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type, event) (rate(pilot_k8s_reg_events[$__rate_interval]))
+                  query: sum by (type, event) (rate(label_replace(pilot_k8s_reg_events, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}} {{event}}'
           - kind: TimeSeriesQuery
             spec:
@@ -388,7 +395,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type, event) (rate(pilot_k8s_cfg_events[$__rate_interval]))
+                  query: sum by (type, event) (rate(label_replace(pilot_k8s_cfg_events, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}} {{event}}'
           - kind: TimeSeriesQuery
             spec:
@@ -398,7 +405,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type) (rate(pilot_push_triggers[$__rate_interval]))
+                  query: sum by (type) (rate(label_replace(pilot_push_triggers, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}}'
       "2_2":
         kind: Panel
@@ -412,6 +419,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -454,6 +462,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -499,6 +508,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -531,6 +541,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -563,6 +574,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line
@@ -582,7 +594,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum(rate(galley_validation_passed[1m]))
+                  query: sum(rate(label_replace(galley_validation_passed, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: Success
           - kind: TimeSeriesQuery
             spec:
@@ -592,7 +604,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum(rate(galley_validation_failed[1m]))
+                  query: sum(rate(label_replace(galley_validation_failed, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: Failure
       "3_1":
         kind: Panel
@@ -606,6 +618,7 @@ spec:
               legend:
                 mode: list
                 position: bottom
+                size: medium
               visual:
                 areaOpacity: 0.5
                 display: line

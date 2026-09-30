@@ -22,12 +22,12 @@ import (
 	"strings"
 	"testing"
 
+	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
-	persesresources "github.com/istio-ecosystem/sail-operator/resources/perses"
 )
 
 func TestBundledDashboardsHaveSpecConfig(t *testing.T) {
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	err := forEachDashboardYAML(fsys, func(filePath string, data []byte) error {
 		dashboard, err := ParseDashboard(data)
 		if err != nil {
@@ -81,7 +81,7 @@ func TestBundledDashboardsReferenceRequiredDatasource(t *testing.T) {
 }
 
 func TestPrepareDashboardSetsNamespaceAndClearsOwners(t *testing.T) {
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	var data []byte
 	err := forEachDashboardYAML(fsys, func(_ string, d []byte) error {
 		data = d
