@@ -320,10 +320,12 @@ func main() {
 		}
 	}
 
+	// Start the background recorder (non-blocking)
 	recorder.Start(ctx)
-	// Wait for context timeout or operator shutdown
-	<-ctx.Done()
-	recorder.Stop()
+	// Automatically trigger Stop() when ctx is canceled without blocking the main thread
+	context.AfterFunc(ctx, func() {
+		recorder.Stop()
+	})
 
 	setupLog.Info("starting sail-operator manager")
 	if err := mgr.Start(ctx); err != nil {
