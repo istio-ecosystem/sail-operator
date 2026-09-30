@@ -175,9 +175,6 @@ spec:
       - kind: Telemetry
         name: telemetries.telemetry.istio.io
         version: v1alpha1
-      - kind: ServiceMonitor
-        name: servicemonitors.monitoring.coreos.com
-        version: v1
       - description: IstioCNI represents a deployment of the Istio CNI component.
         displayName: Istio CNI
         kind: IstioCNI
