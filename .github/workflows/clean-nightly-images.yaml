@@ -2,7 +2,9 @@ name: Nightly image cleaning build workflow
 
 on:
   schedule:
-    - cron: "0 6 * * *" # run this a few hours after publishing new nightly images to avoid conflicts
+    # Disabled: February 30th never occurs, so this schedule never fires.
+    # Original schedule was "0 6 * * *" - a few hours after publishing new nightly images to avoid conflicts.
+    - cron: "0 6 30 2 *"
 
 run-name: clean-nightly-images
 
