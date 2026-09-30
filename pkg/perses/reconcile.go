@@ -21,18 +21,11 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ReconcileResult captures the outcome of dashboard reconciliation.
-type ReconcileResult struct {
-	CRDsAvailable bool
-	AllCreated    bool
-	CreatedCount  int
-	FailedNames   []string
-}
-
-// ReconcileDashboards creates PersesDashboard resources in the target namespace when they do not exist.
+// reconcileDashboards creates PersesDashboard resources in the target namespace when they do not exist.
 // Existing dashboards are left unchanged. Dashboard YAML is discovered by walking dashboards/ under
 // fsys. The CRD must already be available; callers that need to wait for the CRD should use
 // kube.WaitForCRDs first.
@@ -41,8 +34,9 @@ func reconcileDashboards(
 	cl client.Client,
 	fsys fs.FS,
 	namespace string,
-) (ReconcileResult, error) {
-	result := ReconcileResult{CRDsAvailable: true, AllCreated: true}
+) error {
+	log := ctrl.LoggerFrom(ctx)
+	created := 0
 
 	err := forEachDashboardYAML(fsys, func(path string, data []byte) error {
 		dashboard, err := PrepareDashboard(data, namespace)
@@ -50,21 +44,20 @@ func reconcileDashboards(
 			return fmt.Errorf("prepare dashboard %s: %w", path, err)
 		}
 		if err := createIfNotExists(ctx, cl, dashboard); err != nil {
-			result.AllCreated = false
-			result.FailedNames = append(result.FailedNames, dashboard.GetName())
 			return fmt.Errorf("create dashboard %s: %w", dashboard.GetName(), err)
 		}
-		result.CreatedCount++
+		created++
 		return nil
 	})
 	if err != nil {
-		return result, err
+		return err
 	}
-	if result.CreatedCount == 0 {
-		return result, fmt.Errorf("no Perses dashboard YAML found under %s/", dashboardsDir)
+	if created == 0 {
+		return fmt.Errorf("no Perses dashboard YAML found under %s/", dashboardsDir)
 	}
 
-	return result, nil
+	log.Info("Perses dashboards reconciled", "namespace", namespace, "count", created)
+	return nil
 }
 
 func createIfNotExists(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) error {

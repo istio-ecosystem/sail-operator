@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package perses provides embedded PersesDashboard manifests vendored from community-mixins.
+// Package resources provides embedded PersesDashboard manifests vendored from community-mixins.
 //
 // Paths are relative to this directory, e.g.:
-//   - dashboards/istio-control-plane.yaml
+//   - dashboards/istio-control-plane-dashboard.yaml
 //   - dashboards/README.md
-package perses
+package resources
 
 import "embed"
 

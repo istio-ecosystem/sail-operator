@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
@@ -34,10 +33,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/perses"
+	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
-	persesresources "github.com/istio-ecosystem/sail-operator/resources/perses"
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
@@ -94,7 +93,8 @@ func main() {
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
-		reconcilerCfg.PersesDashboardFS = os.DirFS(path.Join(resourceDirectory, "perses"))
+		// Perses dashboards live with the package, not under the Istio charts tree.
+		reconcilerCfg.PersesDashboardFS = persesresources.FS
 	} else {
 		setupLog.Info("using embedded resources")
 		reconcilerCfg.ResourceFS = resources.FS
