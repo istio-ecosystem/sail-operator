@@ -96,14 +96,19 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 		Expect(cl.Create(ctx, whCfg)).To(Succeed())
 		Success("Created MutatingWebhookConfiguration pointing to non-existent service")
 
-		// Label the namespace to match the webhook's namespaceSelector
-		ns := &corev1.Namespace{}
-		Expect(cl.Get(ctx, client.ObjectKey{Name: testNS}, ns)).To(Succeed())
-		if ns.Labels == nil {
-			ns.Labels = make(map[string]string)
-		}
-		ns.Labels["webhook-event-test"] = "true"
-		Expect(cl.Update(ctx, ns)).To(Succeed())
+		// Label the namespace to match the webhook's namespaceSelector. On OpenShift, cluster
+		// controllers (the SCC allocator and the PSA label syncer) write the namespace repeatedly
+		// during its first seconds, so the read-modify-write is retried until it lands: each
+		// attempt re-reads the namespace to pick up the latest resource version.
+		Eventually(func(g Gomega) {
+			ns := &corev1.Namespace{}
+			g.Expect(cl.Get(ctx, client.ObjectKey{Name: testNS}, ns)).To(Succeed())
+			if ns.Labels == nil {
+				ns.Labels = make(map[string]string)
+			}
+			ns.Labels["webhook-event-test"] = "true"
+			g.Expect(cl.Update(ctx, ns)).To(Succeed())
+		}).Should(Succeed())
 
 		// Create a Deployment to trigger the webhook failure
 		replicas := int32(1)
