@@ -1,4 +1,5 @@
 {{ if .Values.bundleGeneration }}
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor" }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -22,4 +23,5 @@ spec:
       scheme: https
       tlsConfig:
         insecureSkipVerify: true
+{{- end }}
 {{ end }}
