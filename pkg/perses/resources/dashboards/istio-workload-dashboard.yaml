@@ -32,35 +32,40 @@ spec:
         items:
         - content:
             $ref: '#/spec/panels/1_0'
-          height: 4
+          height: 6
           width: 12
           x: 0
           "y": 0
         - content:
             $ref: '#/spec/panels/1_1'
-          height: 4
+          height: 6
           width: 12
           x: 12
           "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: General (II Duration)
+        items:
         - content:
-            $ref: '#/spec/panels/1_2'
+            $ref: '#/spec/panels/2_0'
           height: 8
           width: 24
           x: 0
-          "y": 4
+          "y": 0
     - kind: Grid
       spec:
         display:
           title: General (III)
         items:
         - content:
-            $ref: '#/spec/panels/2_0'
+            $ref: '#/spec/panels/3_0'
           height: 6
           width: 12
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/2_1'
+            $ref: '#/spec/panels/3_1'
           height: 6
           width: 12
           x: 12
@@ -71,7 +76,7 @@ spec:
           title: Inbound Workloads
         items:
         - content:
-            $ref: '#/spec/panels/3_0'
+            $ref: '#/spec/panels/4_0'
           height: 3
           width: 24
           x: 0
@@ -82,13 +87,13 @@ spec:
           title: Inbound Workloads
         items:
         - content:
-            $ref: '#/spec/panels/4_0'
+            $ref: '#/spec/panels/5_0'
           height: 9
           width: 12
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/4_1'
+            $ref: '#/spec/panels/5_1'
           height: 9
           width: 12
           x: 12
@@ -99,19 +104,19 @@ spec:
           title: Inbound Workloads (II)
         items:
         - content:
-            $ref: '#/spec/panels/5_0'
+            $ref: '#/spec/panels/6_0'
           height: 9
           width: 8
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/5_1'
+            $ref: '#/spec/panels/6_1'
           height: 9
           width: 8
           x: 8
           "y": 0
         - content:
-            $ref: '#/spec/panels/5_2'
+            $ref: '#/spec/panels/6_2'
           height: 9
           width: 8
           x: 16
@@ -122,13 +127,13 @@ spec:
           title: Inbound Workloads (III)
         items:
         - content:
-            $ref: '#/spec/panels/6_0'
+            $ref: '#/spec/panels/7_0'
           height: 9
           width: 12
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/6_1'
+            $ref: '#/spec/panels/7_1'
           height: 9
           width: 12
           x: 12
@@ -139,7 +144,7 @@ spec:
           title: Outbound Services
         items:
         - content:
-            $ref: '#/spec/panels/7_0'
+            $ref: '#/spec/panels/8_0'
           height: 3
           width: 24
           x: 0
@@ -150,13 +155,13 @@ spec:
           title: Outbound Services (II)
         items:
         - content:
-            $ref: '#/spec/panels/8_0'
+            $ref: '#/spec/panels/9_0'
           height: 9
           width: 12
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/8_1'
+            $ref: '#/spec/panels/9_1'
           height: 9
           width: 12
           x: 12
@@ -167,19 +172,19 @@ spec:
           title: Outbound Services (III)
         items:
         - content:
-            $ref: '#/spec/panels/9_0'
+            $ref: '#/spec/panels/10_0'
           height: 9
           width: 8
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/9_1'
+            $ref: '#/spec/panels/10_1'
           height: 9
           width: 8
           x: 8
           "y": 0
         - content:
-            $ref: '#/spec/panels/9_2'
+            $ref: '#/spec/panels/10_2'
           height: 9
           width: 8
           x: 16
@@ -190,13 +195,13 @@ spec:
           title: Outbound Services (IV)
         items:
         - content:
-            $ref: '#/spec/panels/10_0'
+            $ref: '#/spec/panels/11_0'
           height: 9
           width: 12
           x: 0
           "y": 0
         - content:
-            $ref: '#/spec/panels/10_1'
+            $ref: '#/spec/panels/11_1'
           height: 9
           width: 12
           x: 12
@@ -267,7 +272,7 @@ spec:
               sparkline:
                 width: 1
               thresholds:
-                defaultColor: green
+                defaultColor: dark-red
                 mode: absolute
                 steps:
                 - color: dark-red
@@ -286,8 +291,6 @@ spec:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
                   query: |2-
-                      (
-                        (
                           sum(
                             rate(
                               istio_requests_total{destination_workload=~"$workload",destination_workload_namespace=~"$namespace",reporter=~"$qrep",response_code!~"5.*"}[5m]
@@ -299,12 +302,11 @@ spec:
                               istio_requests_total{destination_workload=~"$workload",destination_workload_namespace=~"$namespace",reporter=~"$qrep"}[5m]
                             )
                           )
-                        )
-                        >= 0
-                      )
+                      >=
+                        0
                     or on ()
                       vector(1)
-      "1_2":
+      "2_0":
         kind: Panel
         spec:
           display:
@@ -413,7 +415,7 @@ spec:
                         )
                       )
                   seriesNameFormat: P99
-      "2_0":
+      "3_0":
         kind: Panel
         spec:
           display:
@@ -455,7 +457,7 @@ spec:
                           istio_tcp_received_bytes_total{destination_workload=~"$workload",destination_workload_namespace=~"$namespace",reporter=~"$qrep"}[1m]
                         )
                       )
-      "2_1":
+      "3_1":
         kind: Panel
         spec:
           display:
@@ -497,7 +499,7 @@ spec:
                           istio_tcp_received_bytes_total{reporter="source",source_workload=~"$workload",source_workload_namespace=~"$namespace"}[1m]
                         )
                       )
-      "3_0":
+      "4_0":
         kind: Panel
         spec:
           display:
@@ -509,7 +511,7 @@ spec:
                 <div class="dashboard-header text-center">
                 <span>INBOUND WORKLOADS</span>
                 </div>
-      "4_0":
+      "5_0":
         kind: Panel
         spec:
           display:
@@ -570,7 +572,7 @@ spec:
                     )
                   seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace
                     }} : {{ response_code }}'
-      "4_1":
+      "5_1":
         kind: Panel
         spec:
           display:
@@ -638,7 +640,7 @@ spec:
                       )
                   seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace
                     }}'
-      "5_0":
+      "6_0":
         kind: Panel
         spec:
           display:
@@ -901,7 +903,7 @@ spec:
                       )
                   seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
                     P99'
-      "5_1":
+      "6_1":
         kind: Panel
         spec:
           display:
@@ -1094,7 +1096,7 @@ spec:
                     )
                   seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
                     P99'
-      "5_2":
+      "6_2":
         kind: Panel
         spec:
           display:
@@ -1268,7 +1270,7 @@ spec:
                     )
                   seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
                     P99'
-      "6_0":
+      "7_0":
         kind: Panel
         spec:
           display:
@@ -1327,7 +1329,7 @@ spec:
                       0.001
                     )
                   seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace}}'
-      "6_1":
+      "7_1":
         kind: Panel
         spec:
           display:
@@ -1387,7 +1389,7 @@ spec:
                     )
                   seriesNameFormat: '{{ destination_service }} : {{ response_code
                     }}'
-      "7_0":
+      "8_0":
         kind: Panel
         spec:
           display:
@@ -1399,7 +1401,7 @@ spec:
                 <div class="dashboard-header text-center">
                 <span>OUTBOUND SERVICES</span>
                 </div>
-      "8_0":
+      "9_0":
         kind: Panel
         spec:
           display:
@@ -1457,7 +1459,7 @@ spec:
                     )
                   seriesNameFormat: '{{ destination_service }} : {{ response_code
                     }}'
-      "8_1":
+      "9_1":
         kind: Panel
         spec:
           display:
@@ -1522,7 +1524,7 @@ spec:
                         )
                       )
                   seriesNameFormat: '{{ destination_service }}'
-      "9_0":
+      "10_0":
         kind: Panel
         spec:
           display:
@@ -1774,7 +1776,7 @@ spec:
                         )
                       )
                   seriesNameFormat: '{{ destination_service }} P99'
-      "9_1":
+      "10_1":
         kind: Panel
         spec:
           display:
@@ -1938,7 +1940,7 @@ spec:
                       )
                     )
                   seriesNameFormat: '{{ destination_service }} P99'
-      "9_2":
+      "10_2":
         kind: Panel
         spec:
           display:
@@ -2102,7 +2104,7 @@ spec:
                       )
                     )
                   seriesNameFormat: '{{ destination_service }} P99'
-      "10_0":
+      "11_0":
         kind: Panel
         spec:
           display:
@@ -2161,7 +2163,7 @@ spec:
                       0.001
                     )
                   seriesNameFormat: '{{ destination_service }}'
-      "10_1":
+      "11_1":
         kind: Panel
         spec:
           display:
@@ -2236,9 +2238,15 @@ spec:
             datasource:
               kind: PrometheusDatasource
               name: prometheus-datasource
-            expr: sum(istio_requests_total) by (destination_workload_namespace) or
-              sum(istio_tcp_sent_bytes_total) by (destination_workload_namespace)
-            labelName: destination_workload_namespace
+            expr: label_replace(sum by (destination_workload_namespace) (istio_requests_total{destination_workload_namespace!="unknown"}),
+              "namespace", "$1", "destination_workload_namespace", "(.*)") or label_replace(sum
+              by (source_workload_namespace) (istio_requests_total{source_workload_namespace!="unknown"}),
+              "namespace", "$1", "source_workload_namespace", "(.*)") or label_replace(sum
+              by (destination_workload_namespace) (istio_tcp_sent_bytes_total{destination_workload_namespace!="unknown"}),
+              "namespace", "$1", "destination_workload_namespace", "(.*)") or label_replace(sum
+              by (source_workload_namespace) (istio_tcp_sent_bytes_total{source_workload_namespace!="unknown"}),
+              "namespace", "$1", "source_workload_namespace", "(.*)")
+            labelName: namespace
     - kind: ListVariable
       spec:
         allowAllValue: false
@@ -2254,12 +2262,15 @@ spec:
             datasource:
               kind: PrometheusDatasource
               name: prometheus-datasource
-            expr: (sum(istio_requests_total{destination_workload_namespace=~"$namespace"})
-              by (destination_workload) or sum(istio_requests_total{source_workload_namespace=~"$namespace"})
-              by (source_workload)) or (sum(istio_tcp_sent_bytes_total{destination_workload_namespace=~"$namespace"})
-              by (destination_workload) or sum(istio_tcp_sent_bytes_total{source_workload_namespace=~"$namespace"})
-              by (source_workload))
-            labelName: destination_workload
+            expr: label_replace(sum by (destination_workload) (istio_requests_total{destination_workload_namespace=~"$namespace",destination_workload!="unknown"}),
+              "workload", "$1", "destination_workload", "(.*)") or label_replace(sum
+              by (source_workload) (istio_requests_total{source_workload_namespace=~"$namespace",source_workload!="unknown"}),
+              "workload", "$1", "source_workload", "(.*)") or label_replace(sum by
+              (destination_workload) (istio_tcp_sent_bytes_total{destination_workload_namespace=~"$namespace",destination_workload!="unknown"}),
+              "workload", "$1", "destination_workload", "(.*)") or label_replace(sum
+              by (source_workload) (istio_tcp_sent_bytes_total{source_workload_namespace=~"$namespace",source_workload!="unknown"}),
+              "workload", "$1", "source_workload", "(.*)")
+            labelName: workload
     - kind: ListVariable
       spec:
         allowAllValue: false
@@ -2275,20 +2286,20 @@ spec:
             datasource:
               kind: PrometheusDatasource
               name: prometheus-datasource
-            expr: sum(istio_requests_total) by (reporter)
+            expr: group by (reporter) (istio_requests_total) or group by (reporter)
+              (istio_tcp_sent_bytes_total)
             labelName: reporter
     - kind: ListVariable
       spec:
         allowAllValue: true
         allowMultiple: true
-        customAllValue: ".*"
+        customAllValue: .*
         defaultValue:
-        - "$__all"
+        - $__all
         display:
           hidden: false
           name: Inbound Workload Namespace
         name: src_namespace
-        sort: alphabetical-asc
         plugin:
           kind: PrometheusPromQLVariable
           spec:
@@ -2296,22 +2307,22 @@ spec:
               kind: PrometheusDatasource
               name: prometheus-datasource
             expr: sum(istio_requests_total{reporter=~"$qrep", destination_workload=~"$workload",
-              destination_workload_namespace=~"$namespace"}) by (source_workload_namespace) or
-              sum(istio_tcp_sent_bytes_total{reporter=~"$qrep", destination_workload=~"$workload",
+              destination_workload_namespace=~"$namespace"}) by (source_workload_namespace)
+              or sum(istio_tcp_sent_bytes_total{reporter=~"$qrep", destination_workload=~"$workload",
               destination_workload_namespace=~"$namespace"}) by (source_workload_namespace)
             labelName: source_workload_namespace
+        sort: alphabetical-asc
     - kind: ListVariable
       spec:
         allowAllValue: true
         allowMultiple: true
-        customAllValue: ".*"
+        customAllValue: .*
         defaultValue:
-        - "$__all"
+        - $__all
         display:
           hidden: false
           name: Inbound Workload
         name: src_workload
-        sort: alphabetical-asc
         plugin:
           kind: PrometheusPromQLVariable
           spec:
@@ -2324,18 +2335,18 @@ spec:
               destination_workload=~"$workload", destination_workload_namespace=~"$namespace",
               source_workload_namespace=~"$src_namespace"}) by (source_workload)
             labelName: source_workload
+        sort: alphabetical-asc
     - kind: ListVariable
       spec:
         allowAllValue: true
         allowMultiple: true
-        customAllValue: ".*"
+        customAllValue: .*
         defaultValue:
-        - "$__all"
+        - $__all
         display:
           hidden: false
           name: Destination Service
         name: dstsvc
-        sort: alphabetical-asc
         plugin:
           kind: PrometheusPromQLVariable
           spec:
@@ -2347,4 +2358,5 @@ spec:
               sum(istio_tcp_sent_bytes_total{reporter="source", source_workload=~"$workload",
               source_workload_namespace=~"$namespace"}) by (destination_service)
             labelName: destination_service
+        sort: alphabetical-asc
 status: {}
