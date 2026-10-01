@@ -76,6 +76,14 @@ const (
 	OutboundTrafficPolicyConfigModeRegistryOnly OutboundTrafficPolicyConfigMode = "REGISTRY_ONLY"
 )
 
+// +kubebuilder:validation:Enum=namespace;pod
+type SidecarInjectorConfigRevisionLabelPrecedence string
+
+const (
+	SidecarInjectorConfigRevisionLabelPrecedenceNamespace SidecarInjectorConfigRevisionLabelPrecedence = "namespace"
+	SidecarInjectorConfigRevisionLabelPrecedencePod       SidecarInjectorConfigRevisionLabelPrecedence = "pod"
+)
+
 // ArchConfig specifies the pod scheduling target architecture(amd64, ppc64le, s390x, arm64)
 // for all the Istio control plane components.
 type ArchConfig struct {
@@ -916,6 +924,9 @@ type SidecarInjectorConfig struct {
 	EnableNamespacesByDefault *bool `json:"enableNamespacesByDefault,omitempty"`
 	// Setting this to `IfNeeded` will result in the sidecar injector being run again if additional mutations occur. Default: Never
 	ReinvocationPolicy *string `json:"reinvocationPolicy,omitempty"`
+	// Controls whether namespace or pod istio.io/rev labels are preferred for revisioned injection.
+	// Valid values are namespace (default) and pod.
+	RevisionLabelPrecedence SidecarInjectorConfigRevisionLabelPrecedence `json:"revisionLabelPrecedence,omitempty"`
 	// Instructs Istio to not inject the sidecar on those pods, based on labels that are present in those pods.
 	//
 	// Annotations in the pods have higher precedence than the label selectors.
@@ -1503,17 +1514,21 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"secretName\x18\x03 \x01(\tR\n" +
-	"secretName\"\xd9\x04\n" +
+	"secretName\"\x8f\x06\n" +
 	"\x15SidecarInjectorConfig\x12X\n" +
 	"\x19enableNamespacesByDefault\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x19enableNamespacesByDefault\x12.\n" +
-	"\x12reinvocationPolicy\x18\x03 \x01(\tR\x12reinvocationPolicy\x12I\n" +
+	"\x12reinvocationPolicy\x18\x03 \x01(\tR\x12reinvocationPolicy\x12\x80\x01\n" +
+	"\x17revisionLabelPrecedence\x18\x19 \x01(\x0e2F.istio.operator.v1alpha1.SidecarInjectorConfig.RevisionLabelPrecedenceR\x17revisionLabelPrecedence\x12I\n" +
 	"\x13neverInjectSelector\x18\v \x03(\v2\x17.google.protobuf.StructR\x13neverInjectSelector\x12K\n" +
 	"\x14alwaysInjectSelector\x18\f \x03(\v2\x17.google.protobuf.StructR\x14alwaysInjectSelector\x12L\n" +
 	"\x13rewriteAppHTTPProbe\x18\x10 \x01(\v2\x1a.google.protobuf.BoolValueR\x13rewriteAppHTTPProbe\x12I\n" +
 	"\x13injectedAnnotations\x18\x13 \x01(\v2\x17.google.protobuf.StructR\x13injectedAnnotations\x12\"\n" +
 	"\finjectionURL\x18\x16 \x01(\tR\finjectionURL\x125\n" +
 	"\ttemplates\x18\x17 \x01(\v2\x17.google.protobuf.StructR\ttemplates\x12*\n" +
-	"\x10defaultTemplates\x18\x18 \x03(\tR\x10defaultTemplates\"\xbd\x02\n" +
+	"\x10defaultTemplates\x18\x18 \x03(\tR\x10defaultTemplates\"1\n" +
+	"\x17RevisionLabelPrecedence\x12\r\n" +
+	"\tnamespace\x10\x00\x12\a\n" +
+	"\x03pod\x10\x01\"\xbd\x02\n" +
 	"\fTracerConfig\x12F\n" +
 	"\adatadog\x18\x01 \x01(\v2,.istio.operator.v1alpha1.TracerDatadogConfigR\adatadog\x12L\n" +
 	"\tlightstep\x18\x02 \x01(\v2..istio.operator.v1alpha1.TracerLightStepConfigR\tlightstep\x12C\n" +
