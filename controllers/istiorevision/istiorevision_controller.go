@@ -76,18 +76,8 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
-// +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
