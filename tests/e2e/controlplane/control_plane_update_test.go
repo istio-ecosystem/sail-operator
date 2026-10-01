@@ -578,14 +578,10 @@ spec:
 				})
 			})
 
-			When("the IstioCNI is updated and the sample pods are restarted", func() {
+			When("the sample pods are restarted", func() {
 				BeforeAll(func(ctx SpecContext) {
-					// The CNI is updated after the control plane, this is the order we support
-					Expect(k.Patch("istiocni", istioCniName, "merge", `{"spec":{"version":"`+newestVersion.Name+`"}}`)).
-						To(Succeed(), "Error updating IstioCNI CR to the newest Istio version")
-					common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
-					Success("IstioCNI updated to the newest Istio version")
-
+					// The IstioCNI is deliberately still at the oldest version here: the workloads
+					// are migrated to the new revision first and the CNI is updated afterwards.
 					samplePods := &corev1.PodList{}
 					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
 					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
@@ -633,6 +629,81 @@ spec:
 						Should(HaveField("Status.IstioRevision", ContainSubstring(revisionName)),
 							"IstioRevisionTag does not point to the IstioRevision of the newest version")
 					Success("IstioRevisionTag points to the new IstioRevision")
+				})
+			})
+
+			When("the IstioCNI is updated to the newest version", func() {
+				var traffic *trafficMonitor
+
+				BeforeAll(func(ctx SpecContext) {
+					// Traffic runs from the restarted sleep pod, so it exercises the workloads that are
+					// already on the new revision while the CNI DaemonSet is replaced underneath them.
+					traffic = startTrafficMonitor(ctx, sampleNamespace,
+						fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", sampleNamespace))
+					Success("Continuous traffic established before the IstioCNI update")
+
+					// The CNI is updated last, after the control plane and after the workloads have
+					// been moved to the new revision. A CNI at version 1.x supports a control plane
+					// at 1.x and 1.x+1, so it keeps setting up the traffic redirection for the
+					// newly injected proxies while it still runs the old version.
+					Expect(k.Patch("istiocni", istioCniName, "merge", `{"spec":{"version":"`+newestVersion.Name+`"}}`)).
+						To(Succeed(), "Error updating IstioCNI CR to the newest Istio version")
+				})
+
+				AfterAll(func() {
+					traffic.stop()
+				})
+
+				It("becomes Ready at the newest version", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						cni := &v1.IstioCNI{}
+						g.Expect(cl.Get(ctx, kube.Key(istioCniName), cni)).To(Succeed())
+						g.Expect(cni.Spec.Version).To(Equal(newestVersion.Name))
+						g.Expect(cni).To(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue))
+					}).Should(Succeed(), "IstioCNI did not become Ready at the newest version")
+					Success("IstioCNI updated to the newest Istio version")
+				})
+
+				It("rolls out the istio-cni-node DaemonSet", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						ds := &appsv1.DaemonSet{}
+						g.Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), ds)).To(Succeed())
+						g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
+						g.Expect(ds.Status.UpdatedNumberScheduled).To(Equal(ds.Status.DesiredNumberScheduled))
+						g.Expect(ds.Status.NumberAvailable).To(Equal(ds.Status.DesiredNumberScheduled))
+					}).Should(Succeed(), "istio-cni-node DaemonSet was not fully rolled out")
+					Success("istio-cni-node DaemonSet rolled out")
+				})
+
+				It("keeps the sample pods running", func(ctx SpecContext) {
+					// The CNI only programs redirection for pods as they start, so an update of the
+					// DaemonSet must leave the already-running workloads untouched.
+					Expect(common.CheckSamplePodsReady(ctx, cl)).To(Succeed(), "Sample pods are not ready after the IstioCNI update")
+					Success("Sample pods stayed ready across the IstioCNI update")
+				})
+
+				It("should not disrupt traffic between running workloads", func() {
+					// The measured window starts before the IstioCNI patch and ends once the DaemonSet
+					// is fully rolled out, so it covers the whole CNI update.
+					failures := traffic.stopAndGetFailures()
+
+					Expect(failures).To(BeEmpty(),
+						"IstioCNI update disrupted traffic between already-running workloads")
+					Success("Traffic was uninterrupted throughout the IstioCNI update")
+				})
+
+				It("still serves traffic once the whole update is complete", func(ctx SpecContext) {
+					// A final request after everything has settled: the control plane, the proxies and
+					// the CNI are all on the newest version at this point.
+					pods := &corev1.PodList{}
+					Expect(cl.List(ctx, pods, client.InNamespace(sampleNamespace), client.MatchingLabels{"app": common.SleepContainerName})).To(Succeed())
+					Expect(pods.Items).ToNot(BeEmpty(), "No sleep pod available to send traffic from")
+
+					Eventually(func() error {
+						return common.CheckHTTPConnectivity(k, sampleNamespace, pods.Items[0].Name, common.SleepContainerName,
+							fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", sampleNamespace), "200", 10)
+					}).Should(Succeed(), "Traffic does not work after the update completed")
+					Success("Traffic works after the skip-version update of all components")
 				})
 			})
 
