@@ -97,7 +97,7 @@ Note: `IN USE` field shows as 0, as `Istio` has just been installed and there ar
 ----
 kubectl create namespace bookinfo
 kubectl label namespace bookinfo istio-injection=enabled
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 ----
 Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resourceinstead of adding the `istio-injection=enabled` label.
 
@@ -268,7 +268,7 @@ kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_minus_one_v
 +
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 ----
 
 ifdef::revision-based-strategy[]
@@ -507,7 +507,7 @@ kubectl label namespace bookinfo istio-injection=enabled
 +
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 ----
 
 ifdef::revision-istiorevisiontag-strategy[]

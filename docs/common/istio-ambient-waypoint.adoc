@@ -359,7 +359,7 @@ kubectl label namespace bookinfo istio.io/dataplane-mode-
 
 [source,bash,subs="attributes+"]
 ----
-kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl delete -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ----
