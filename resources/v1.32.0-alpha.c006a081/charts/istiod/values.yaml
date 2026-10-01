@@ -126,6 +126,11 @@ _internal_defaults_do_not_set:
     neverInjectSelector: []
     alwaysInjectSelector: []
 
+    # Controls revision label precedence for sidecar injection when both namespace and pod labels exist.
+    # - "namespace" (default): preserve existing behavior (namespace revision takes precedence)
+    # - "pod": allow pod istio.io/rev to take precedence over namespace istio.io/rev
+    revisionLabelPrecedence: "namespace"
+
     # injectedAnnotations are additional annotations that will be added to the pod spec after injection
     # This is primarily to support PSP annotations. For example, if you defined a PSP with the annotations:
     #
@@ -261,7 +266,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on registry.istio.io/testing.
     hub: registry.istio.io/testing
     # Default tag for Istio images.
-    tag: 1.32.0-alpha.e17de9b1baae628416c07f922c7125f9fdb0fcc4
+    tag: 1.32.0-alpha.c006a081a582c4812421ee6bcd77097c6b909d4b
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
