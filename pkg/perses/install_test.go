@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -106,7 +105,7 @@ func TestStartIdempotentCreation(t *testing.T) {
 }
 
 func TestNewInstallerUsesOperatorNamespace(t *testing.T) {
-	i := NewInstaller(config.ReconcilerConfig{OperatorNamespace: "my-operator"}, nil, nil, nil)
+	i := NewInstaller("my-operator", nil, nil, nil)
 	if i.Namespace != "my-operator" {
 		t.Fatalf("Namespace = %q, want my-operator", i.Namespace)
 	}
