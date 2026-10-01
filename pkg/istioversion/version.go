@@ -262,7 +262,7 @@ func GetTwoConsecutiveMinorVersions(mode DataPlaneMode) (baseVer, newVer Version
 
 // GetOldestAndNewestMinorVersions returns the oldest and the newest minor versions (with their
 // latest patches) that are supported by the given data plane mode.
-// Unless only two minors qualify, the two are not consecutive, which makes them suitable for
+// Unless only two minor versions qualify, the two are not consecutive, which makes them suitable for
 // testing an update that skips over every minor in between.
 func GetOldestAndNewestMinorVersions(mode DataPlaneMode) (oldestVer, newestVer VersionInfo, err error) {
 	filtered := latestPatchVersionsFrom(mode.minVersion())
