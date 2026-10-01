@@ -19,7 +19,6 @@ import (
 	"io/fs"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -44,12 +43,12 @@ type Installer struct {
 }
 
 // NewInstaller builds an Installer that provisions dashboards in the operator namespace.
-func NewInstaller(cfg config.ReconcilerConfig, cl client.Client, crdCache cache.Cache, dashboardFS fs.FS) *Installer {
+func NewInstaller(namespace string, cl client.Client, crdCache cache.Cache, dashboardFS fs.FS) *Installer {
 	return &Installer{
 		Client:      cl,
 		Cache:       crdCache,
 		DashboardFS: dashboardFS,
-		Namespace:   cfg.OperatorNamespace,
+		Namespace:   namespace,
 		waitForCRDs: kube.WaitForCRDs,
 	}
 }

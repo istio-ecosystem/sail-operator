@@ -72,7 +72,7 @@ func main() {
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
-	flag.BoolVar(&reconcilerCfg.EnablePersesDashboards, "enable-perses-dashboards", false,
+	flag.BoolVar(&config.Config.EnablePersesDashboards, "enable-perses-dashboards", false,
 		"Wait for PersesDashboard CRD and create bundled Istio dashboards in the operator namespace. Disabled by default.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
@@ -90,15 +90,14 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Perses dashboards live with the package, not under the Istio charts tree.
+	config.Config.PersesDashboardFS = persesresources.FS
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
-		// Perses dashboards live with the package, not under the Istio charts tree.
-		reconcilerCfg.PersesDashboardFS = persesresources.FS
 	} else {
 		setupLog.Info("using embedded resources")
 		reconcilerCfg.ResourceFS = resources.FS
-		reconcilerCfg.PersesDashboardFS = persesresources.FS
 	}
 	reconcilerCfg.OperatorNamespace = os.Getenv("POD_NAMESPACE")
 	if reconcilerCfg.OperatorNamespace == "" {
@@ -267,8 +266,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if reconcilerCfg.EnablePersesDashboards {
-		err = perses.NewInstaller(reconcilerCfg, mgr.GetClient(), mgr.GetCache(), reconcilerCfg.PersesDashboardFS).
+	if config.Config.EnablePersesDashboards {
+		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, mgr.GetClient(), mgr.GetCache(), config.Config.PersesDashboardFS).
 			SetupWithManager(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")

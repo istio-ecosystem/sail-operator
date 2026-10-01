@@ -25,6 +25,9 @@ var Config = OperatorConfig{}
 
 type OperatorConfig struct {
 	ImageDigests map[string]IstioImageConfig `properties:"images"`
+	// Runtime operator settings (not loaded from the properties file).
+	PersesDashboardFS      fs.FS `properties:"-"`
+	EnablePersesDashboards bool  `properties:"-"`
 }
 
 type IstioImageConfig struct {
@@ -40,15 +43,13 @@ type OCPVersion struct {
 }
 
 type ReconcilerConfig struct {
-	ResourceFS        fs.FS
-	PersesDashboardFS fs.FS
-	Platform          Platform
+	ResourceFS fs.FS
+	Platform   Platform
 	// TODO: Remove OCPVersion once support for OpenShift 4 is dropped.
 	OCPVersion              *OCPVersion
 	DefaultProfile          string
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
-	EnablePersesDashboards  bool
 	TLSConfig               *TLSConfig
 }
 

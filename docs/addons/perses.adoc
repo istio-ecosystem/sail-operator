@@ -47,8 +47,22 @@ When enabled, the operator waits for the `persesdashboards.perses.dev` CRD and c
 
 The manifests under `pkg/perses/resources/dashboards/` are copied from
 link:https://github.com/perses/community-mixins[perses/community-mixins]
-(`examples/dashboards/operator/istio/`). That repository has no release tags; pin a
-commit SHA when you refresh.
+(`examples/dashboards/operator/istio/`). That repository has no release tags, so Sail
+pins a commit SHA in `pkg/perses/resources/dashboards/README.md`.
+
+==== Pinning and refresh cadence
+
+There is no automated update check and no required bump on every Sail release.
+Maintainers refresh the pin only when upstream dashboards change:
+
+* Bump the pin when link:https://github.com/perses/community-mixins[perses/community-mixins]
+  has Istio dashboard updates worth shipping (typically after Istio or Grafana mixin
+  changes are published there). Copy the new manifests and record the commit SHA in
+  `pkg/perses/resources/dashboards/README.md`.
+* Do *not* bump the pin on a Sail patch release unless a dashboard fix is required
+  for that release.
+* If community-mixins has no relevant changes, leave the existing pin as-is across
+  Sail minors and patches.
 
 . Choose a commit from community-mixins (for example the tip of `main`):
 +

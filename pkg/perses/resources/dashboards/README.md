@@ -8,6 +8,12 @@ Vendored `PersesDashboard` manifests from [perses/community-mixins](https://gith
 | Ref | `d4e23ad64ea8087c74b94ffc4bd2aae1122f2386` |
 | Last updated | `2026-09-28` |
 
+Pin cadence: bump the Ref only when community-mixins has dashboard changes worth
+shipping (typically after Istio or Grafana mixin updates land there). There is no
+required bump per Sail release. Prefer not to change the pin on patch releases
+unless a dashboard fix is needed. See `docs/addons/perses.adoc` for the refresh
+procedure.
+
 ## Bundled dashboards
 
 | Dashboard ID | Display name |
