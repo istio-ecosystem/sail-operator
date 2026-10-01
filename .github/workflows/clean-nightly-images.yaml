@@ -1,10 +1,12 @@
 name: Nightly image cleaning build workflow
 
 on:
-  schedule:
-    # Disabled: February 30th never occurs, so this schedule never fires.
-    # Original schedule was "0 6 * * *" - a few hours after publishing new nightly images to avoid conflicts.
-    - cron: "0 6 30 2 *"
+  # Scheduled runs are disabled; the workflow can only be triggered manually.
+  # The previous attempt to disable it with an impossible date (cron "0 6 30 2 *",
+  # i.e. February 30th) did not work - GitHub's scheduler kept firing it every
+  # few minutes instead of never.
+  # Original schedule was "0 6 * * *" - a few hours after publishing new nightly images to avoid conflicts.
+  workflow_dispatch: {}
 
 run-name: clean-nightly-images
 
