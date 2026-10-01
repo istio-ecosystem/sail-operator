@@ -390,10 +390,17 @@ spec:
 	// leaving out every minor in between.
 	Describe("skipping intermediate versions", func() {
 		oldestVersion, newestVersion, versionErr := istioversion.GetOldestAndNewestMinorVersions(istioversion.Sidecar)
+		// The minor right below the newest one. If it is also the oldest supported minor, only two
+		// minors qualify, so there is no intermediate version to skip over.
+		previousVersion, _, previousVersionErr := istioversion.GetTwoConsecutiveMinorVersions(istioversion.Sidecar)
 
 		BeforeAll(func() {
 			if versionErr != nil {
 				Skip(fmt.Sprintf("Skipping skip-version update tests: %v", versionErr))
+			}
+			if previousVersionErr == nil && previousVersion.Name == oldestVersion.Name {
+				Skip(fmt.Sprintf("Skipping skip-version update tests: %s and %s are consecutive minors, nothing to skip over",
+					oldestVersion.Name, newestVersion.Name))
 			}
 		})
 
