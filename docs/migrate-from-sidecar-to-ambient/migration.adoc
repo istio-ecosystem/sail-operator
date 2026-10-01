@@ -585,7 +585,7 @@ kubectl get pods -n bookinfo
 Note: during the restart, sidecars will be updated to support HBONE while still functioning as traditional sidecars. Having HBONE support enabled is a prerequisite for ambient mode.
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
-with_retries wait_pods_ready_by_ns "bookinfo"
+with_retries wait_for_rollout_success "bookinfo"
 kubectl get pods -n bookinfo
 endif::[]
 
