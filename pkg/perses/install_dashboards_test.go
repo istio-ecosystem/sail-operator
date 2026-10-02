@@ -36,15 +36,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
-func TestReconcileDashboardsCreatesAll(t *testing.T) {
+func TestInstallDashboardsCreatesAll(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
-	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
-		t.Fatalf("reconcileDashboards() error = %v", err)
+	if err := installDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("installDashboards() error = %v", err)
 	}
 
 	list := &unstructured.UnstructuredList{}
@@ -62,7 +62,7 @@ func TestReconcileDashboardsCreatesAll(t *testing.T) {
 	}
 }
 
-func TestReconcileDashboardsSkipsExisting(t *testing.T) {
+func TestInstallDashboardsSkipsExisting(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	existing := &unstructured.Unstructured{}
@@ -79,8 +79,8 @@ func TestReconcileDashboardsSkipsExisting(t *testing.T) {
 	cl := newPersesTestClient(t, testPersesDashboardCRD(), existing)
 	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 
-	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
-		t.Fatalf("reconcileDashboards() error = %v", err)
+	if err := installDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("installDashboards() error = %v", err)
 	}
 
 	got := &unstructured.Unstructured{}
@@ -93,18 +93,18 @@ func TestReconcileDashboardsSkipsExisting(t *testing.T) {
 	}
 }
 
-func TestReconcileDashboardsIdempotent(t *testing.T) {
+func TestInstallDashboardsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
 	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	want := countDashboardYAMLs(t, fsys)
 
-	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
-		t.Fatalf("first reconcile: %v", err)
+	if err := installDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("first install: %v", err)
 	}
-	if err := reconcileDashboards(ctx, cl, fsys, namespace); err != nil {
-		t.Fatalf("second reconcile: %v", err)
+	if err := installDashboards(ctx, cl, fsys, namespace); err != nil {
+		t.Fatalf("second install: %v", err)
 	}
 
 	list := &unstructured.UnstructuredList{}
@@ -113,42 +113,42 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 		t.Fatalf("list dashboards: %v", err)
 	}
 	if len(list.Items) != want {
-		t.Fatalf("expected %d dashboards after idempotent reconcile, got %d", want, len(list.Items))
+		t.Fatalf("expected %d dashboards after idempotent install, got %d", want, len(list.Items))
 	}
 }
 
-func TestReconcileDashboardsLoadError(t *testing.T) {
+func TestInstallDashboardsLoadError(t *testing.T) {
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	err := reconcileDashboards(context.Background(), cl, os.DirFS(t.TempDir()), "sail-operator")
+	err := installDashboards(context.Background(), cl, os.DirFS(t.TempDir()), "sail-operator")
 	if err == nil {
 		t.Fatal("expected load error")
 	}
 }
 
-func TestReconcileDashboardsEmptyDir(t *testing.T) {
+func TestInstallDashboardsEmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(path.Join(dir, "dashboards"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	err := reconcileDashboards(context.Background(), cl, os.DirFS(dir), "sail-operator")
+	err := installDashboards(context.Background(), cl, os.DirFS(dir), "sail-operator")
 	if err == nil {
 		t.Fatal("expected error when no YAML found")
 	}
 }
 
-func TestReconcileDashboardsPrepareError(t *testing.T) {
+func TestInstallDashboardsPrepareError(t *testing.T) {
 	fsys := fstest.MapFS{
 		"dashboards/broken.yaml": &fstest.MapFile{Data: []byte(":::")},
 	}
 	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	err := reconcileDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")
+	err := installDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")
 	if err == nil {
 		t.Fatal("expected prepare error")
 	}
 }
 
-func TestReconcileDashboardsCreateError(t *testing.T) {
+func TestInstallDashboardsCreateError(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testPersesDashboardCRD()).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
@@ -156,7 +156,7 @@ func TestReconcileDashboardsCreateError(t *testing.T) {
 			},
 		}).Build()
 	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
-	err := reconcileDashboards(context.Background(), cl, fsys, "sail-operator")
+	err := installDashboards(context.Background(), cl, fsys, "sail-operator")
 	if err == nil {
 		t.Fatal("expected create error")
 	}
@@ -172,7 +172,7 @@ func TestCreateIfNotExistsGetError(t *testing.T) {
 	obj.SetGroupVersionKind(DashboardGVK)
 	obj.SetName("istio-control-plane")
 	obj.SetNamespace("sail-operator")
-	if err := createIfNotExists(context.Background(), cl, obj); err == nil {
+	if _, err := createIfNotExists(context.Background(), cl, obj); err == nil {
 		t.Fatal("expected get error")
 	}
 }

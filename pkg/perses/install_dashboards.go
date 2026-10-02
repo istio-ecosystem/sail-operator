@@ -25,50 +25,58 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// reconcileDashboards creates PersesDashboard resources in the target namespace when they do not exist.
+// installDashboards creates PersesDashboard resources in the target namespace when they do not exist.
 // Existing dashboards are left unchanged. Dashboard YAML is discovered by walking dashboards/ under
 // fsys. The CRD must already be available; callers that need to wait for the CRD should use
 // kube.WaitForCRDs first.
-func reconcileDashboards(
+func installDashboards(
 	ctx context.Context,
 	cl client.Client,
 	fsys fs.FS,
 	namespace string,
 ) error {
 	log := ctrl.LoggerFrom(ctx)
-	created := 0
+	created, existing := 0, 0
 
 	err := forEachDashboardYAML(fsys, func(path string, data []byte) error {
 		dashboard, err := PrepareDashboard(data, namespace)
 		if err != nil {
 			return fmt.Errorf("prepare dashboard %s: %w", path, err)
 		}
-		if err := createIfNotExists(ctx, cl, dashboard); err != nil {
+		wasCreated, err := createIfNotExists(ctx, cl, dashboard)
+		if err != nil {
 			return fmt.Errorf("create dashboard %s: %w", dashboard.GetName(), err)
 		}
-		created++
+		if wasCreated {
+			created++
+		} else {
+			existing++
+		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	if created == 0 {
+	if created == 0 && existing == 0 {
 		return fmt.Errorf("no Perses dashboard YAML found under %s/", dashboardsDir)
 	}
 
-	log.Info("Perses dashboards reconciled", "namespace", namespace, "count", created)
+	log.Info("Perses dashboards installed", "namespace", namespace, "created", created, "existing", existing)
 	return nil
 }
 
-func createIfNotExists(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) error {
+func createIfNotExists(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) (bool, error) {
 	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(desired.GroupVersionKind())
 	err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: desired.GetName()}, existing)
 	if err == nil {
-		return nil
+		return false, nil
 	}
 	if !apierrors.IsNotFound(err) {
-		return err
+		return false, err
 	}
-	return cl.Create(ctx, desired)
+	if err := cl.Create(ctx, desired); err != nil {
+		return false, err
+	}
+	return true, nil
 }

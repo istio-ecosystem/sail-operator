@@ -91,7 +91,6 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	// Perses dashboards live with the package, not under the Istio charts tree.
-	config.Config.PersesDashboardFS = persesresources.FS
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
@@ -267,7 +266,7 @@ func main() {
 	}
 
 	if config.Config.EnablePersesDashboards {
-		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, mgr.GetClient(), mgr.GetCache(), config.Config.PersesDashboardFS).
+		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, mgr.GetClient(), mgr.GetCache(), persesresources.FS).
 			SetupWithManager(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")

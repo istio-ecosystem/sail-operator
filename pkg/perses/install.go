@@ -74,7 +74,7 @@ func (i *Installer) Start(ctx context.Context) error {
 	}
 	log.Info("PersesDashboard CRD is ready; installing dashboards", "namespace", i.Namespace)
 
-	if err := reconcileDashboards(ctrl.LoggerInto(ctx, log), i.Client, i.DashboardFS, i.Namespace); err != nil {
+	if err := installDashboards(ctrl.LoggerInto(ctx, log), i.Client, i.DashboardFS, i.Namespace); err != nil {
 		// Do not take down the operator for optional dashboard provisioning failures.
 		log.Error(err, "Failed to install Perses dashboards")
 		return nil

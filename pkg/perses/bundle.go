@@ -65,14 +65,23 @@ func PrepareDashboard(data []byte, namespace string) (*unstructured.Unstructured
 	if err != nil {
 		return nil, err
 	}
+	if dashboard.GroupVersionKind().Group != persesGroup ||
+		dashboard.GroupVersionKind().Version != persesVersion ||
+		dashboard.GetKind() != "PersesDashboard" {
+		return nil, fmt.Errorf("unexpected object kind %q apiVersion %q; want PersesDashboard %s/%s",
+			dashboard.GetKind(), dashboard.GetAPIVersion(), persesGroup, persesVersion)
+	}
 	if dashboard.GetName() == "" {
 		return nil, fmt.Errorf("dashboard missing metadata.name")
 	}
 	dashboard.SetGroupVersionKind(DashboardGVK)
 	dashboard.SetNamespace(namespace)
 	dashboard.SetOwnerReferences(nil)
-	dashboard.SetLabels(map[string]string{
-		constants.KubernetesAppManagedByKey: constants.ManagedByLabelValue,
-	})
+	labels := dashboard.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.KubernetesAppManagedByKey] = constants.ManagedByLabelValue
+	dashboard.SetLabels(labels)
 	return dashboard, nil
 }

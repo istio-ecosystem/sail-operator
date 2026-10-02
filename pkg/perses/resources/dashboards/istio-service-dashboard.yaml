@@ -1405,7 +1405,7 @@ spec:
                     round(
                       sum by (source_workload, source_workload_namespace) (
                         irate(
-                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[1m]
+                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[5m]
                         )
                       ),
                       0.001
@@ -1424,7 +1424,7 @@ spec:
                     round(
                       sum by (source_workload, source_workload_namespace) (
                         irate(
-                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[1m]
+                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[5m]
                         )
                       ),
                       0.001
@@ -1461,7 +1461,7 @@ spec:
                     round(
                       sum by (source_workload, source_workload_namespace) (
                         irate(
-                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[1m]
+                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[5m]
                         )
                       ),
                       0.001
@@ -1480,7 +1480,7 @@ spec:
                     round(
                       sum by (source_workload, source_workload_namespace) (
                         irate(
-                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[1m]
+                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[5m]
                         )
                       ),
                       0.001
@@ -2245,7 +2245,7 @@ spec:
                     round(
                       sum by (destination_workload, destination_workload_namespace) (
                         irate(
-                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter="destination"}[1m]
+                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter="destination"}[5m]
                         )
                       ),
                       0.001
@@ -2264,7 +2264,7 @@ spec:
                     round(
                       sum by (destination_workload, destination_workload_namespace) (
                         irate(
-                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination"}[1m]
+                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination"}[5m]
                         )
                       ),
                       0.001
@@ -2301,7 +2301,7 @@ spec:
                     round(
                       sum by (destination_workload, destination_workload_namespace) (
                         irate(
-                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter="destination"}[1m]
+                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter="destination"}[5m]
                         )
                       ),
                       0.001
@@ -2320,7 +2320,7 @@ spec:
                     round(
                       sum by (destination_workload, destination_workload_namespace) (
                         irate(
-                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination"}[1m]
+                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination"}[5m]
                         )
                       ),
                       0.001
@@ -2364,5 +2364,4 @@ spec:
             expr: group by (reporter) (istio_requests_total) or group by (reporter)
               (istio_tcp_sent_bytes_total)
             labelName: reporter
-    
 status: {}

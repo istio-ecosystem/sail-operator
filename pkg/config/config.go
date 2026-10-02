@@ -26,8 +26,7 @@ var Config = OperatorConfig{}
 type OperatorConfig struct {
 	ImageDigests map[string]IstioImageConfig `properties:"images"`
 	// Runtime operator settings (not loaded from the properties file).
-	PersesDashboardFS      fs.FS `properties:"-"`
-	EnablePersesDashboards bool  `properties:"-"`
+	EnablePersesDashboards bool `properties:"-"`
 }
 
 type IstioImageConfig struct {
