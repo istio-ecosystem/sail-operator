@@ -2,15 +2,15 @@
   "capturedAt": "2026-10-02",
   "environment": "kind",
   "suites": {
-    "ambient":           { "allocBytes": 19825617758, "allocObjects": 69211820, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 80.65,  "apiCallsPatch": 0 },
+    "ambient":           { "allocBytes": 23082619166, "allocObjects": 78022703, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 80.65,  "apiCallsPatch": 0 },
     "controlplane":      { "allocBytes": 8409988163,  "allocObjects": 29663768, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 34.22,  "apiCallsPatch": 0 },
     "dualstack":         { "allocBytes": 3602328849,  "allocObjects": 12984139, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 14.46,  "apiCallsPatch": 0 },
-    "gatewaycontroller": { "allocBytes": 725365133,   "allocObjects": 2437973,  "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 3.32,   "apiCallsPatch": 0 },
-    "library":           { "allocBytes": 29262459,    "allocObjects": 110673,   "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 0.43,   "apiCallsPatch": 0 },
-    "migration":         { "allocBytes": 4945494368,  "allocObjects": 17617734, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 19.55,  "apiCallsPatch": 0 },
-    "monitoring":        { "allocBytes": 1069039542,  "allocObjects": 3906152,  "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 4.34,   "apiCallsPatch": 0 },
+    "gatewaycontroller": { "allocBytes": 916604886,   "allocObjects": 2688103,  "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 3.32,   "apiCallsPatch": 0 },
+    "library":           { "allocBytes": 29262459,    "allocObjects": 111131,   "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 0.43,   "apiCallsPatch": 0 },
+    "migration":         { "allocBytes": 5041539897,  "allocObjects": 17617734, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 19.55,  "apiCallsPatch": 0 },
+    "monitoring":        { "allocBytes": 1074489400,  "allocObjects": 3906152,  "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 4.34,   "apiCallsPatch": 0 },
     "multicluster":      { "allocBytes": 19957418761, "allocObjects": 67638112, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 187.70, "apiCallsPatch": 0 },
-    "multicontrolplane": { "allocBytes": 4323257751,  "allocObjects": 14523413, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 18.47,  "apiCallsPatch": 0 },
+    "multicontrolplane": { "allocBytes": 4833066954,  "allocObjects": 16213305, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 18.47,  "apiCallsPatch": 0 },
     "operator":          { "allocBytes": 277273950,   "allocObjects": 643127,   "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 1.32,   "apiCallsPatch": 0 }
   }
 }
