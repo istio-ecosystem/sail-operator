@@ -251,6 +251,9 @@ install_operator() {
   if [ -n "${OPERATOR_CPU_LIMIT:-}" ]; then
     helm_sets+=(--set "operator.resources.limits.cpu=${OPERATOR_CPU_LIMIT}")
   fi
+  if [ "${PPROF_ENABLED:-false}" == "true" ]; then
+    helm_sets+=(--set "pprofBindAddress=:6060")
+  fi
 
   echo "Helm install overrides: ${helm_sets[*]}"
   helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" "${helm_sets[@]}"
@@ -395,7 +398,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER PPROF_ENABLED
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153

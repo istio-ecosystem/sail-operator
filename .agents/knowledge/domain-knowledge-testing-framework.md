@@ -515,3 +515,55 @@ When testing on different architectures:
 - **AMD64**: Default for most CI environments
 - **ARM64**: Common for Apple Silicon Macs
 - **Mixed environments**: Use `TARGET_ARCH` to specify target architecture
+
+---
+
+## Performance Tests
+
+Located in `tests/e2e/performance/`. Run with `make test.e2e.performance` (dedicated CI job; excluded from regular `test.e2e.kind` via `!performance` label filter).
+
+### Design principles
+
+* **Operator-only scope**: wait for `IstioRevision` `Reconciled=True`, not for istiod to start. This isolates operator overhead from control-plane startup variability.
+* **`profile: empty`** for latency scenarios (churn) — minimal Helm work, measures pure reconcile cost.
+* **`profile: default`** for API-call scenarios (lifecycle, stress) — real SSA applies generate measurable PATCH calls.
+* **Settle wait**: before each measurement, the operator's PATCH counter is polled in 2-second windows until the rate drops to zero (deadline 30s). This prevents background requeues from a previous test's cleanup from contaminating the baseline snapshot.
+* **Median of N runs** (`PERF_NUM_MEASUREMENTS=3` by default): each scenario repeats N times and asserts on the **median**, making a single noisy CI run insufficient to trip the threshold.
+* **Degradation factor 1.2×** (default): tighter than the old 1.5× — catches a 20% regression rather than 50%.
+
+### Scenarios
+
+| Scenario | Ginkgo `Describe` | Key metric | Profile |
+|---|---|---|---|
+| Reconcile churn | `Reconcile churn` | median avg reconcile seconds | empty |
+| Steady-state resources | `Operator steady-state resource usage` | memory MiB (hard); CPU millicores (warning) | empty |
+| API call efficiency | `API server call efficiency` | median PATCH calls per lifecycle | default |
+| Multi-mesh stress | `Multi-mesh stress` | median avg reconcile seconds, wall-clock, PATCH calls | default |
+
+CPU is informational only — kind's shared-node scheduling makes it too noisy for a hard assertion.
+
+### Baseline management (`baseline.json`)
+
+The file `tests/e2e/performance/baseline.json` stores one representative observed value per metric. `ComputeThresholds(factor)` in `baseline.go` multiplies each value by the degradation factor to produce the failure threshold.
+
+To update after an intentional performance change:
+1. Run `make test.e2e.performance` and read the `--- ACTUAL VALUES ---` blocks.
+2. Set those **median** values in `baseline.json`.
+3. Commit the file: `git commit -s -m "perf: update baseline after <reason>"`.
+
+Never set baseline values from a single noisy run. Run at least 3 times and use the median.
+
+### Key environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier; raise temporarily on noisy clusters |
+| `PERF_NUM_MEASUREMENTS` | `3` | Runs per scenario; median is asserted |
+| `PERF_CHURN_CR_COUNT` | `10` | CRs created in churn scenario |
+| `PERF_STRESS_CR_COUNT` | `5` | CRs created in stress scenario |
+
+### Common pitfalls
+
+* **Global PATCH counter bleeding**: `rest_client_requests_total{method="PATCH"}` is a global counter covering all operator reconciliations, not per-CR. The settle wait eliminates bleeding from preceding tests; without it, a test that deletes many CRs can inflate the next test's PATCH count.
+* **CPU noise on kind**: A single-node kind cluster shares CPU with the test process, scheduler, and other workloads. Use CPU as a trend signal, not a hard gate.
+* **Baseline drift (ratchet effect)**: Avoid raising the baseline on every PR that shows slight degradation without understanding why. The 1.2× factor and median approach are designed to distinguish real regressions from noise — investigate before updating.

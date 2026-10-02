@@ -1,0 +1,16 @@
+{
+  "capturedAt": "pending-first-run",
+  "environment": "kind",
+  "suites": {
+    "ambient":           { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "controlplane":      { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "dualstack":         { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "gatewaycontroller": { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "library":           { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "migration":         { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "monitoring":        { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "multicluster":      { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "multicontrolplane": { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
+    "operator":          { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 }
+  }
+}

@@ -236,7 +236,7 @@ test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.
 	${SOURCE_DIR}/tests/e2e/cleanup-ocp.sh
 
 .PHONY: test.e2e.kind
-test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
+test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it. Set PPROF_ENABLED=true to enable per-suite profiling and performance baseline comparison.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
 
 .PHONY: test.e2e.describe

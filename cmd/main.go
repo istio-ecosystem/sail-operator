@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
@@ -53,6 +54,7 @@ var setupLog = ctrl.Log.WithName("setup")
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var pprofAddr string
 	var configFile string
 	var resourceDirectory string
 	var logAPIRequests bool
@@ -72,6 +74,7 @@ func main() {
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
+	flag.StringVar(&pprofAddr, "pprof-bind-address", "", "Address for the pprof HTTP server (e.g. :6060). Empty disables it.")
 
 	opts := zap.Options{
 		Development: true,
@@ -85,6 +88,15 @@ func main() {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if pprofAddr != "" {
+		go func() {
+			setupLog.Info("starting pprof server", "address", pprofAddr)
+			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+				setupLog.Error(err, "pprof server stopped")
+			}
+		}()
+	}
 
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
