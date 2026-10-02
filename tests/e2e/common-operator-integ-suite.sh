@@ -114,6 +114,7 @@ initialize_variables() {
   CONTROL_PLANE_NS="${CONTROL_PLANE_NS:-istio-system}"
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+  PPROF_ENABLED="${PPROF_ENABLED:-true}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
   ISTIOCTL_PATH="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
@@ -251,7 +252,7 @@ install_operator() {
   if [ -n "${OPERATOR_CPU_LIMIT:-}" ]; then
     helm_sets+=(--set "operator.resources.limits.cpu=${OPERATOR_CPU_LIMIT}")
   fi
-  if [ "${PPROF_ENABLED:-false}" == "true" ]; then
+  if [ "${PPROF_ENABLED:-true}" == "true" ]; then
     helm_sets+=(--set "pprofBindAddress=:6060")
   fi
 
