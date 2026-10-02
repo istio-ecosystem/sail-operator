@@ -101,7 +101,6 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 	})
 
 	for _, suite := range suites {
-		suite := suite
 		It(fmt.Sprintf("%s suite allocation and CPU are within baseline", suite), func() {
 			prof, ok := profiles[suite]
 			if !ok {
