@@ -538,11 +538,22 @@ When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU bef
 
 ### Signals measured
 
-| Field | Source | Why |
+| Field | Source | What it measures |
 |---|---|---|
-| `allocBytes` | pprof `alloc_space` | Total bytes allocated; cumulative, GC-independent |
-| `allocObjects` | pprof `alloc_objects` | Total objects allocated; cumulative, GC-independent |
-| `cpuSeconds` | `process_cpu_seconds_total` (Prometheus) | CPU time consumed by the operator process |
+| `allocBytes` | pprof `alloc_space` | Cumulative bytes allocated during the suite (includes GC'd memory) |
+| `allocObjects` | pprof `alloc_objects` | Cumulative heap objects allocated during the suite |
+| `inuseBytes` | pprof `inuse_space` (after-snapshot with `?gc=1`) | Net live-heap change after a forced GC — proxy for memory growth |
+| `inuseObjects` | pprof `inuse_objects` (after-snapshot with `?gc=1`) | Net live-object count change after a forced GC |
+| `cpuSeconds` | `process_cpu_seconds_total` (Prometheus) | CPU time consumed by the operator process (user + system) |
+| `apiCallsPatch` | `rest_client_requests_total{method="PATCH"}` (Prometheus) | Number of PATCH calls made to the API server |
+
+**`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing significant work, not that the operator is leaking memory.
+
+**`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
+
+**`apiCallsPatch` reflects API efficiency.** PATCH calls are the dominant write traffic from the operator. A large increase suggests the operator is re-applying resources on every reconcile even when nothing changed, or that a new code path is issuing redundant updates.
+
+New fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted when the baseline entry is non-zero, so the first CI run collects data without failing.
 
 ### Enabling profiling
 

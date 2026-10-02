@@ -32,14 +32,23 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 )
 
-// SuiteProfile is the allocation delta for one E2E suite, written to
+// SuiteProfile is the metric delta for one E2E suite, written to
 // $ARTIFACTS/profiles/<suite>.json and read by the performance suite.
 type SuiteProfile struct {
-	Suite        string    `json:"suite"`
-	CapturedAt   time.Time `json:"capturedAt"`
-	AllocBytes   int64     `json:"allocBytes"`
-	AllocObjects int64     `json:"allocObjects"`
-	CPUSeconds   float64   `json:"cpuSeconds"`
+	Suite         string    `json:"suite"`
+	CapturedAt    time.Time `json:"capturedAt"`
+	AllocBytes    int64     `json:"allocBytes"`
+	AllocObjects  int64     `json:"allocObjects"`
+	InuseBytes    int64     `json:"inuseBytes"`
+	InuseObjects  int64     `json:"inuseObjects"`
+	CPUSeconds    float64   `json:"cpuSeconds"`
+	APICallsPatch int64     `json:"apiCallsPatch"`
+}
+
+type snapshotResult struct {
+	heap      common.HeapMetrics
+	cpuSecs   float64
+	patchCalls int64
 }
 
 // WrapSuite runs fn (which should call RunSpecs) and, when PPROF_ENABLED=true,
@@ -61,7 +70,7 @@ func WrapSuite(suiteName string, fn func()) {
 		return
 	}
 
-	beforeHeap, beforeCPU, err := snapshot(operatorNs, deploymentName, token)
+	before, err := snapshot(operatorNs, deploymentName, token, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[profiling] WARNING: before-snapshot failed for suite %q: %v\n", suiteName, err)
 		fn()
@@ -70,48 +79,57 @@ func WrapSuite(suiteName string, fn func()) {
 
 	fn()
 
-	afterHeap, afterCPU, err := snapshot(operatorNs, deploymentName, token)
+	after, err := snapshot(operatorNs, deploymentName, token, true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[profiling] WARNING: after-snapshot failed for suite %q: %v\n", suiteName, err)
 		return
 	}
 
-	delta := common.DeltaHeapMetrics(beforeHeap, afterHeap)
+	delta := common.DeltaHeapMetrics(before.heap, after.heap)
 	prof := SuiteProfile{
-		Suite:        suiteName,
-		CapturedAt:   time.Now().UTC(),
-		AllocBytes:   delta.AllocBytes,
-		AllocObjects: delta.AllocObjects,
-		CPUSeconds:   afterCPU - beforeCPU,
+		Suite:         suiteName,
+		CapturedAt:    time.Now().UTC(),
+		AllocBytes:    delta.AllocBytes,
+		AllocObjects:  delta.AllocObjects,
+		InuseBytes:    delta.InuseBytes,
+		InuseObjects:  delta.InuseObjects,
+		CPUSeconds:    after.cpuSecs - before.cpuSecs,
+		APICallsPatch: after.patchCalls - before.patchCalls,
 	}
 
 	if err := saveProfile(suiteName, prof); err != nil {
 		fmt.Fprintf(os.Stderr, "[profiling] WARNING: could not save profile for suite %q: %v\n", suiteName, err)
 	} else {
-		fmt.Fprintf(os.Stdout, "[profiling] suite=%s allocBytes=%d allocObjects=%d cpuSeconds=%.3f\n",
-			suiteName, prof.AllocBytes, prof.AllocObjects, prof.CPUSeconds)
+		fmt.Fprintf(os.Stdout,
+			"[profiling] suite=%s allocBytes=%d allocObjects=%d inuseBytes=%d inuseObjects=%d cpuSeconds=%.3f apiCallsPatch=%d\n",
+			suiteName, prof.AllocBytes, prof.AllocObjects, prof.InuseBytes, prof.InuseObjects, prof.CPUSeconds, prof.APICallsPatch)
 	}
 }
 
-func snapshot(operatorNs, deploymentName, metricsToken string) (common.HeapMetrics, float64, error) {
-	raw, err := common.FetchHeapProfile(operatorNs, deploymentName)
+func snapshot(operatorNs, deploymentName, metricsToken string, forceGC bool) (snapshotResult, error) {
+	raw, err := common.FetchHeapProfile(operatorNs, deploymentName, forceGC)
 	if err != nil {
-		return common.HeapMetrics{}, 0, fmt.Errorf("fetching heap profile: %w", err)
+		return snapshotResult{}, fmt.Errorf("fetching heap profile: %w", err)
 	}
 	heap, err := common.ParseHeapMetrics(raw)
 	if err != nil {
-		return common.HeapMetrics{}, 0, fmt.Errorf("parsing heap profile: %w", err)
+		return snapshotResult{}, fmt.Errorf("parsing heap profile: %w", err)
 	}
 
 	metrics, err := common.ScrapeOperatorMetrics(operatorNs, deploymentName, metricsToken)
 	if err != nil {
-		return heap, 0, fmt.Errorf("scraping metrics: %w", err)
+		return snapshotResult{heap: heap}, fmt.Errorf("scraping metrics: %w", err)
 	}
 	cpuSeconds, err := metrics.GetCounterValue("process_cpu_seconds_total", nil)
 	if err != nil {
-		return heap, 0, fmt.Errorf("reading process CPU metric: %w", err)
+		return snapshotResult{heap: heap}, fmt.Errorf("reading process CPU metric: %w", err)
 	}
-	return heap, cpuSeconds, nil
+	patchCalls, err := metrics.GetCounterValue("rest_client_requests_total", map[string]string{"method": "PATCH"})
+	if err != nil {
+		// PATCH counter may be absent if no PATCH calls were made yet; treat as 0
+		patchCalls = 0
+	}
+	return snapshotResult{heap: heap, cpuSecs: cpuSeconds, patchCalls: int64(patchCalls)}, nil
 }
 
 func saveProfile(suiteName string, prof SuiteProfile) error {

@@ -28,15 +28,19 @@ import (
 	"github.com/google/pprof/profile"
 )
 
-// HeapMetrics holds allocation counters extracted from a Go heap pprof profile.
+// HeapMetrics holds allocation and live-heap counters extracted from a Go heap pprof profile.
 type HeapMetrics struct {
 	AllocBytes   int64
 	AllocObjects int64
+	InuseBytes   int64
+	InuseObjects int64
 }
 
 // FetchHeapProfile port-forwards to the operator pprof endpoint on pprofPort and
-// returns the raw heap profile bytes.
-func FetchHeapProfile(operatorNs, deploymentName string) ([]byte, error) {
+// returns the raw heap profile bytes. When forceGC is true, ?gc=1 is appended to
+// the request URL so the runtime performs a full GC before sampling — use this for
+// the after-snapshot to get a clean picture of truly retained (live) heap.
+func FetchHeapProfile(operatorNs, deploymentName string, forceGC bool) ([]byte, error) {
 	localPort, err := freePort()
 	if err != nil {
 		return nil, fmt.Errorf("finding free port: %w", err)
@@ -66,8 +70,11 @@ func FetchHeapProfile(operatorNs, deploymentName string) ([]byte, error) {
 		return nil, fmt.Errorf("pprof port-forward not ready on :%d: %w", localPort, err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", localPort), nil)
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", localPort)
+	if forceGC {
+		url += "?gc=1"
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -86,40 +93,49 @@ func FetchHeapProfile(operatorNs, deploymentName string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// ParseHeapMetrics parses a raw heap profile and returns cumulative alloc_space
-// and alloc_objects — the two most stable regression signals.
+// ParseHeapMetrics parses a raw heap profile and returns cumulative alloc counters
+// (alloc_space, alloc_objects) and live-heap counters (inuse_space, inuse_objects).
 func ParseHeapMetrics(data []byte) (HeapMetrics, error) {
 	p, err := profile.ParseData(data)
 	if err != nil {
 		return HeapMetrics{}, fmt.Errorf("parsing heap profile: %w", err)
 	}
 
-	var allocBytesIdx, allocObjectsIdx int = -1, -1
+	idx := map[string]int{
+		"alloc_space": -1, "alloc_objects": -1,
+		"inuse_space": -1, "inuse_objects": -1,
+	}
 	for i, st := range p.SampleType {
-		switch st.Type {
-		case "alloc_space":
-			allocBytesIdx = i
-		case "alloc_objects":
-			allocObjectsIdx = i
+		if _, ok := idx[st.Type]; ok {
+			idx[st.Type] = i
 		}
 	}
-	if allocBytesIdx < 0 || allocObjectsIdx < 0 {
+	if idx["alloc_space"] < 0 || idx["alloc_objects"] < 0 {
 		return HeapMetrics{}, fmt.Errorf("heap profile missing alloc_space or alloc_objects sample types")
 	}
 
 	var m HeapMetrics
 	for _, s := range p.Sample {
-		m.AllocBytes += s.Value[allocBytesIdx]
-		m.AllocObjects += s.Value[allocObjectsIdx]
+		m.AllocBytes += s.Value[idx["alloc_space"]]
+		m.AllocObjects += s.Value[idx["alloc_objects"]]
+		if idx["inuse_space"] >= 0 {
+			m.InuseBytes += s.Value[idx["inuse_space"]]
+		}
+		if idx["inuse_objects"] >= 0 {
+			m.InuseObjects += s.Value[idx["inuse_objects"]]
+		}
 	}
 	return m, nil
 }
 
-// DeltaHeapMetrics returns the allocation delta between a before and after snapshot.
-// Both must come from the same process (cumulative counters only go up).
+// DeltaHeapMetrics returns the delta between a before and after snapshot.
+// AllocBytes/AllocObjects are cumulative (monotonically increasing); InuseBytes/InuseObjects
+// are point-in-time live heap, so their delta represents net memory growth during the suite.
 func DeltaHeapMetrics(before, after HeapMetrics) HeapMetrics {
 	return HeapMetrics{
 		AllocBytes:   after.AllocBytes - before.AllocBytes,
 		AllocObjects: after.AllocObjects - before.AllocObjects,
+		InuseBytes:   after.InuseBytes - before.InuseBytes,
+		InuseObjects: after.InuseObjects - before.InuseObjects,
 	}
 }

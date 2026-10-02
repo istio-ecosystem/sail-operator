@@ -101,7 +101,7 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 	})
 
 	for _, suite := range suites {
-		It(fmt.Sprintf("%s suite allocation and CPU are within baseline", suite), func() {
+		It(fmt.Sprintf("%s suite metrics are within baseline", suite), func() {
 			prof, ok := profiles[suite]
 			if !ok {
 				Skip(fmt.Sprintf("no profile found for suite %q (was PPROF_ENABLED=true during that suite?)", suite))
@@ -115,7 +115,10 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 			GinkgoWriter.Printf("--- %s ACTUAL VALUES ---\n", suite)
 			GinkgoWriter.Printf("  allocBytes=%d   (threshold=%d)\n", prof.AllocBytes, thresholds.MaxAllocBytes)
 			GinkgoWriter.Printf("  allocObjects=%d (threshold=%d)\n", prof.AllocObjects, thresholds.MaxAllocObjects)
+			GinkgoWriter.Printf("  inuseBytes=%d   (threshold=%d)\n", prof.InuseBytes, thresholds.MaxInuseBytes)
+			GinkgoWriter.Printf("  inuseObjects=%d (threshold=%d)\n", prof.InuseObjects, thresholds.MaxInuseObjects)
 			GinkgoWriter.Printf("  cpuSeconds=%.3f (threshold=%.3f)\n", prof.CPUSeconds, thresholds.MaxCPUSeconds)
+			GinkgoWriter.Printf("  apiCallsPatch=%d (threshold=%d)\n", prof.APICallsPatch, thresholds.MaxAPICallsPatch)
 
 			Expect(prof.AllocBytes).To(BeNumerically("<=", thresholds.MaxAllocBytes),
 				"suite %q: heap allocations exceeded baseline×%.2f", suite, degradationFactor)
@@ -123,6 +126,18 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 				"suite %q: alloc objects exceeded baseline×%.2f", suite, degradationFactor)
 			Expect(prof.CPUSeconds).To(BeNumerically("<=", thresholds.MaxCPUSeconds),
 				"suite %q: CPU seconds exceeded baseline×%.2f", suite, degradationFactor)
+			if thresholds.MaxInuseBytes > 0 {
+				Expect(prof.InuseBytes).To(BeNumerically("<=", thresholds.MaxInuseBytes),
+					"suite %q: live heap (inuse) exceeded baseline×%.2f", suite, degradationFactor)
+			}
+			if thresholds.MaxInuseObjects > 0 {
+				Expect(prof.InuseObjects).To(BeNumerically("<=", thresholds.MaxInuseObjects),
+					"suite %q: live objects (inuse) exceeded baseline×%.2f", suite, degradationFactor)
+			}
+			if thresholds.MaxAPICallsPatch > 0 {
+				Expect(prof.APICallsPatch).To(BeNumerically("<=", thresholds.MaxAPICallsPatch),
+					"suite %q: PATCH API calls exceeded baseline×%.2f", suite, degradationFactor)
+			}
 		})
 	}
 })

@@ -228,7 +228,7 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 | `multicluster` | Multi-cluster deployments |
 | `multi-control-plane` | Multiple Istio CRs in a single cluster |
 | `migration` | Sidecar-to-ambient migration procedures |
-| `performance` | Operator performance: heap allocation and CPU delta comparison against per-suite baseline |
+| `performance` | Operator performance: heap allocation, live-heap, CPU, and API call delta comparison against per-suite baseline |
 
 **Sub-feature** — optional, for finer filtering within a feature area
 
@@ -575,12 +575,33 @@ Test Suite Failed
 
 The performance suite (`tests/e2e/performance/`) compares per-suite heap and CPU profiles against a committed baseline. It does not run its own workload — it reads `$ARTIFACTS/profiles/<suite>.json` files written by `profiling.WrapSuite` during the other E2E suites.
 
-Each profile contains:
-* `allocBytes` — total bytes allocated by the operator during that suite (pprof `alloc_space`, GC-independent)
-* `allocObjects` — total objects allocated (pprof `alloc_objects`, GC-independent)
-* `cpuSeconds` — CPU time consumed by the operator process (`process_cpu_seconds_total`)
+#### What each metric measures
 
-These are cumulative allocation deltas measured before and after each suite's `RunSpecs` call, making them more stable than wall-clock time on a shared-node cluster.
+Each profile contains six fields. Understanding what they measure — and what they do **not** — is important for interpreting regressions.
+
+| Field | pprof / Prometheus source | What it measures |
+|---|---|---|
+| `allocBytes` | pprof `alloc_space` | Cumulative bytes allocated by the operator during the suite (includes memory that was later GC'd) |
+| `allocObjects` | pprof `alloc_objects` | Cumulative number of heap objects allocated during the suite |
+| `inuseBytes` | pprof `inuse_space` (after-snapshot with `?gc=1`) | Net live-heap change after a forced GC — best available proxy for memory growth |
+| `inuseObjects` | pprof `inuse_objects` (after-snapshot with `?gc=1`) | Net live-object count change after a forced GC |
+| `cpuSeconds` | `process_cpu_seconds_total` | CPU time consumed by the operator process (user + system) |
+| `apiCallsPatch` | `rest_client_requests_total{method="PATCH"}` | Number of PATCH calls made to the Kubernetes API server |
+
+**`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive at any time; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing a lot of work, not that the operator is leaking memory.
+
+**`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
+
+What each signal detects:
+
+* **`allocBytes` / `allocObjects` increase** — the operator's reconciliation paths are creating or processing more objects per unit of work. Common causes: a new API call that allocates a large response, a hot loop that builds intermediate slices on every reconcile, or more Istio resources being created per test scenario.
+* **`inuseBytes` / `inuseObjects` increase** — the operator is retaining more live heap across the suite. Common causes: a memory leak, an unbounded cache, or resources not being released after the suite's workload completes.
+* **`cpuSeconds` increase** — the operator is spending more CPU time. Common causes: more reconcile iterations, more expensive Helm rendering, or heavier API server interaction.
+* **`apiCallsPatch` increase** — the operator is issuing more PATCH calls. Common causes: a code path that applies resources on every reconcile even when nothing changed, or additional resources being managed per test scenario.
+
+The three newer fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted once the baseline entry is non-zero, so the first CI run with these fields collects data without failing.
+
+The committed baseline values and their first-run context are in [`tests/e2e/performance/baseline.json`](performance/baseline.json). Those values were captured on a KIND cluster and reflect the normal operating cost of each suite.
 
 #### Running with profiling enabled
 
@@ -592,7 +613,7 @@ The performance suite runs last alphabetically, so by the time it executes every
 
 #### Updating the baseline
 
-When a performance change is intentional, copy the values from the `--- ACTUAL VALUES ---` blocks in the performance suite output into `tests/e2e/performance/baseline.json` and commit:
+Before updating, run at least two CI runs to confirm the new values are stable across runs. Take values from a run where no other changes are in flight on the cluster. Copy the values from the `--- ACTUAL VALUES ---` blocks in the performance suite output:
 
 ```bash
 PPROF_ENABLED=true make test.e2e.kind
