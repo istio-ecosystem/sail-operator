@@ -93,9 +93,10 @@ tests/e2e/
 ├── multicluster/         # Multi-cluster scenarios (primary-remote, multi-primary, external control plane)
 ├── multicontrolplane/    # Multiple control plane tests
 ├── operator/             # Operator deployment and installation tests
+├── performance/          # Performance baseline comparison (reads profiles written by other suites)
 ├── samples/              # Sample application tests
 ├── setup/                # Test setup utilities
-└── util/                 # Shared utilities (cleaner, kubectl, helm, etc.)
+└── util/                 # Shared utilities (cleaner, kubectl, helm, profiling, etc.)
 ```
 
 ### Cluster Management
@@ -520,50 +521,56 @@ When testing on different architectures:
 
 ## Performance Tests
 
-Located in `tests/e2e/performance/`. Run with `make test.e2e.performance` (dedicated CI job; excluded from regular `test.e2e.kind` via `!performance` label filter).
+Located in `tests/e2e/performance/`. The performance suite does **not** run its own workload. Instead it reads heap and CPU profiles captured by `profiling.WrapSuite` during each of the other E2E suites and compares them against a committed baseline.
 
-### Design principles
+### How it works
 
-* **Operator-only scope**: wait for `IstioRevision` `Reconciled=True`, not for istiod to start. This isolates operator overhead from control-plane startup variability.
-* **`profile: empty`** for latency scenarios (churn) — minimal Helm work, measures pure reconcile cost.
-* **`profile: default`** for API-call scenarios (lifecycle, stress) — real SSA applies generate measurable PATCH calls.
-* **Settle wait**: before each measurement, the operator's PATCH counter is polled in 2-second windows until the rate drops to zero (deadline 30s). This prevents background requeues from a previous test's cleanup from contaminating the baseline snapshot.
-* **Median of N runs** (`PERF_NUM_MEASUREMENTS=3` by default): each scenario repeats N times and asserts on the **median**, making a single noisy CI run insufficient to trip the threshold.
-* **Degradation factor 1.2×** (default): tighter than the old 1.5× — catches a 20% regression rather than 50%.
+Every `*_suite_test.go` wraps `RunSpecs` with `profiling.WrapSuite`:
 
-### Scenarios
+```go
+func TestAmbient(t *testing.T) {
+    RegisterFailHandler(Fail)
+    profiling.WrapSuite("ambient", func() { RunSpecs(t, "Ambient Test Suite") })
+}
+```
 
-| Scenario | Ginkgo `Describe` | Key metric | Profile |
-|---|---|---|---|
-| Reconcile churn | `Reconcile churn` | median avg reconcile seconds | empty |
-| Steady-state resources | `Operator steady-state resource usage` | memory MiB (hard); CPU millicores (warning) | empty |
-| API call efficiency | `API server call efficiency` | median PATCH calls per lifecycle | default |
-| Multi-mesh stress | `Multi-mesh stress` | median avg reconcile seconds, wall-clock, PATCH calls | default |
+When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU before and after the suite runs, computes the delta, and writes `$ARTIFACTS/profiles/<suite>.json`. The performance suite runs last (alphabetically after all other suites), loads those files, and asserts each delta is within `baseline × PERF_DEGRADATION_FACTOR`.
 
-CPU is informational only — kind's shared-node scheduling makes it too noisy for a hard assertion.
+### Signals measured
+
+| Field | Source | Why |
+|---|---|---|
+| `allocBytes` | pprof `alloc_space` | Total bytes allocated; cumulative, GC-independent |
+| `allocObjects` | pprof `alloc_objects` | Total objects allocated; cumulative, GC-independent |
+| `cpuSeconds` | `process_cpu_seconds_total` (Prometheus) | CPU time consumed by the operator process |
+
+### Enabling profiling
+
+```bash
+PPROF_ENABLED=true make test.e2e.kind
+```
+
+The `common-operator-integ-suite.sh` script passes `--set pprofBindAddress=:6060` to Helm when `PPROF_ENABLED=true`, starting a plain-HTTP pprof endpoint in the operator pod.
 
 ### Baseline management (`baseline.json`)
 
-The file `tests/e2e/performance/baseline.json` stores one representative observed value per metric. `ComputeThresholds(factor)` in `baseline.go` multiplies each value by the degradation factor to produce the failure threshold.
+`tests/e2e/performance/baseline.json` stores per-suite baseline values. `ThresholdsFor(suite, factor)` multiplies each value by the degradation factor to produce the failure threshold.
 
-To update after an intentional performance change:
-1. Run `make test.e2e.performance` and read the `--- ACTUAL VALUES ---` blocks.
-2. Set those **median** values in `baseline.json`.
-3. Commit the file: `git commit -s -m "perf: update baseline after <reason>"`.
-
-Never set baseline values from a single noisy run. Run at least 3 times and use the median.
+To update after an intentional change:
+1. Run `PPROF_ENABLED=true make test.e2e.kind` and copy the values from the `--- ACTUAL VALUES ---` output blocks in the performance suite output.
+2. Update `baseline.json` with those values.
+3. Commit: `git commit -s -m "perf: update baseline after <reason>"`.
 
 ### Key environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier; raise temporarily on noisy clusters |
-| `PERF_NUM_MEASUREMENTS` | `3` | Runs per scenario; median is asserted |
-| `PERF_CHURN_CR_COUNT` | `10` | CRs created in churn scenario |
-| `PERF_STRESS_CR_COUNT` | `5` | CRs created in stress scenario |
+| `PPROF_ENABLED` | `""` | Set to `true` to enable profiling and run baseline comparison |
+| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier applied to baseline values |
+| `PERF_BASELINE_FILE` | `tests/e2e/performance/baseline.json` | Path to an alternative baseline file |
 
 ### Common pitfalls
 
-* **Global PATCH counter bleeding**: `rest_client_requests_total{method="PATCH"}` is a global counter covering all operator reconciliations, not per-CR. The settle wait eliminates bleeding from preceding tests; without it, a test that deletes many CRs can inflate the next test's PATCH count.
-* **CPU noise on kind**: A single-node kind cluster shares CPU with the test process, scheduler, and other workloads. Use CPU as a trend signal, not a hard gate.
-* **Baseline drift (ratchet effect)**: Avoid raising the baseline on every PR that shows slight degradation without understanding why. The 1.2× factor and median approach are designed to distinguish real regressions from noise — investigate before updating.
+* **All-zero baselines**: The committed `baseline.json` ships with all zeros until the first real run populates it. With zero baselines, any positive delta will fail. Update the baseline from a real run before enabling this in CI.
+* **Suite not found**: If a suite's profile is missing (e.g., that suite was skipped or `PPROF_ENABLED` was not set), the corresponding `It` block is skipped with an explanatory message rather than failing.
+* **Port-forward timing**: `WrapSuite` establishes a port-forward to `:6060` on the operator pod. If the operator is not ready at suite start, the before-snapshot fails gracefully and the suite runs without profiling.

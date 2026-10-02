@@ -102,7 +102,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 - **Integration tests**: Use Ginkgo/Gomega with envtest
 - **E2E tests**: Use Ginkgo/Gomega against real clusters
 - **Test isolation**: Keep business logic in testable packages separate from controllers
-- **Performance tests**: Located in `tests/e2e/performance/`. Measure reconcile latency, API call efficiency, CPU/memory, and multi-mesh stress. Run in a dedicated CI job (`make test.e2e.performance`); excluded from regular `test.e2e.kind` via `!performance` label. Each scenario runs 3× and asserts on the **median** against `tests/e2e/performance/baseline.json` × 1.2. Update the baseline file when performance changes intentionally. See `tests/e2e/README.md` for the full run-and-update workflow.
+- **Performance tests**: Located in `tests/e2e/performance/`. Enabled with `PPROF_ENABLED=true`. Rather than running its own workload, the performance suite reads heap and CPU profiles captured by `profiling.WrapSuite` during the other E2E suites and compares them against per-suite baseline values in `tests/e2e/performance/baseline.json` × `PERF_DEGRADATION_FACTOR` (default 1.2). Update the baseline file when performance changes intentionally. See `tests/e2e/README.md` for the full run-and-update workflow.
 
 ## Common Operations
 
