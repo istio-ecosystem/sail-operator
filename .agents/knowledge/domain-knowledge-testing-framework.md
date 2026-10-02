@@ -549,6 +549,8 @@ When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU bef
 
 **`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing significant work, not that the operator is leaking memory.
 
+**`cpuSeconds` uses a separate, looser degradation factor (`PERF_CPU_DEGRADATION_FACTOR`, default 2.0×).** CPU time varies significantly across CI environments — a dualstack cluster runs roughly 2× heavier than a single-stack kind cluster for the same test suite. Using a dedicated factor lets the single `baseline.json` serve all environments while still catching extreme regressions (anything more than double the baseline).
+
 **`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
 
 **`apiCallsPatch` reflects API efficiency.** PATCH calls are the dominant write traffic from the operator. A large increase suggests the operator is re-applying resources on every reconcile even when nothing changed, or that a new code path is issuing redundant updates.
@@ -577,7 +579,8 @@ To update after an intentional change:
 | Variable | Default | Purpose |
 |---|---|---|
 | `PPROF_ENABLED` | `""` | Set to `true` to enable profiling and run baseline comparison |
-| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier applied to baseline values |
+| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier for heap and API-call metrics |
+| `PERF_CPU_DEGRADATION_FACTOR` | `2.0` | Separate threshold multiplier for `cpuSeconds` only |
 | `PERF_BASELINE_FILE` | `tests/e2e/performance/baseline.json` | Path to an alternative baseline file |
 
 ### Common pitfalls

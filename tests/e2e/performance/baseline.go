@@ -79,9 +79,11 @@ func LoadBaseline() (*Baseline, error) {
 	return &b, nil
 }
 
-// ThresholdsFor returns the maximum-acceptable values for suiteName at the given factor.
+// ThresholdsFor returns the maximum-acceptable values for suiteName.
+// factor is applied to all metrics; cpuFactor is applied to CPUSeconds instead of factor,
+// allowing a looser CPU bound to absorb CI environment variance.
 // Returns nil if the suite has no baseline entry (test will be skipped).
-func (b *Baseline) ThresholdsFor(suiteName string, factor float64) *SuiteThresholds {
+func (b *Baseline) ThresholdsFor(suiteName string, factor, cpuFactor float64) *SuiteThresholds {
 	sb, ok := b.Suites[suiteName]
 	if !ok {
 		return nil
@@ -91,7 +93,7 @@ func (b *Baseline) ThresholdsFor(suiteName string, factor float64) *SuiteThresho
 		MaxAllocObjects:  int64(math.Ceil(float64(sb.AllocObjects) * factor)),
 		MaxInuseBytes:    int64(math.Ceil(float64(sb.InuseBytes) * factor)),
 		MaxInuseObjects:  int64(math.Ceil(float64(sb.InuseObjects) * factor)),
-		MaxCPUSeconds:    sb.CPUSeconds * factor,
+		MaxCPUSeconds:    sb.CPUSeconds * cpuFactor,
 		MaxAPICallsPatch: int64(math.Ceil(float64(sb.APICallsPatch) * factor)),
 	}
 }

@@ -430,7 +430,8 @@ The following environment variables define the behavior of the test run:
 
 **Performance-test-specific variables** (only apply when `PPROF_ENABLED=true`):
 * `PPROF_ENABLED=true` — Enables pprof profiling in the operator and activates baseline comparison in the performance suite.
-* `PERF_DEGRADATION_FACTOR=1.2` — Multiplier applied to each baseline value to compute the failure threshold. A value of 1.2 allows up to 20% regression above the baseline; increase temporarily on noisy clusters.
+* `PERF_DEGRADATION_FACTOR=1.2` — Multiplier applied to heap and API-call baseline values to compute failure thresholds. A value of 1.2 allows up to 20% regression above the baseline; increase temporarily on noisy clusters.
+* `PERF_CPU_DEGRADATION_FACTOR=2.0` — Separate multiplier applied only to `cpuSeconds`. Defaults to 2.0 to absorb the natural variance between CI environments (dualstack vs. single-stack kind clusters).
 * `PERF_BASELINE_FILE` — Path to an alternative baseline file (default: `tests/e2e/performance/baseline.json`).
 
 ### Customizing the test run
@@ -596,7 +597,7 @@ What each signal detects:
 
 * **`allocBytes` / `allocObjects` increase** — the operator's reconciliation paths are creating or processing more objects per unit of work. Common causes: a new API call that allocates a large response, a hot loop that builds intermediate slices on every reconcile, or more Istio resources being created per test scenario.
 * **`inuseBytes` / `inuseObjects` increase** — the operator is retaining more live heap across the suite. Common causes: a memory leak, an unbounded cache, or resources not being released after the suite's workload completes.
-* **`cpuSeconds` increase** — the operator is spending more CPU time. Common causes: more reconcile iterations, more expensive Helm rendering, or heavier API server interaction.
+* **`cpuSeconds` increase** — the operator is spending more CPU time. Common causes: more reconcile iterations, more expensive Helm rendering, or heavier API server interaction. CPU time varies significantly across CI environments (a dualstack cluster runs roughly 2× heavier than a single-stack kind cluster), so `cpuSeconds` uses a separate, looser degradation factor (`PERF_CPU_DEGRADATION_FACTOR`, default 2.0×) rather than the general 1.2× factor.
 * **`apiCallsPatch` increase** — the operator is issuing more PATCH calls. Common causes: a code path that applies resources on every reconcile even when nothing changed, or additional resources being managed per test scenario.
 
 The three newer fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted once the baseline entry is non-zero, so the first CI run with these fields collects data without failing.

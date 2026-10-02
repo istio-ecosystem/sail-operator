@@ -70,9 +70,10 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 300)) * time.Second)
 
 	var (
-		degradationFactor float64
-		baseline          *Baseline
-		profiles          map[string]profiling.SuiteProfile
+		degradationFactor    float64
+		cpuDegradationFactor float64
+		baseline             *Baseline
+		profiles             map[string]profiling.SuiteProfile
 	)
 
 	BeforeAll(func() {
@@ -87,12 +88,19 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 			}
 		}
 
+		cpuDegradationFactor = 2.0
+		if raw := env.Get("PERF_CPU_DEGRADATION_FACTOR", ""); raw != "" {
+			if f, err := strconv.ParseFloat(raw, 64); err == nil && f > 0 {
+				cpuDegradationFactor = f
+			}
+		}
+
 		By("loading performance baseline")
 		var err error
 		baseline, err = LoadBaseline()
 		Expect(err).NotTo(HaveOccurred(), "Failed to load performance baseline")
-		GinkgoWriter.Printf("Baseline loaded (capturedAt=%s env=%s degradationFactor=%.2f)\n",
-			baseline.CapturedAt, baseline.Environment, degradationFactor)
+		GinkgoWriter.Printf("Baseline loaded (capturedAt=%s env=%s degradationFactor=%.2f cpuDegradationFactor=%.2f)\n",
+			baseline.CapturedAt, baseline.Environment, degradationFactor, cpuDegradationFactor)
 
 		By("loading suite profiles from $ARTIFACTS/profiles/")
 		profiles, err = loadSuiteProfiles()
@@ -107,7 +115,7 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 				Skip(fmt.Sprintf("no profile found for suite %q (was PPROF_ENABLED=true during that suite?)", suite))
 			}
 
-			thresholds := baseline.ThresholdsFor(suite, degradationFactor)
+			thresholds := baseline.ThresholdsFor(suite, degradationFactor, cpuDegradationFactor)
 			if thresholds == nil {
 				Skip(fmt.Sprintf("no baseline entry for suite %q", suite))
 			}
@@ -125,7 +133,7 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 			Expect(prof.AllocObjects).To(BeNumerically("<=", thresholds.MaxAllocObjects),
 				"suite %q: alloc objects exceeded baseline×%.2f", suite, degradationFactor)
 			Expect(prof.CPUSeconds).To(BeNumerically("<=", thresholds.MaxCPUSeconds),
-				"suite %q: CPU seconds exceeded baseline×%.2f", suite, degradationFactor)
+				"suite %q: CPU seconds exceeded baseline×%.2f", suite, cpuDegradationFactor)
 			if thresholds.MaxInuseBytes > 0 {
 				Expect(prof.InuseBytes).To(BeNumerically("<=", thresholds.MaxInuseBytes),
 					"suite %q: live heap (inuse) exceeded baseline×%.2f", suite, degradationFactor)
