@@ -46,8 +46,8 @@ type SuiteProfile struct {
 }
 
 type snapshotResult struct {
-	heap      common.HeapMetrics
-	cpuSecs   float64
+	heap       common.HeapMetrics
+	cpuSecs    float64
 	patchCalls int64
 }
 
