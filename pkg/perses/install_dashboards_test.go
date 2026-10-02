@@ -177,6 +177,48 @@ func TestCreateIfNotExistsGetError(t *testing.T) {
 	}
 }
 
+func TestCreateIfNotExistsCreates(t *testing.T) {
+	cl := newPersesTestClient(t, testPersesDashboardCRD())
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(DashboardGVK)
+	obj.SetName("new-dashboard")
+	obj.SetNamespace("sail-operator")
+	created, err := createIfNotExists(context.Background(), cl, obj)
+	if err != nil || !created {
+		t.Fatalf("created = %v, err = %v; want create", created, err)
+	}
+	got := &unstructured.Unstructured{}
+	got.SetGroupVersionKind(DashboardGVK)
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "sail-operator", Name: "new-dashboard"}, got); err != nil {
+		t.Fatalf("get created dashboard: %v", err)
+	}
+}
+
+func TestCreateIfNotExistsSkipsExisting(t *testing.T) {
+	existing := &unstructured.Unstructured{}
+	existing.SetGroupVersionKind(DashboardGVK)
+	existing.SetName("existing-dashboard")
+	existing.SetNamespace("sail-operator")
+	cl := newPersesTestClient(t, testPersesDashboardCRD(), existing)
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(DashboardGVK)
+	obj.SetName("existing-dashboard")
+	obj.SetNamespace("sail-operator")
+	obj.SetLabels(map[string]string{"replaced": "true"})
+	created, err := createIfNotExists(context.Background(), cl, obj)
+	if err != nil || created {
+		t.Fatalf("created = %v, err = %v; want skip existing", created, err)
+	}
+	got := &unstructured.Unstructured{}
+	got.SetGroupVersionKind(DashboardGVK)
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "sail-operator", Name: "existing-dashboard"}, got); err != nil {
+		t.Fatalf("get existing dashboard: %v", err)
+	}
+	if got.GetLabels()["replaced"] == "true" {
+		t.Fatal("expected existing object to remain unchanged")
+	}
+}
+
 func newPersesTestClient(t *testing.T, objects ...client.Object) client.Client {
 	t.Helper()
 	return fake.NewClientBuilder().
