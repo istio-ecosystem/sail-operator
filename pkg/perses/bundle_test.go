@@ -16,12 +16,15 @@ package perses
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
 	"testing"
+	"testing/fstest"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 )
@@ -126,6 +129,73 @@ func TestPrepareDashboardMissingName(t *testing.T) {
 	_, err := PrepareDashboard([]byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata: {}\n"), "ns")
 	if err == nil {
 		t.Fatal("expected error for missing metadata.name")
+	}
+}
+
+func TestPrepareDashboardWrongKind(t *testing.T) {
+	_, err := PrepareDashboard([]byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"), "ns")
+	if err == nil {
+		t.Fatal("expected error for wrong kind")
+	}
+}
+
+func TestPrepareDashboardSetsManagedByLabel(t *testing.T) {
+	const manifest = `apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: test-dashboard
+spec:
+  config: {}
+`
+	dashboard, err := PrepareDashboard([]byte(manifest), "sail-operator")
+	if err != nil {
+		t.Fatalf("PrepareDashboard: %v", err)
+	}
+	if dashboard.GetLabels()[constants.KubernetesAppManagedByKey] != constants.ManagedByLabelValue {
+		t.Fatalf("managed-by label = %q, want %q", dashboard.GetLabels()[constants.KubernetesAppManagedByKey], constants.ManagedByLabelValue)
+	}
+}
+
+func TestForEachDashboardYAMLSkipsNonYAML(t *testing.T) {
+	const manifest = `apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: dash
+spec:
+  config: {}
+`
+	fsys := fstest.MapFS{
+		"dashboards/README.md": &fstest.MapFile{Data: []byte("# readme")},
+		"dashboards/dash.yaml": &fstest.MapFile{Data: []byte(manifest)},
+	}
+	count := 0
+	if err := forEachDashboardYAML(fsys, func(string, []byte) error {
+		count++
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 YAML dashboard, got %d", count)
+	}
+}
+
+func TestForEachDashboardYAMLPropagatesCallbackError(t *testing.T) {
+	fsys := fstest.MapFS{
+		"dashboards/dash.yaml": &fstest.MapFile{Data: []byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata:\n  name: dash\n")},
+	}
+	err := forEachDashboardYAML(fsys, func(string, []byte) error {
+		return fmt.Errorf("callback failed")
+	})
+	if err == nil {
+		t.Fatal("expected callback error")
+	}
+}
+
+func TestForEachDashboardYAMLMissingDir(t *testing.T) {
+	err := forEachDashboardYAML(fstest.MapFS{}, func(string, []byte) error { return nil })
+	if err == nil {
+		t.Fatal("expected error when dashboards/ is missing")
 	}
 }
 
