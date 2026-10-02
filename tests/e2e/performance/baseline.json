@@ -1,16 +1,16 @@
 {
-  "capturedAt": "pending-first-run",
+  "capturedAt": "2026-10-02",
   "environment": "kind",
   "suites": {
-    "ambient":           { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "controlplane":      { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "dualstack":         { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "gatewaycontroller": { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "library":           { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "migration":         { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "monitoring":        { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "multicluster":      { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "multicontrolplane": { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 },
-    "operator":          { "allocBytes": 0, "allocObjects": 0, "cpuSeconds": 0 }
+    "ambient":           { "allocBytes": 19825617758, "allocObjects": 69211820, "cpuSeconds": 80.65  },
+    "controlplane":      { "allocBytes": 8409988163,  "allocObjects": 29663768, "cpuSeconds": 34.22  },
+    "dualstack":         { "allocBytes": 3602328849,  "allocObjects": 12984139, "cpuSeconds": 14.46  },
+    "gatewaycontroller": { "allocBytes": 725365133,   "allocObjects": 2437973,  "cpuSeconds": 3.32   },
+    "library":           { "allocBytes": 29262459,    "allocObjects": 110673,   "cpuSeconds": 0.43   },
+    "migration":         { "allocBytes": 4945494368,  "allocObjects": 17617734, "cpuSeconds": 19.55  },
+    "monitoring":        { "allocBytes": 1069039542,  "allocObjects": 3906152,  "cpuSeconds": 4.34   },
+    "multicluster":      { "allocBytes": 19957418761, "allocObjects": 67638112, "cpuSeconds": 187.70 },
+    "multicontrolplane": { "allocBytes": 4323257751,  "allocObjects": 14523413, "cpuSeconds": 18.47  },
+    "operator":          { "allocBytes": 277273950,   "allocObjects": 643127,   "cpuSeconds": 1.32   }
   }
 }
