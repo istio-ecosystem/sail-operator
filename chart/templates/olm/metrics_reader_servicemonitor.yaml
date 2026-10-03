@@ -1,0 +1,27 @@
+{{ if .Values.bundleGeneration }}
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor" }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.name }}-metrics-monitor
+  labels:
+    release: {{ .Values.metrics.helm.releaseName }}  # match Prometheus serviceMonitorSelector
+    app.kubernetes.io/component: {{ .Values.name }}
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: {{ .Values.name }}
+spec:
+  selector:
+    matchLabels:
+      control-plane: {{ .Values.deployment.name }}
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 30s
+      path: /metrics
+      port: https
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+{{- end }}
+{{ end }}
