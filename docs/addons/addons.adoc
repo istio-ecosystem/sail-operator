@@ -99,7 +99,7 @@ Install Bookinfo demo app.
 
 [source,bash,subs="attributes+"]
 ----
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 ----
 

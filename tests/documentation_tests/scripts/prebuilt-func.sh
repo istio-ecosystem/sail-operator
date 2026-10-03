@@ -343,12 +343,12 @@ EOF
 
 # Deploy Bookinfo application
 install_bookinfo() {
-    istio_release_name="$1"
     namespace="${2:-bookinfo}"
+    repo_root=$(git rev-parse --show-toplevel)
 
     kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
     kubectl label namespace "$namespace" istio.io/rev=default
-    kubectl apply -n "$namespace" -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/platform/kube/bookinfo.yaml
+    kubectl apply -n "$namespace" -f "$repo_root/samples/bookinfo/platform/kube/bookinfo.yaml"
 }
 
 # Create Bookinfo gateway API
