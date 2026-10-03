@@ -106,9 +106,29 @@ func forEachChartCRD(fn func(obj *unstructured.Unstructured)) {
 }
 
 func deleteAllIstioCRDs(ctx context.Context) {
+	var names []string
 	forEachChartCRD(func(obj *unstructured.Unstructured) {
-		_ = dynamicClient.Resource(crdGVR).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+		name := obj.GetName()
+		names = append(names, name)
+		err := dynamicClient.Resource(crdGVR).Delete(ctx, name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			GinkgoWriter.Printf("Warning: failed to delete CRD %s: %v\n", name, err)
+		}
 	})
+	if len(names) == 0 {
+		return
+	}
+
+	Eventually(func(g Gomega) {
+		for _, name := range names {
+			_, err := dynamicClient.Resource(crdGVR).Get(ctx, name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			g.Expect(err).NotTo(HaveOccurred(), "unexpected error getting CRD %s", name)
+			g.Expect(false).To(BeTrue(), "CRD %s still exists (may still be terminating)", name)
+		}
+	}).Should(Succeed())
 }
 
 func createAllIstioCRDs(ctx context.Context) {
@@ -120,7 +140,7 @@ func createAllIstioCRDs(ctx context.Context) {
 	})
 }
 
-var _ = Describe("CRD Ownership", Label("library", "crd-ownership"), Ordered, func() {
+var _ = Describe("CRD Ownership", Label("library", "crd-ownership", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
