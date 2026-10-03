@@ -11,6 +11,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.1.0
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
+	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -19,6 +20,7 @@ require (
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
 	github.com/openshift/library-go v0.0.0-20260318142011-72bf34f474bc
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
+	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.71.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
@@ -99,7 +101,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.28.1 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
@@ -129,7 +130,6 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
-	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rubenv/sql-migrate v1.8.1 // indirect

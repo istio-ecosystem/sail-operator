@@ -93,9 +93,10 @@ tests/e2e/
 ├── multicluster/         # Multi-cluster scenarios (primary-remote, multi-primary, external control plane)
 ├── multicontrolplane/    # Multiple control plane tests
 ├── operator/             # Operator deployment and installation tests
+├── performance/          # Performance baseline comparison (reads profiles written by other suites)
 ├── samples/              # Sample application tests
 ├── setup/                # Test setup utilities
-└── util/                 # Shared utilities (cleaner, kubectl, helm, etc.)
+└── util/                 # Shared utilities (cleaner, kubectl, helm, profiling, etc.)
 ```
 
 ### Cluster Management
@@ -515,3 +516,75 @@ When testing on different architectures:
 - **AMD64**: Default for most CI environments
 - **ARM64**: Common for Apple Silicon Macs
 - **Mixed environments**: Use `TARGET_ARCH` to specify target architecture
+
+---
+
+## Performance Tests
+
+Located in `tests/e2e/performance/`. The performance suite does **not** run its own workload. Instead it reads heap and CPU profiles captured by `profiling.WrapSuite` during each of the other E2E suites and compares them against a committed baseline.
+
+### How it works
+
+Every `*_suite_test.go` wraps `RunSpecs` with `profiling.WrapSuite`:
+
+```go
+func TestAmbient(t *testing.T) {
+    RegisterFailHandler(Fail)
+    profiling.WrapSuite("ambient", func() { RunSpecs(t, "Ambient Test Suite") })
+}
+```
+
+When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU before and after the suite runs, computes the delta, and writes `$ARTIFACTS/profiles/<suite>.json`. The performance suite runs last (alphabetically after all other suites), loads those files, and asserts each delta is within `baseline × PERF_DEGRADATION_FACTOR`.
+
+### Signals measured
+
+| Field | Source | What it measures |
+|---|---|---|
+| `allocBytes` | pprof `alloc_space` | Cumulative bytes allocated during the suite (includes GC'd memory) |
+| `allocObjects` | pprof `alloc_objects` | Cumulative heap objects allocated during the suite |
+| `inuseBytes` | pprof `inuse_space` (after-snapshot with `?gc=1`) | Net live-heap change after a forced GC — proxy for memory growth |
+| `inuseObjects` | pprof `inuse_objects` (after-snapshot with `?gc=1`) | Net live-object count change after a forced GC |
+| `cpuSeconds` | `process_cpu_seconds_total` (Prometheus) | CPU time consumed by the operator process (user + system) |
+| `apiCallsPatch` | `rest_client_requests_total{method="PATCH"}` (Prometheus) | Number of PATCH calls made to the API server |
+
+**`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing significant work, not that the operator is leaking memory.
+
+**`cpuSeconds` uses a separate, looser degradation factor (`PERF_CPU_DEGRADATION_FACTOR`, default 2.0×).** CPU time varies significantly across CI environments — a dualstack cluster runs roughly 2× heavier than a single-stack kind cluster for the same test suite. Using a dedicated factor lets the single `baseline.json` serve all environments while still catching extreme regressions (anything more than double the baseline).
+
+**`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
+
+**`apiCallsPatch` reflects API efficiency.** PATCH calls are the dominant write traffic from the operator. A large increase suggests the operator is re-applying resources on every reconcile even when nothing changed, or that a new code path is issuing redundant updates.
+
+New fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted when the baseline entry is non-zero, so the first CI run collects data without failing.
+
+### Enabling profiling
+
+```bash
+PPROF_ENABLED=true make test.e2e.kind
+```
+
+The `common-operator-integ-suite.sh` script passes `--set pprofBindAddress=:6060` to Helm when `PPROF_ENABLED=true`, starting a plain-HTTP pprof endpoint in the operator pod.
+
+### Baseline management (`baseline.json`)
+
+`tests/e2e/performance/baseline.json` stores per-suite baseline values. `ThresholdsFor(suite, factor)` multiplies each value by the degradation factor to produce the failure threshold.
+
+To update after an intentional change:
+1. Run `PPROF_ENABLED=true make test.e2e.kind` and copy the values from the `--- ACTUAL VALUES ---` output blocks in the performance suite output.
+2. Update `baseline.json` with those values.
+3. Commit: `git commit -s -m "perf: update baseline after <reason>"`.
+
+### Key environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PPROF_ENABLED` | `""` | Set to `true` to enable profiling and run baseline comparison |
+| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier for heap and API-call metrics |
+| `PERF_CPU_DEGRADATION_FACTOR` | `2.0` | Separate threshold multiplier for `cpuSeconds` only |
+| `PERF_BASELINE_FILE` | `tests/e2e/performance/baseline.json` | Path to an alternative baseline file |
+
+### Common pitfalls
+
+* **All-zero baselines**: The committed `baseline.json` ships with all zeros until the first real run populates it. With zero baselines, any positive delta will fail. Update the baseline from a real run before enabling this in CI.
+* **Suite not found**: If a suite's profile is missing (e.g., that suite was skipped or `PPROF_ENABLED` was not set), the corresponding `It` block is skipped with an explanatory message rather than failing.
+* **Port-forward timing**: `WrapSuite` establishes a port-forward to `:6060` on the operator pod. If the operator is not ready at suite start, the before-snapshot fails gracefully and the suite runs without profiling.

@@ -141,6 +141,7 @@ csv:
 image: quay.io/sail-dev/sail-operator:1.31-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
+pprofBindAddress: ""
 operator:
   # env:
   # - name: GOMAXPROCS
