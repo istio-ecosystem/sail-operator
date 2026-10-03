@@ -1,0 +1,537 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: istio-mesh-dashboard
+    app.kubernetes.io/name: perses-dashboard
+    app.kubernetes.io/part-of: perses-operator
+  name: istio-mesh-dashboard
+  namespace: perses-dev
+spec:
+  config:
+    display:
+      name: Istio Mesh Dashboard
+    duration: 1h
+    layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Global Traffic
+        items:
+        - content:
+            $ref: '#/spec/panels/0_0'
+          height: 6
+          width: 6
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/0_1'
+          height: 6
+          width: 6
+          x: 6
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/0_2'
+          height: 6
+          width: 6
+          x: 12
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/0_3'
+          height: 6
+          width: 6
+          x: 18
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Global Traffic
+        items:
+        - content:
+            $ref: '#/spec/panels/1_0'
+          height: 16
+          width: 24
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_1'
+          height: 16
+          width: 24
+          x: 0
+          "y": 16
+    - kind: Grid
+      spec:
+        display:
+          title: Istio Component Versions
+        items:
+        - content:
+            $ref: '#/spec/panels/2_0'
+          height: 8
+          width: 24
+          x: 0
+          "y": 0
+    panels:
+      "0_0":
+        kind: Panel
+        spec:
+          display:
+            description: Total requests in the cluster
+            name: Traffic Volume
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: requests/sec
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: round(sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])),
+                    0.01)
+      "0_1":
+        kind: Panel
+        spec:
+          display:
+            description: Total success rate of requests in the cluster
+            name: Success Rate
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: percent-decimal
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    (
+                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m]))
+                      /
+                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m]))
+                    )
+                    and on ()
+                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) > 0
+                    or on ()
+                      (
+                        sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) == bool 0
+                      )
+                    * 0 + 1
+      "0_2":
+        kind: Panel
+        spec:
+          display:
+            description: Total 4xx requests in in the cluster
+            name: 4xxs
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: requests/sec
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"4.."}[5m])),
+                      0.01
+                    )
+                    or
+                      vector(0)
+      "0_3":
+        kind: Panel
+        spec:
+          display:
+            description: Total 5xx requests in in the cluster
+            name: 5xxs
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: requests/sec
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"5.."}[5m])),
+                      0.01
+                    )
+                    or
+                      vector(0)
+      "1_0":
+        kind: Panel
+        spec:
+          display:
+            description: Request information for HTTP services
+            name: HTTP/gRPC Workloads
+          plugin:
+            kind: Table
+            spec:
+              columnSettings:
+              - align: left
+                header: Service
+                name: destination_service
+              - align: left
+                header: Workload
+                name: destination_workload_var
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: requests/sec
+                header: Requests
+                name: 'value #1'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P50 Latency
+                name: 'value #2'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P90 Latency
+                name: 'value #3'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: milliseconds
+                header: P99 Latency
+                name: 'value #4'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: percent-decimal
+                header: Success Rate
+                name: 'value #5'
+              - hide: true
+                name: destination_workload_namespace
+              - hide: true
+                name: destination_workload
+              - hide: true
+                name: timestamp
+              transforms:
+              - kind: MergeSeries
+                spec: {}
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      sum by (destination_workload, destination_workload_namespace, destination_service) (
+                        rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                      ),
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      histogram_quantile(
+                        0.5,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      )
+                      or
+                      histogram_quantile(
+                        0.5,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      ) * 1000,
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      histogram_quantile(
+                        0.9,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      )
+                      or
+                      histogram_quantile(
+                        0.9,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      ) * 1000,
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      histogram_quantile(
+                        0.99,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      )
+                      or
+                      histogram_quantile(
+                        0.99,
+                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      ) * 1000,
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      (
+                        sum by (destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m])
+                        )
+                        /
+                        sum by (destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                        )
+                      )
+                      and on (destination_workload, destination_workload_namespace, destination_service) (
+                        sum by (destination_workload, destination_workload_namespace, destination_service) (
+                          rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                        ) > 0
+                      )
+                      or on (destination_workload, destination_workload_namespace, destination_service) (
+                        (
+                          sum by (destination_workload, destination_workload_namespace, destination_service) (
+                            rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                          ) == bool 0
+                        ) * 0 + 1
+                      ),
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+      "1_1":
+        kind: Panel
+        spec:
+          display:
+            description: Bytes sent and recieived information for TCP services
+            name: TCP Workloads
+          plugin:
+            kind: Table
+            spec:
+              columnSettings:
+              - align: left
+                header: Service
+                name: destination_service
+              - align: left
+                header: Workload
+                name: destination_workload_var
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: bytes/sec
+                header: Bytes Received
+                name: 'value #1'
+              - align: right
+                format:
+                  decimalPlaces: 2
+                  unit: bytes/sec
+                header: Bytes Sent
+                name: 'value #2'
+              - hide: true
+                name: destination_workload_namespace
+              - hide: true
+                name: destination_workload
+              - hide: true
+                name: timestamp
+              transforms:
+              - kind: MergeSeries
+                spec: {}
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      sum by (destination_workload, destination_workload_namespace, destination_service) (
+                        rate(istio_tcp_received_bytes_total{reporter=~"source|destination|waypoint"}[5m])
+                      ),
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    label_join(
+                      sum by (destination_workload, destination_workload_namespace, destination_service) (
+                        rate(istio_tcp_sent_bytes_total{reporter=~"source|destination|waypoint"}[5m])
+                      ),
+                      "destination_workload_var",
+                      ".",
+                      "destination_workload",
+                      "destination_workload_namespace"
+                    )
+                  seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace
+                    }}'
+      "2_0":
+        kind: Panel
+        spec:
+          display:
+            description: Version number of each running instance
+            name: Istio Component Versions
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum by (component, tag) (istio_build)
+                  seriesNameFormat: '{{component}} ({{tag}})'
+status: {}

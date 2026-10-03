@@ -32,6 +32,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/perses"
+	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
@@ -70,6 +72,8 @@ func main() {
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&config.Config.EnablePersesDashboards, "enable-perses-dashboards", false,
+		"Wait for PersesDashboard CRD and create bundled Istio dashboards in the operator namespace. Disabled by default.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
 
@@ -86,6 +90,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Perses dashboards live with the package, not under the Istio charts tree.
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
@@ -258,6 +263,17 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Monitoring")
 		os.Exit(1)
+	}
+
+	if config.Config.EnablePersesDashboards {
+		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, mgr.GetClient(), mgr.GetCache(), persesresources.FS).
+			SetupWithManager(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("Perses dashboard installation disabled")
 	}
 
 	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {
