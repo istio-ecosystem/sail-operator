@@ -13,12 +13,13 @@ Configuring Istio to work with various integrations, especially on OpenShift, of
 
 ## Non-goals
 - Modifying the existing Istio CRD.
+- Installing or directly managing external datastores or integrations such as Prometheus, Tempo, Perses. This is another operator or admin's responsibility to manage.
 
 ## Design
 
 Note that the Integrations controller detailed below will be the same one implemented as part of the [metrics integration SEP](https://github.com/istio-ecosystem/sail-operator/pull/2028). See the Implementation Plan for more details.
 
-A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. The Integration controller will configure the target resources and any other resources necessary to manage the integration based on which integrations are configured. For example, a UWM integration would look like this:
+A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`, `PersesDatasource`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. The Integration controller will configure the target resources and any other resources necessary to manage the integration based on which integrations are configured. For example, a UWM integration would look like this:
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
@@ -123,6 +124,7 @@ For users that manage their resources through Argo CD, the [Server Side Apply sy
 
 - A mesh admin wants to configure Istio to work with UserWorkloadMonitoring on OpenShift. The admin wants Istio to work with UserWorkloadMonitoring without having to do any manual steps.
 - A mesh admin wants to configure Kiali to read from UserWorkloadMonitoring and distributed tracing without having to perform any manual steps.
+- A mesh admin on OpenShift wants a `PersesDatasource` in their Perses project wired to the same metrics backend as Kiali, by creating a minimal CR and letting the integration fill in the mesh-specific fields via server-side apply.
 - A mesh admin wants to maintain full control over the configuration of all resources in case any customizations are needed.
 
 ### API Changes
@@ -141,11 +143,44 @@ Three new CRDs will be added corresponding broadly to different integration type
   - IstioCSR
   - CertManager
 
-Each `Integration` resource has a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. 
+Each `Integration` resource has a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. The integrations controller does not create these resources if they do not exist.
 
 Here are examples of each type:
 
-A `MetricsIntegration` targeting Istio, Kiali, and Perses for UWM:
+A `MetricsIntegration` targeting Istio and Perses for UWM:
+
+The user creates the resources specified in `targetRefs`:
+
+```yaml
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: prometheus-datasource
+  namespace: monitoring
+spec:
+  config:
+    display:
+      name: prometheus-datasource
+    default: true
+    plugin:
+      kind: PrometheusDatasource
+      spec: {}
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+---
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+  namespace: istio-system
+spec: {}
+```
+
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
@@ -155,11 +190,8 @@ spec:
   targetRefs:
     - kind: Istio
       name: default
-    - kind: Kiali
-      name: kiali
-      namespace: istio-system
-    - kind: Perses
-      name: perses
+    - kind: PersesDatasource
+      name: prometheus-datasource
       namespace: monitoring
   type: UserWorkloadMonitoring
   userWorkloadMonitoring: {}
@@ -217,6 +249,50 @@ spec:
          url_format: "jaeger"
 ```
 
+#### PersesDatasource (MetricsIntegration)
+
+When a `MetricsIntegration` includes `targetRefs` with `kind: PersesDatasource`, the Integrations controller **server-side applies** mesh-related fields onto the referenced `PersesDatasource`. The user creates that CR (and any Perses prerequisites); the controller does not create it. Integration types do not duplicate fields from `PersesDatasource`; users set overrides directly on the resource if needed.
+
+Kiali `external_services.perses` is **not** configured implicitly when a `PersesDatasource` is also targeted. Users who want Perses deep links in Kiali configure `external_services.perses` directly on the `Kiali` CR (or via a future `DashboardIntegration`).
+
+The datasource wires Perses to the same metrics backend selected by `type`, analogous to how a `Kiali` target wires `external_services.prometheus`.
+
+| `MetricsIntegration.type` | `PersesDatasource` endpoint |
+|---------------------------|-----------------------------|
+| `UserWorkloadMonitoring` | OpenShift User Workload Monitoring Thanos querier (same URL and auth as Kiali `external_services.prometheus` for UWM) |
+| `ClusterObservabilityOperator` | Prometheus/Thanos URL derived from the referenced `MonitoringStack` |
+
+The controller server-side applies these fields onto the user-created `PersesDatasource` referenced in `targetRefs`. Users who need a different proxy URL, authentication, or TLS set those fields directly on the CR; SSA conflict rules apply.
+
+Example fields applied by the controller for UWM (merged onto the user's `PersesDatasource`):
+
+```yaml
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: prometheus-datasource
+  namespace: monitoring
+spec:
+  config:
+    display:
+      name: Thanos Querier Datasource
+    default: true
+    plugin:
+      kind: PrometheusDatasource
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
+            secret: prometheus-datasource-secret
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt
+```
+
 Integrating Istio with Zero Trust Workload Identity Management:
 ```yaml
 kind: CertificateIntegration
@@ -250,7 +326,7 @@ spec:
 
 These are broadly what the golang API changes would be:
 ```go
-// TargetReference identifies a resource that the integration configures.
+// TargetReference identifies a resource that the integration configures
 type TargetReference struct {
 	// Kind specifies the kind of resource (e.g. "Istio", "Kiali").
 	Kind string `json:"kind"`
@@ -259,7 +335,7 @@ type TargetReference struct {
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the target resource.
-	// Only required for namespace-scoped resources like Kiali.
+	// Only required for namespace-scoped resources like Kiali and PersesDatasource.
 	Namespace string `json:"namespace,omitempty"`
 }
 
@@ -379,6 +455,7 @@ Integrations will report `Status`. Non-exhaustive list of what should be in `Sta
 - Validations: do the refs exist?
 - Success/failure to update resources.
 - Possibly report if the update was partially applied i.e. some other controller owns part of the fields.
+- Missing CRDs when the targetRef's CRD does not exist in the cluster.
 
 #### Migration
 
@@ -405,6 +482,9 @@ Adding the Cluster Observability Operator integration would require adding:
 - `PATCH` for `Kiali` resources (the Sail Operator already has permission to patch `Istio` resources)
 - `CREATE`/`PATCH` for `PodMonitor`/`ServiceMonitor` resources.
 
+When `MetricsIntegration` targets a `PersesDatasource`, the Integrations controller also needs:
+- `PATCH` for `PersesDatasource` resources (`perses.dev/v1alpha2`)
+
 This will greatly increase the scope of the Sail Operator's Service Account but the operator already has full control of `Secret` and `ClusterRole`/`ClusterRoleBinding` resources effectively giving it cluster admin for the cluster.
 
 ### Architecture
@@ -419,6 +499,7 @@ flowchart TD
     subgraph "Targets"
         Istio["Istio"]
         Kiali["Kiali"]
+        PDS["PersesDatasource"]
     end
 
     subgraph "References"
@@ -428,6 +509,7 @@ flowchart TD
 
     MI -- "targetRefs:\nIstio" --> Istio
     MI -- "targetRefs:\nKiali" --> Kiali
+    MI -- "targetRefs:\nPersesDatasource" --> PDS
     MI -. "metrics:\nClusterObservability" .-> MS
 
     TI -- "targetRefs:\nIstio" --> Istio
@@ -497,13 +579,16 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - [ ] Add `TracingIntegration` CRD
 - [ ] Add `CertificateIntegration` CRD
 - [ ] Add a `Kiali` target on the `Integration` resources.
+- [ ] When `MetricsIntegration` targets a `PersesDatasource`, server-side apply mesh-related fields onto the referenced datasource.
 
 ## Test Plan
 - A key aspect of this design is utilizing Server Side Apply to ensure that users can override values that the operator sets if need be without fighting against the controller. This needs to be an integral part of the test suite and will be included in e2e testing. Specifically e2e testing should ensure that the operator can Apply a configuration partially and ignore any conflict errors.
 - Some of the integrations types will only be available on OpenShift like the UWM and COO types. e2e tests for these can only be run in an OpenShift environment. These will be filtered out of the kind based suite with the openshift label similar to the TLS profile tests.
+- Perses tests should cover: SSA on user-created `PersesDatasource`; validation when a `PersesDatasource` targetRef does not exist; datasource proxy URL aligned with `type` for UWM; missing CRDs when `perses.dev` CRDs are not installed.
 
 ## Change History (only required when making changes after SEP has been accepted)
 - Changed the API from `IstioIntegration` --> `<Component>Integration`.
 - Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali).
 - Replaced `target` discriminated union with `targetRefs` array of references.
 - Updated migration section to ignore any existing resources.
+- Updated `Perses` targetRef for `MetricsIntegration` to `PersesDatasource`.
