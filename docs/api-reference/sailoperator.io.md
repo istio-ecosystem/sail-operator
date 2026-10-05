@@ -3198,6 +3198,7 @@ _Appears in:_
 - [IstioRevisionStatus](#istiorevisionstatus)
 - [IstioRevisionTagStatus](#istiorevisiontagstatus)
 - [IstioStatus](#istiostatus)
+- [MetricsIntegrationStatus](#metricsintegrationstatus)
 - [ZTunnelStatus](#ztunnelstatus)
 - [ZTunnelStatus](#ztunnelstatus)
 
@@ -3928,8 +3929,215 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha1 API group
 
 ### Resource Types
+- [MetricsIntegration](#metricsintegration-v1alpha1)
+- [MetricsIntegrationList](#metricsintegrationlist-v1alpha1)
 - [ZTunnel](#ztunnel-v1alpha1)
 - [ZTunnelList](#ztunnellist-v1alpha1)
+
+
+
+#### ClusterObservabilityOperatorConfig
+
+
+
+ClusterObservabilityOperatorConfig configures the Cluster Observability Operator integration.
+
+
+
+_Appears in:_
+- [MetricsConfig](#metricsconfig)
+- [MetricsIntegrationSpec](#metricsintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `monitoringStackRef` _[NamespacedReference](#namespacedreference)_ | MonitoringStackRef is a reference to a MonitoringStack resource that defines the Prometheus stack used for scraping Istio metrics. |  | Required: \{\}   |
+
+
+#### MetricsConfig
+
+
+
+MetricsConfig configures a metrics backend.
+
+
+
+_Appears in:_
+- [MetricsIntegrationSpec](#metricsintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[MetricsType](#metricstype)_ | Type specifies the metrics integration type. |  | Enum: [UserWorkloadMonitoring ClusterObservabilityOperator]  Required: \{\}   |
+| `userWorkloadMonitoring` _[UserWorkloadMonitoringConfig](#userworkloadmonitoringconfig)_ | UserWorkloadMonitoring configures integration with OpenShift User Workload Monitoring. |  |  |
+| `clusterObservabilityOperator` _[ClusterObservabilityOperatorConfig](#clusterobservabilityoperatorconfig)_ | ClusterObservabilityOperator configures integration with the Cluster Observability Operator's MonitoringStack resource for metrics collection. |  |  |
+
+
+#### MetricsIntegration (v1alpha1)
+
+
+
+MetricsIntegration configures metrics collection integrations for Istio and related resources.
+
+
+
+_Appears in:_
+- [MetricsIntegrationList](#metricsintegrationlist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `MetricsIntegration` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[MetricsIntegrationSpec](#metricsintegrationspec)_ |  |  |  |
+| `status` _[MetricsIntegrationStatus](#metricsintegrationstatus)_ |  |  |  |
+
+
+#### MetricsIntegrationConditionReason
+
+_Underlying type:_ _string_
+
+MetricsIntegrationConditionReason represents the reason for a MetricsIntegration condition.
+
+
+
+_Appears in:_
+- [MetricsIntegrationStatus](#metricsintegrationstatus)
+
+| Field | Description |
+| --- | --- |
+| `ReconcileError` | MetricsIntegrationReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
+| `RefNotFound` | MetricsIntegrationReasonReferenceNotFound indicates that the resource referenced by the integration's TargetRefs was not found.  |
+| `InvalidSpec` | MetricsIntegrationReasonInvalidSpec indicates that the spec is invalid.  |
+| `DuplicateTarget` | MetricsIntegrationReasonDuplicateTarget indicates that a MetricsIntegration already exists for one of the referenced resources.  |
+| `NotImplemented` | MetricsIntegrationReasonNotImplemented indicates that the requested integration type is not yet implemented.  |
+| `Healthy` | MetricsIntegrationReasonHealthy indicates that the integration has been successfully reconciled.  |
+
+
+
+
+#### MetricsIntegrationList (v1alpha1)
+
+
+
+MetricsIntegrationList contains a list of MetricsIntegrations
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `MetricsIntegrationList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[MetricsIntegration](#metricsintegration) array_ |  |  |  |
+
+
+#### MetricsIntegrationSpec
+
+
+
+MetricsIntegrationSpec defines the desired state of MetricsIntegration
+
+
+
+_Appears in:_
+- [MetricsIntegration](#metricsintegration)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `targetRefs` _[TargetReference](#targetreference) array_ | TargetRefs specifies the resources that this integration configures. |  | MinItems: 1  Required: \{\}   |
+| `type` _[MetricsType](#metricstype)_ | Type specifies the metrics integration type. |  | Enum: [UserWorkloadMonitoring ClusterObservabilityOperator]  Required: \{\}   |
+| `userWorkloadMonitoring` _[UserWorkloadMonitoringConfig](#userworkloadmonitoringconfig)_ | UserWorkloadMonitoring configures integration with OpenShift User Workload Monitoring. |  |  |
+| `clusterObservabilityOperator` _[ClusterObservabilityOperatorConfig](#clusterobservabilityoperatorconfig)_ | ClusterObservabilityOperator configures integration with the Cluster Observability Operator's MonitoringStack resource for metrics collection. |  |  |
+
+
+#### MetricsIntegrationStatus
+
+
+
+MetricsIntegrationStatus defines the observed state of MetricsIntegration
+
+
+
+_Appears in:_
+- [MetricsIntegration](#metricsintegration)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this MetricsIntegration object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `state` _[MetricsIntegrationConditionReason](#metricsintegrationconditionreason)_ | Reports the current state of the object. |  |  |
+
+
+#### MetricsType
+
+_Underlying type:_ _string_
+
+MetricsType identifies the type of metrics integration.
+
+_Validation:_
+- Enum: [UserWorkloadMonitoring ClusterObservabilityOperator]
+
+_Appears in:_
+- [MetricsConfig](#metricsconfig)
+- [MetricsIntegrationSpec](#metricsintegrationspec)
+
+| Field | Description |
+| --- | --- |
+| `UserWorkloadMonitoring` | MetricsTypeUserWorkloadMonitoring integrates Istio with OpenShift User Workload Monitoring.  |
+| `ClusterObservabilityOperator` | MetricsTypeClusterObservabilityOperator integrates Istio with a Cluster Observability Operator MonitoringStack.  |
+
+
+#### NamespacedReference
+
+
+
+NamespacedReference references a namespaced Kubernetes object.
+
+
+
+_Appears in:_
+- [ClusterObservabilityOperatorConfig](#clusterobservabilityoperatorconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the referenced object. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `namespace` _string_ | Namespace is the namespace of the referenced object. |  | MaxLength: 63  MinLength: 1  Required: \{\}   |
+
+
+#### TargetReference
+
+
+
+TargetReference identifies a resource that the integration configures.
+
+
+
+_Appears in:_
+- [MetricsIntegrationSpec](#metricsintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind is the kind of the target resource. |  | Enum: [Istio Kiali Perses]  Required: \{\}   |
+| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `namespace` _string_ | Namespace is the namespace of the target resource. Only required for namespace-scoped resources like Kiali. |  | MaxLength: 63   |
+
+
+#### UserWorkloadMonitoringConfig
+
+
+
+UserWorkloadMonitoringConfig configures the OpenShift User Workload Monitoring integration.
+
+
+
+_Appears in:_
+- [MetricsConfig](#metricsconfig)
+- [MetricsIntegrationSpec](#metricsintegrationspec)
 
 
 

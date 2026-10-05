@@ -1,0 +1,7 @@
+category: added
+title: Add MetricsIntegration CRD API
+description: |
+  Introduces a cluster-scoped MetricsIntegration API (sailoperator.io/v1alpha1)
+  as defined in SEP3, so metrics backends can be declared by referencing Istio
+  (and related) resources. Controller reconciliation for UserWorkloadMonitoring
+  and ClusterObservabilityOperator will follow in a subsequent PR.
