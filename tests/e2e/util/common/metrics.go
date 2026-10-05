@@ -17,6 +17,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -26,8 +27,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	dto "github.com/prometheus/client_model/go"
@@ -38,71 +37,15 @@ import (
 // MetricsSnapshot is a parsed Prometheus metric family map keyed by metric name.
 type MetricsSnapshot map[string]*dto.MetricFamily
 
-// PodResources holds parsed CPU and memory usage for a single pod.
-type PodResources struct {
-	CPUMillicores int64
-	MemoryMi      int64
-}
-
 // ScrapeOperatorMetrics port-forwards to the operator deployment's metrics endpoint
 // (port 8443, TLS with skip-verify) and returns a parsed MetricsSnapshot.
 // The caller must supply a valid bearer token that has the metrics-reader ClusterRole.
 func ScrapeOperatorMetrics(operatorNs, deploymentName, bearerToken string) (MetricsSnapshot, error) {
-	localPort, err := freePort()
-	if err != nil {
-		return nil, fmt.Errorf("finding free port: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	args := []string{
-		"port-forward", "-n", operatorNs,
-		"deploy/" + deploymentName,
-		fmt.Sprintf("%d:8443", localPort),
-	}
-	if kc := os.Getenv("KUBECONFIG"); kc != "" {
-		args = append(args, "--kubeconfig", kc)
-	}
-	pfCmd := exec.CommandContext(ctx, "kubectl", args...)
-	if err := pfCmd.Start(); err != nil {
-		return nil, fmt.Errorf("starting port-forward: %w", err)
-	}
-	// Kill the subprocess and reap it to avoid zombie processes.
-	defer func() {
-		_ = pfCmd.Process.Kill()
-		_ = pfCmd.Wait()
-	}()
-
-	if err := waitForPort(localPort, 10*time.Second); err != nil {
-		return nil, fmt.Errorf("port-forward not ready on :%d: %w", localPort, err)
-	}
-
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // intentional for local port-forward
-		},
-		Timeout: 10 * time.Second,
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		fmt.Sprintf("https://127.0.0.1:%d/metrics", localPort), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+bearerToken)
-
-	resp, err := httpClient.Do(req)
+	body, err := portForwardedGet(operatorNs, deploymentName, 8443, "https", "/metrics", bearerToken)
 	if err != nil {
 		return nil, fmt.Errorf("scraping metrics: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("metrics endpoint returned %d: %s", resp.StatusCode, string(body))
-	}
-
-	return parseMetrics(resp.Body)
+	return parseMetrics(bytes.NewReader(body))
 }
 
 // GetServiceAccountToken returns a short-lived bearer token for the named service account.
@@ -223,51 +166,73 @@ func (s MetricsSnapshot) GetHistogramSumAndCount(metricName string, labels map[s
 	return sum, count, nil
 }
 
-// ParseTopPodsOutput parses the `kubectl top pods --no-headers` text output into
-// a map of pod name → PodResources. Returns an empty map if output is empty or
-// metrics-server is unavailable. CPU is parsed in millicores (e.g. "5m" → 5),
-// memory in mebibytes (e.g. "64Mi" → 64, "1Gi" → 1024).
-func ParseTopPodsOutput(output string) map[string]PodResources {
-	result := make(map[string]PodResources)
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			continue
+// portForwardedGet starts a kubectl port-forward from deploy/<deploymentName> in operatorNs,
+// forwarding <targetPort> to a random local port, then issues a GET and returns the body.
+// Use scheme "http" or "https" (https skips TLS verification for local port-forwards).
+// Pass a non-empty bearerToken to set an Authorization header.
+func portForwardedGet(operatorNs, deploymentName string, targetPort int, scheme, path, bearerToken string) ([]byte, error) {
+	localPort, err := freePort()
+	if err != nil {
+		return nil, fmt.Errorf("finding free port: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	args := []string{
+		"port-forward", "-n", operatorNs,
+		"deploy/" + deploymentName,
+		fmt.Sprintf("%d:%d", localPort, targetPort),
+	}
+	if kc := os.Getenv("KUBECONFIG"); kc != "" {
+		args = append(args, "--kubeconfig", kc)
+	}
+	pfCmd := exec.CommandContext(ctx, "kubectl", args...)
+	if err := pfCmd.Start(); err != nil {
+		return nil, fmt.Errorf("starting port-forward: %w", err)
+	}
+	defer func() {
+		_ = pfCmd.Process.Kill()
+		_ = pfCmd.Wait()
+	}()
+
+	if err := waitForPort(localPort, 10*time.Second); err != nil {
+		return nil, fmt.Errorf("port-forward not ready on :%d: %w", localPort, err)
+	}
+
+	httpClient := http.DefaultClient
+	if scheme == "https" {
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // intentional for local port-forward
+			},
+			Timeout: 10 * time.Second,
 		}
-		name := fields[0]
-		cpu := parseMillicores(fields[1])
-		mem := parseMebibytes(fields[2])
-		result[name] = PodResources{CPUMillicores: cpu, MemoryMi: mem}
 	}
-	return result
-}
 
-// parseMillicores converts a CPU string like "5m" or "1" to millicores.
-func parseMillicores(s string) int64 {
-	if strings.HasSuffix(s, "m") {
-		v, _ := strconv.ParseInt(strings.TrimSuffix(s, "m"), 10, 64)
-		return v
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		fmt.Sprintf("%s://127.0.0.1:%d%s", scheme, localPort, path), nil)
+	if err != nil {
+		return nil, err
 	}
-	v, _ := strconv.ParseInt(s, 10, 64)
-	return v * 1000
-}
+	if bearerToken != "" {
+		req.Header.Set("Authorization", "Bearer "+bearerToken)
+	}
 
-// parseMebibytes converts memory strings like "64Mi", "1Gi", "512Ki" to mebibytes.
-func parseMebibytes(s string) int64 {
-	switch {
-	case strings.HasSuffix(s, "Gi"):
-		v, _ := strconv.ParseInt(strings.TrimSuffix(s, "Gi"), 10, 64)
-		return v * 1024
-	case strings.HasSuffix(s, "Mi"):
-		v, _ := strconv.ParseInt(strings.TrimSuffix(s, "Mi"), 10, 64)
-		return v
-	case strings.HasSuffix(s, "Ki"):
-		v, _ := strconv.ParseInt(strings.TrimSuffix(s, "Ki"), 10, 64)
-		return v / 1024
-	default:
-		v, _ := strconv.ParseInt(s, 10, 64)
-		return v / (1024 * 1024)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", path, err)
 	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("endpoint returned %d: %s", resp.StatusCode, string(body))
+	}
+	return body, nil
 }
 
 func parseMetrics(r io.Reader) (MetricsSnapshot, error) {
