@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -83,13 +84,13 @@ func TestRecordMetrics(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "istio-1"},
 			Spec:       v1.IstioSpec{Version: "v1.30.0"},
 		},
-		&v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "istio-rev-1"},
-			Spec:       v1.IstioRevisionSpec{Version: "v1.30.0"},
+		&v1.Istio{
+			ObjectMeta: metav1.ObjectMeta{Name: "istio-2"},
+			Spec:       v1.IstioSpec{Version: "v1.31.0"},
 		},
-		&v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "istio-rev-2"},
-			Spec:       v1.IstioRevisionSpec{Version: "v1.31.0"},
+		&v1.Istio{
+			ObjectMeta: metav1.ObjectMeta{Name: "istio-3"},
+			Spec:       v1.IstioSpec{Version: "v1.31.0"},
 		},
 
 		// ZTunnel resources
@@ -143,23 +144,23 @@ func TestRecordMetrics(t *testing.T) {
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "ambient-ns-3",
-				Labels: map[string]string{"istio.io/ingress-use-waypoint": "ingress-waypoint"},
+				Labels: map[string]string{"istio.io/use-waypoint": "waypoint", "istio.io/ingress-use-waypoint": "ingress-waypoint"},
 			},
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(initObjects...).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.PlatformKubernetes)
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{})
 
 	ctx := context.Background()
 	recorder.recordMetrics(ctx)
 
 	// Assert GaugeVec metrics
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.30.0")); val != 2 {
-		t.Errorf("expected IstioVersionTotal for v1.30.0 to be 2, got %f", val)
+	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
+		t.Errorf("expected IstioVersionTotal for v1.30.0 to be 1, got %f", val)
 	}
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.31.0")); val != 1 {
-		t.Errorf("expected IstioVersionTotal for v1.31.0 to be 1, got %f", val)
+	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.31.0")); val != 2 {
+		t.Errorf("expected IstioVersionTotal for v1.31.0 to be 2, got %f", val)
 	}
 	if val := getGaugeValue(t, ZTunnelVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
 		t.Errorf("expected ZTunnelVersionTotal for v1.30.0 to be 1, got %f", val)
@@ -181,7 +182,7 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	scheme := createScheme(t)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.PlatformKubernetes)
+	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -189,15 +190,84 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	recorder.Start(ctx)
 
 	// Allow the ticker to trigger at least once
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
+}
 
-	recorder.Stop()
+func TestEnsureNamespaceLabel(t *testing.T) {
+	scheme := createScheme(t)
 
-	// Verify the channel is closed
-	select {
-	case <-recorder.done:
-		// Expected behavior: channel should be closed
-	default:
-		t.Errorf("expected recorder.done channel to be closed after Stop()")
+	tests := []struct {
+		name              string
+		operatorNamespace string
+		initialNamespace  *corev1.Namespace
+		expectError       bool
+	}{
+		{
+			name:              "successfully patch existing namespace without labels",
+			operatorNamespace: "openshift-operators",
+			initialNamespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "openshift-operators",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:              "successfully patch existing namespace with existing labels",
+			operatorNamespace: "openshift-operators",
+			initialNamespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "openshift-operators",
+					Labels: map[string]string{"other-label": "true"},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:              "returns error when namespace does not exist",
+			operatorNamespace: "openshift-operators",
+			initialNamespace:  nil,
+			expectError:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var initObjs []client.Object
+			if tt.initialNamespace != nil {
+				initObjs = append(initObjs, tt.initialNamespace)
+			}
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(initObjs...).Build()
+			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
+				OperatorNamespace: tt.operatorNamespace,
+			})
+
+			ctx := context.Background()
+			err := recorder.EnsureNamespaceLabel(ctx)
+
+			if (err != nil) != tt.expectError {
+				t.Fatalf("EnsureNamespaceLabel() error = %v, expectError %v", err, tt.expectError)
+			}
+
+			if !tt.expectError {
+				updatedNs := &corev1.Namespace{}
+				err := fakeClient.Get(ctx, client.ObjectKey{Name: tt.operatorNamespace}, updatedNs)
+				if err != nil {
+					t.Fatalf("failed to get patched namespace: %v", err)
+				}
+
+				labelVal, exists := updatedNs.Labels["openshift.io/cluster-monitoring"]
+				if !exists || labelVal != "true" {
+					t.Errorf("expected label openshift.io/cluster-monitoring=true, got exists=%v, val=%s", exists, labelVal)
+				}
+
+				if tt.initialNamespace.Labels != nil && tt.initialNamespace.Labels["other-label"] != "" {
+					if updatedNs.Labels["other-label"] != "true" {
+						t.Errorf("expected existing labels to be preserved")
+					}
+				}
+			}
+		})
 	}
 }

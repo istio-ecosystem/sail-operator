@@ -40,10 +40,8 @@ type MetricDescription struct {
 // MetricsRecorder manages periodic metrics collection
 type MetricsRecorder struct {
 	client.Client
-	platform config.Platform
-	interval time.Duration
-	ticker   *time.Ticker
-	done     chan struct{}
+	metricsCfg config.ReconcilerConfig
+	interval   time.Duration
 }
 
 // metricPrefix will be populated at build time via -ldflags
@@ -140,39 +138,28 @@ func ListMetrics() []MetricDescription {
 	return v
 }
 
-func NewMetricsRecorder(interval time.Duration, client client.Client, platform config.Platform) *MetricsRecorder {
+func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig) *MetricsRecorder {
 	return &MetricsRecorder{
-		Client:   client,
-		platform: platform,
-		interval: interval,
-		done:     make(chan struct{}),
+		Client:     client,
+		metricsCfg: metricsCfg,
+		interval:   interval,
 	}
 }
 
 // Start begins recording metrics every interval until context is canceled
 func (m *MetricsRecorder) Start(ctx context.Context) {
-	m.ticker = time.NewTicker(m.interval)
-
 	go func() {
+		ticker := time.NewTicker(m.interval)
+		defer ticker.Stop() // Cleans up ticker whenever the goroutine exits
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-m.done:
-				return
-			case <-m.ticker.C:
+			case <-ticker.C:
 				m.recordMetrics(ctx)
 			}
 		}
 	}()
-}
-
-// Stop cleans up the ticker
-func (m *MetricsRecorder) Stop() {
-	if m.ticker != nil {
-		m.ticker.Stop()
-	}
-	close(m.done)
 }
 
 // recordMetrics lists custom resources such as Istio, IstioRevision, ZTunnel and records their counts.
@@ -201,19 +188,11 @@ func (m *MetricsRecorder) listIstiod(ctx context.Context) map[string]float64 {
 	istiodCounts := make(map[string]float64)
 
 	istioList := v1.IstioList{}
-	istioRevisionList := v1.IstioRevisionList{}
 	if err := m.Client.List(ctx, &istioList); err != nil {
 		log.V(4).Error(err, "failed to list Istio")
 	}
-	if err := m.Client.List(ctx, &istioRevisionList); err != nil {
-		log.V(4).Error(err, "failed to list IstioRevision")
-	}
+
 	for _, item := range istioList.Items {
-		if item.Spec.Version != "" {
-			istiodCounts[item.Spec.Version]++
-		}
-	}
-	for _, item := range istioRevisionList.Items {
 		if item.Spec.Version != "" {
 			istiodCounts[item.Spec.Version]++
 		}
@@ -263,6 +242,8 @@ func (m *MetricsRecorder) listSidecarNamespace(ctx context.Context) float64 {
 
 func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
 	log := logf.FromContext(ctx)
+	setNs := make(map[string]corev1.Namespace)
+
 	ambientNsList := &corev1.NamespaceList{}
 	waypointNsList := &corev1.NamespaceList{}
 	ingressNsList := &corev1.NamespaceList{}
@@ -276,20 +257,26 @@ func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
 	if err := m.Client.List(ctx, ingressNsList, client.HasLabels{"istio.io/ingress-use-waypoint"}); err != nil {
 		log.V(4).Error(err, "failed to list namespace")
 	}
-	return float64(len(ambientNsList.Items) + len(waypointNsList.Items) + len(ingressNsList.Items))
+
+	for _, ns := range ambientNsList.Items {
+		setNs[ns.Name] = ns
+	}
+	for _, ns := range waypointNsList.Items {
+		setNs[ns.Name] = ns
+	}
+	for _, ns := range ingressNsList.Items {
+		setNs[ns.Name] = ns
+	}
+
+	return float64(len(setNs))
 }
 
 // EnsureNamespaceLabel ensures label openshift.io/cluster-monitoring=true for the operator namespace
 // When the operator is running on OpenShift
 func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
-	name := "sail-operator"
-	if m.platform == config.PlatformOpenShift {
-		name = "openshift-operators"
-	}
-
 	ns := &corev1.Namespace{}
-	if err := m.Client.Get(ctx, types.NamespacedName{Name: name}, ns); err != nil {
-		return fmt.Errorf("failed to get namespace %s: %w", name, err)
+	if err := m.Client.Get(ctx, types.NamespacedName{Name: m.metricsCfg.OperatorNamespace}, ns); err != nil {
+		return fmt.Errorf("failed to get namespace %s: %w", m.metricsCfg.OperatorNamespace, err)
 	}
 
 	patchBase := client.MergeFrom(ns.DeepCopy())

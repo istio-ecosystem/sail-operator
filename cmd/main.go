@@ -313,7 +313,7 @@ func main() {
 	}
 
 	setupLog.Info("starting custom resource metrics recorder")
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg.Platform)
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg)
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		if err := recorder.EnsureNamespaceLabel(ctx); err != nil {
 			setupLog.Error(err, "problem adding cluster-monitoring label")
@@ -322,10 +322,6 @@ func main() {
 
 	// Start the background recorder (non-blocking)
 	recorder.Start(ctx)
-	// Automatically trigger Stop() when ctx is canceled without blocking the main thread
-	context.AfterFunc(ctx, func() {
-		recorder.Stop()
-	})
 
 	setupLog.Info("starting sail-operator manager")
 	if err := mgr.Start(ctx); err != nil {
