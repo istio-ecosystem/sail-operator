@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-02",
+  "capturedAt": "2026-10-05",
   "environment": "kind",
   "suites": {
     "ambient":           { "allocBytes": 23082619166, "allocObjects": 78022703, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 80.65,  "apiCallsPatch": 1142 },
@@ -11,6 +11,6 @@
     "monitoring":        { "allocBytes": 1132945769,  "allocObjects": 3906152,  "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 4.34,   "apiCallsPatch": 54   },
     "multicluster":      { "allocBytes": 19957418761, "allocObjects": 67638112, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 187.70, "apiCallsPatch": 0    },
     "multicontrolplane": { "allocBytes": 4833066954,  "allocObjects": 16213305, "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 18.47,  "apiCallsPatch": 209  },
-    "operator":          { "allocBytes": 277273950,   "allocObjects": 643127,   "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 1.32,   "apiCallsPatch": 8    }
+    "operator":          { "allocBytes": 280290322,   "allocObjects": 836763,   "inuseBytes": 0, "inuseObjects": 0, "cpuSeconds": 1.32,   "apiCallsPatch": 8    }
   }
 }
