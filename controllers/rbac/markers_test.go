@@ -89,7 +89,7 @@ func TestCSVClusterPermissionsIsSupersetOfHelmRole(t *testing.T) {
 		t.Fatalf("failed to parse Helm role: %v", err)
 	}
 
-	csvRaw := mustReadFile(t, filepath.Join(repoRoot, "bundle", "manifests", "sailoperator.clusterserviceversion.yaml"))
+	csvRaw := mustReadCSV(t, filepath.Join(repoRoot, "bundle", "manifests"))
 	var csv struct {
 		Spec struct {
 			Install struct {
@@ -143,6 +143,21 @@ func repositoryRoot(t *testing.T) string {
 		t.Fatal("failed to determine test file path")
 	}
 	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
+}
+
+func mustReadCSV(t *testing.T, manifestsDir string) string {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(manifestsDir, "*.clusterserviceversion.yaml"))
+	if err != nil {
+		t.Fatalf("failed to glob CSV files: %v", err)
+	}
+	if len(matches) == 0 {
+		t.Fatalf("no *.clusterserviceversion.yaml found in %s", manifestsDir)
+	}
+	if len(matches) > 1 {
+		t.Fatalf("multiple *.clusterserviceversion.yaml found in %s: %v", manifestsDir, matches)
+	}
+	return mustReadFile(t, matches[0])
 }
 
 func mustReadFile(t *testing.T, path string) string {
