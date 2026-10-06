@@ -23,6 +23,7 @@ import (
 	"testing/synctest"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -74,19 +75,21 @@ func (f *fakeController) GetLogger() logr.Logger {
 }
 
 func TestDelayedStartController(t *testing.T) {
-	blockOnRequired := func(ctx context.Context, _ cache.Cache, crdNames ...string) error {
+	requiredGVR := schema.GroupVersionResource{Group: "example.io", Version: "v1", Resource: "required"}
+	optionalGVR := schema.GroupVersionResource{Group: "example.io", Version: "v1", Resource: "optional"}
+	blockOnRequired := func(ctx context.Context, _ cache.Cache, gvrs ...schema.GroupVersionResource) error {
 		// Simulate blocking on required and returning immediately for optional
-		for _, name := range crdNames {
-			if name == "required.example.io" {
+		for _, gvr := range gvrs {
+			if gvr == requiredGVR {
 				<-ctx.Done()
 			}
 		}
 		return ctx.Err()
 	}
-	blockOnOptional := func(ctx context.Context, _ cache.Cache, crdNames ...string) error {
+	blockOnOptional := func(ctx context.Context, _ cache.Cache, gvrs ...schema.GroupVersionResource) error {
 		// Simulate blocking on optional and returning immediately for required
-		for _, name := range crdNames {
-			if name == "optional.example.io" {
+		for _, gvr := range gvrs {
+			if gvr == optionalGVR {
 				<-ctx.Done()
 			}
 		}
@@ -102,13 +105,13 @@ func TestDelayedStartController(t *testing.T) {
 		expectedError       error
 		requiredWatchError  error
 		optionalWatchError  error
-		waitFunc            func(context.Context, cache.Cache, ...string) error
+		waitFunc            func(context.Context, cache.Cache, ...schema.GroupVersionResource) error
 	}{
 		"CRDs exist. Should start controller": {
 			expectStart:         true,
 			expectRequiredWatch: true,
 			expectOptionalWatch: true,
-			waitFunc:            func(context.Context, cache.Cache, ...string) error { return nil },
+			waitFunc:            func(context.Context, cache.Cache, ...schema.GroupVersionResource) error { return nil },
 		},
 		"Required CRDs don't exist. Controller never calls Start": {
 			expectStart:         false,
@@ -122,8 +125,8 @@ func TestDelayedStartController(t *testing.T) {
 			expectRequiredWatch: false,
 			expectOptionalWatch: true,
 			expectedError:       requiredWaitErr,
-			waitFunc: func(_ context.Context, _ cache.Cache, crdNames ...string) error {
-				if slices.Contains(crdNames, "required.example.io") {
+			waitFunc: func(_ context.Context, _ cache.Cache, gvrs ...schema.GroupVersionResource) error {
+				if slices.Contains(gvrs, requiredGVR) {
 					return requiredWaitErr
 				}
 				return nil
@@ -141,14 +144,14 @@ func TestDelayedStartController(t *testing.T) {
 			expectOptionalWatch: true,
 			expectedError:       requiredWatchErr,
 			requiredWatchError:  requiredWatchErr,
-			waitFunc:            func(context.Context, cache.Cache, ...string) error { return nil },
+			waitFunc:            func(context.Context, cache.Cache, ...schema.GroupVersionResource) error { return nil },
 		},
 		"Watching the optional source fails. Controller is still started": {
 			expectStart:         true,
 			expectRequiredWatch: true,
 			expectOptionalWatch: true,
 			optionalWatchError:  optionalWatchErr,
-			waitFunc:            func(context.Context, cache.Cache, ...string) error { return nil },
+			waitFunc:            func(context.Context, cache.Cache, ...schema.GroupVersionResource) error { return nil },
 		},
 	}
 
@@ -161,9 +164,9 @@ func TestDelayedStartController(t *testing.T) {
 				fakeController := newFakeController()
 				controller := newDelayedStartController(fakeController, &informertest.FakeInformers{})
 				var requiredSource source.Source = &fakeSource{watchErr: tc.requiredWatchError}
-				controller.DelayedWatch("required.example.io", requiredSource)
+				controller.DelayedWatch(requiredGVR, requiredSource)
 				var optionalSource source.Source = &fakeSource{watchErr: tc.optionalWatchError}
-				controller.OptionalDelayedWatch("optional.example.io", optionalSource)
+				controller.OptionalDelayedWatch(optionalGVR, optionalSource)
 				controller.waitForCRDs = tc.waitFunc
 
 				var startErr error

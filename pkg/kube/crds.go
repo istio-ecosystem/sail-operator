@@ -19,17 +19,18 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// CRDsReady checks whether all named CRDs are established, serving at least one version, and not terminating.
-func CRDsReady(ctx context.Context, reader client.Reader, crdNames ...string) (bool, error) {
-	for _, name := range crdNames {
+// CRDsReady checks whether all requested resources have established, non-terminating CRDs serving their requested versions.
+func CRDsReady(ctx context.Context, reader client.Reader, gvrs ...schema.GroupVersionResource) (bool, error) {
+	for _, gvr := range gvrs {
 		crd := &apiextensionsv1.CustomResourceDefinition{}
-		if err := reader.Get(ctx, client.ObjectKey{Name: name}, crd); err != nil {
+		if err := reader.Get(ctx, client.ObjectKey{Name: gvr.GroupResource().String()}, crd); err != nil {
 			if apierrors.IsNotFound(err) {
 				return false, nil
 			}
@@ -45,7 +46,7 @@ func CRDsReady(ctx context.Context, reader client.Reader, crdNames ...string) (b
 			}
 		}
 		for _, version := range crd.Spec.Versions {
-			if version.Served {
+			if version.Name == gvr.Version && version.Served {
 				served = true
 			}
 		}
@@ -56,20 +57,20 @@ func CRDsReady(ctx context.Context, reader client.Reader, crdNames ...string) (b
 	return true, nil
 }
 
-// WaitForCRDs waits until all named CRDs are established, serving at least one version, and not terminating.
+// WaitForCRDs waits until all requested resources have established, non-terminating CRDs serving their requested versions.
 // It watches CRD objects, not custom resources. The shared informer handles list/watch retries and updates its
 // store before notifying us, so readiness checks use the same cache as the event source.
 //
 // It waits indefinitely, so it serves both CRDs a controller requires before it can start and optional CRDs
 // that may be installed later: gate the controller's start on the former, and gate an extra watch, started
 // from its own goroutine, on the latter.
-func WaitForCRDs(ctx context.Context, crdCache cache.Cache, crdNames ...string) error {
-	if len(crdNames) == 0 {
+func WaitForCRDs(ctx context.Context, crdCache cache.Cache, gvrs ...schema.GroupVersionResource) error {
+	if len(gvrs) == 0 {
 		return nil
 	}
-	required := make(map[string]struct{}, len(crdNames))
-	for _, name := range crdNames {
-		required[name] = struct{}{}
+	required := make(map[string]struct{}, len(gvrs))
+	for _, gvr := range gvrs {
+		required[gvr.GroupResource().String()] = struct{}{}
 	}
 	// GetInformer waits for the informer to sync by default.
 	informer, err := crdCache.GetInformer(ctx, &apiextensionsv1.CustomResourceDefinition{})
@@ -110,7 +111,7 @@ func WaitForCRDs(ctx context.Context, crdCache cache.Cache, crdNames ...string) 
 	// Subscribe before checking to avoid missing a change between the check and
 	// registration. Coalesced notifications always trigger a fresh cache read.
 	for {
-		ready, err := CRDsReady(ctx, crdCache, crdNames...)
+		ready, err := CRDsReady(ctx, crdCache, gvrs...)
 		if err != nil {
 			return err
 		}

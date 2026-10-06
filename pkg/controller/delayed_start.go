@@ -21,6 +21,7 @@ import (
 	"slices"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,8 +39,8 @@ func NewDelayedStartController(name string, options controller.Options, crdCache
 
 func newDelayedStartController(wrappedController controller.Controller, crdCache cache.Cache) *DelayedStartController {
 	return &DelayedStartController{
-		requiredSources: map[string]source.Source{},
-		optionalSources: map[string]source.Source{},
+		requiredSources: map[schema.GroupVersionResource]source.Source{},
+		optionalSources: map[schema.GroupVersionResource]source.Source{},
 		Controller:      wrappedController,
 		cache:           crdCache,
 		waitForCRDs:     kube.WaitForCRDs,
@@ -50,21 +51,21 @@ func newDelayedStartController(wrappedController controller.Controller, crdCache
 // optional watches asynchronously when their CRDs become available.
 type DelayedStartController struct {
 	cache           cache.Cache
-	requiredSources map[string]source.Source
-	optionalSources map[string]source.Source
-	waitForCRDs     func(context.Context, cache.Cache, ...string) error
+	requiredSources map[schema.GroupVersionResource]source.Source
+	optionalSources map[schema.GroupVersionResource]source.Source
+	waitForCRDs     func(context.Context, cache.Cache, ...schema.GroupVersionResource) error
 	controller.Controller
 }
 
 // DelayedWatch adds a source whose CRD must be ready before the wrapped controller starts.
 // If the CRD is not ready, the controller won't be started until the CRD is ready.
-func (d *DelayedStartController) DelayedWatch(crdName string, src source.Source) {
-	d.requiredSources[crdName] = src
+func (d *DelayedStartController) DelayedWatch(gvr schema.GroupVersionResource, src source.Source) {
+	d.requiredSources[gvr] = src
 }
 
 // OptionalDelayedWatch adds a source asynchronously when its CRD becomes ready.
-func (d *DelayedStartController) OptionalDelayedWatch(crdName string, src source.Source) {
-	d.optionalSources[crdName] = src
+func (d *DelayedStartController) OptionalDelayedWatch(gvr schema.GroupVersionResource, src source.Source) {
+	d.optionalSources[gvr] = src
 }
 
 // NeedLeaderElection ensures that the wrapper is started in the manager's leader-election group.
@@ -85,11 +86,11 @@ func (d *DelayedStartController) Start(ctx context.Context) error {
 	// their CRDs are ready. These won't block the Start of the Controller.
 	// Controller.Watch is safe to call both before and after Start: the
 	// source is either queued until Start or started right away.
-	for crdName, src := range d.optionalSources {
-		go func(ctx context.Context, crdName string, src source.Source) {
-			log := d.GetLogger().WithValues("crd", crdName)
+	for gvr, src := range d.optionalSources {
+		go func(ctx context.Context, gvr schema.GroupVersionResource, src source.Source) {
+			log := d.GetLogger().WithValues("gvr", gvr)
 			log.Info("Checking if CRD exists. If it does not then watch will begin after it is present.")
-			if err := d.waitForCRDs(ctx, d.cache, crdName); err != nil {
+			if err := d.waitForCRDs(ctx, d.cache, gvr); err != nil {
 				if !errors.Is(err, context.Canceled) {
 					log.Error(err, "Unable to wait for optional CRD; its watch was not added")
 				}
@@ -100,15 +101,15 @@ func (d *DelayedStartController) Start(ctx context.Context) error {
 				return
 			}
 			log.Info("CRD is ready. Watch added.")
-		}(ctx, crdName, src)
+		}(ctx, gvr, src)
 	}
 
-	requiredCRDNames := slices.Collect(maps.Keys(d.requiredSources))
-	d.GetLogger().Info("Waiting for CRDs to be present to start controller", "crds", requiredCRDNames)
-	if err := d.waitForCRDs(ctx, d.cache, requiredCRDNames...); err != nil {
+	requiredGVRs := slices.Collect(maps.Keys(d.requiredSources))
+	d.GetLogger().Info("Waiting for CRDs to be present to start controller", "gvrs", requiredGVRs)
+	if err := d.waitForCRDs(ctx, d.cache, requiredGVRs...); err != nil {
 		return err
 	}
-	d.GetLogger().Info("CRDs present. Starting controller.", "crds", requiredCRDNames)
+	d.GetLogger().Info("CRDs present. Starting controller.", "gvrs", requiredGVRs)
 
 	for _, src := range d.requiredSources {
 		if err := d.Watch(src); err != nil {
