@@ -24,6 +24,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +34,11 @@ import (
 const (
 	collectorCRDName = "collectors.example.com"
 	telemetryCRDName = "telemetries.example.com"
+)
+
+var (
+	collectorGVR = schema.GroupVersionResource{Group: "example.com", Version: "v1beta1", Resource: "collectors"}
+	telemetryGVR = schema.GroupVersionResource{Group: "example.com", Version: "v1", Resource: "telemetries"}
 )
 
 func testCRDs() []*apiextensionsv1.CustomResourceDefinition {
@@ -84,13 +90,21 @@ func TestCRDsReady(t *testing.T) {
 				return crds
 			}(),
 		},
-		"any served version": {
+		"different served version is not ready": {
 			existing: func() []*apiextensionsv1.CustomResourceDefinition {
 				crds := testCRDs()
 				crds[0].Spec.Versions[0].Name = "v99"
 				return crds
 			}(),
-			want: true,
+		},
+		"requested version unserved while another is served": {
+			existing: func() []*apiextensionsv1.CustomResourceDefinition {
+				crds := testCRDs()
+				crds[0].Spec.Versions[0].Served = false
+				crds[0].Spec.Versions = append(crds[0].Spec.Versions,
+					apiextensionsv1.CustomResourceDefinitionVersion{Name: "v99", Served: true})
+				return crds
+			}(),
 		},
 		"terminating - not ready": {
 			existing: func() []*apiextensionsv1.CustomResourceDefinition {
@@ -106,7 +120,7 @@ func TestCRDsReady(t *testing.T) {
 			for _, crd := range tc.existing {
 				builder.WithObjects(crd)
 			}
-			ready, err := CRDsReady(t.Context(), builder.Build(), collectorCRDName, telemetryCRDName)
+			ready, err := CRDsReady(t.Context(), builder.Build(), collectorGVR, telemetryGVR)
 			if err != nil || ready != tc.want {
 				t.Fatalf("ready = %v, err = %v; want %v", ready, err, tc.want)
 			}
@@ -120,7 +134,7 @@ func TestWaitForCRDsEmpty(t *testing.T) {
 	}
 }
 
-func TestWaitForCRDsCustomNames(t *testing.T) {
+func TestWaitForCRDsCustomGVR(t *testing.T) {
 	obj := testCRDs()[0]
 	obj.SetName("examples.example.com")
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(obj).Build()
@@ -128,7 +142,7 @@ func TestWaitForCRDsCustomNames(t *testing.T) {
 	crdCache := &crdTestCache{Reader: cl, informer: informer}
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
-	if err := WaitForCRDs(ctx, crdCache, obj.GetName()); err != nil {
+	if err := WaitForCRDs(ctx, crdCache, schema.GroupVersionResource{Group: "example.com", Version: "v1beta1", Resource: "examples"}); err != nil {
 		t.Fatal(err)
 	}
 	if !informer.removed {
@@ -140,25 +154,45 @@ func TestWaitForCRDs(t *testing.T) {
 	readyCRDs := testCRDs()
 
 	for name, tc := range map[string]struct {
-		initial         []*apiextensionsv1.CustomResourceDefinition
-		addedDuringWait []*apiextensionsv1.CustomResourceDefinition
-		names           []string
-		wantReady       bool
+		initial           []*apiextensionsv1.CustomResourceDefinition
+		addedDuringWait   []*apiextensionsv1.CustomResourceDefinition
+		updatedDuringWait []*apiextensionsv1.CustomResourceDefinition
+		gvrs              []schema.GroupVersionResource
+		wantReady         bool
 	}{
 		"CRDs already ready": {
-			initial: readyCRDs, names: []string{collectorCRDName, telemetryCRDName}, wantReady: true,
+			initial: readyCRDs, gvrs: []schema.GroupVersionResource{collectorGVR, telemetryGVR}, wantReady: true,
+		},
+		"different served version never ready": {
+			initial: readyCRDs,
+			gvrs:    []schema.GroupVersionResource{{Group: "example.com", Version: "v99", Resource: "collectors"}},
+		},
+		"different group never ready": {
+			initial: readyCRDs,
+			gvrs:    []schema.GroupVersionResource{{Group: "other.com", Version: "v1beta1", Resource: "collectors"}},
+		},
+		"waits for both versions of the same CRD": {
+			initial: readyCRDs,
+			gvrs:    []schema.GroupVersionResource{collectorGVR, {Group: "example.com", Version: "v99", Resource: "collectors"}},
+			updatedDuringWait: func() []*apiextensionsv1.CustomResourceDefinition {
+				crd := readyCRDs[0].DeepCopy()
+				crd.Spec.Versions = append(crd.Spec.Versions,
+					apiextensionsv1.CustomResourceDefinitionVersion{Name: "v99", Served: true})
+				return []*apiextensionsv1.CustomResourceDefinition{crd}
+			}(),
+			wantReady: true,
 		},
 		"CRDs never ready": {
-			names: []string{collectorCRDName, telemetryCRDName},
+			gvrs: []schema.GroupVersionResource{collectorGVR, telemetryGVR},
 		},
 		"missing CRD is added": {
 			initial:         readyCRDs[:1],
-			names:           []string{collectorCRDName, telemetryCRDName},
+			gvrs:            []schema.GroupVersionResource{collectorGVR, telemetryGVR},
 			addedDuringWait: readyCRDs[1:],
 			wantReady:       true,
 		},
 		"waits for all missing CRDs": {
-			names:           []string{collectorCRDName, telemetryCRDName},
+			gvrs:            []schema.GroupVersionResource{collectorGVR, telemetryGVR},
 			addedDuringWait: readyCRDs,
 			wantReady:       true,
 		},
@@ -174,7 +208,7 @@ func TestWaitForCRDs(t *testing.T) {
 					}},
 				},
 			}},
-			names: []string{collectorCRDName},
+			gvrs: []schema.GroupVersionResource{collectorGVR},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -194,7 +228,7 @@ func TestWaitForCRDs(t *testing.T) {
 					returned bool
 				)
 				go func() {
-					err = WaitForCRDs(ctx, crdCache, tc.names...)
+					err = WaitForCRDs(ctx, crdCache, tc.gvrs...)
 					returned = true
 				}()
 				// Wait until the initial cache check finishes or WaitForCRDs blocks.
@@ -216,7 +250,7 @@ func TestWaitForCRDs(t *testing.T) {
 						t.Errorf("handler removed = %t; want %t", informer.removed, wantReturned)
 					}
 				}
-				check(tc.wantReady && len(tc.addedDuringWait) == 0)
+				check(tc.wantReady && len(tc.addedDuringWait) == 0 && len(tc.updatedDuringWait) == 0)
 
 				for i, crd := range tc.addedDuringWait {
 					if err := cl.Create(ctx, crd.DeepCopy()); err != nil {
@@ -225,6 +259,21 @@ func TestWaitForCRDs(t *testing.T) {
 					handler.OnAdd(crd, false)
 					synctest.Wait()
 					check(tc.wantReady && i == len(tc.addedDuringWait)-1)
+				}
+
+				for i, crd := range tc.updatedDuringWait {
+					old := &apiextensionsv1.CustomResourceDefinition{}
+					if err := cl.Get(ctx, client.ObjectKeyFromObject(crd), old); err != nil {
+						t.Fatal(err)
+					}
+					updated := old.DeepCopy()
+					updated.Spec = crd.Spec
+					if err := cl.Update(ctx, updated); err != nil {
+						t.Fatal(err)
+					}
+					handler.OnUpdate(old, updated)
+					synctest.Wait()
+					check(tc.wantReady && i == len(tc.updatedDuringWait)-1)
 				}
 
 				cancel()
