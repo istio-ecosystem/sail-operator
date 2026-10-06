@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.32.0-alpha.c945dafc09f13c8231a967070f84ea02aaa4e4f3
+appVersion: 1.32.0-alpha.db074ed84644d1c563921b3890665b0533ee6de8
 description: Helm chart for istio control plane
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -9,4 +9,4 @@ keywords:
 name: istiod
 sources:
 - https://github.com/istio/istio
-version: 1.32.0-alpha.c945dafc09f13c8231a967070f84ea02aaa4e4f3
+version: 1.32.0-alpha.db074ed84644d1c563921b3890665b0533ee6de8
