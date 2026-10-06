@@ -781,8 +781,12 @@ spec:
                 - persesdashboards
               verbs:
                 - create
+                - delete
                 - get
                 - list
+                - patch
+                - update
+                - watch
           serviceAccountName: sail-operator
       deployments:
         - label:

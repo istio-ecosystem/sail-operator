@@ -19,64 +19,35 @@ import (
 	"fmt"
 	"io/fs"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// installDashboards creates PersesDashboard resources in the target namespace when they do not exist.
-// Existing dashboards are left unchanged. Dashboard YAML is discovered by walking dashboards/ under
-// fsys. The CRD must already be available; callers that need to wait for the CRD should use
-// kube.WaitForCRDs first.
+// installDashboards installs or upgrades bundled PersesDashboard resources using the embedded
+// Helm chart under pkg/perses/resources. Dashboard content is upgraded on each operator start
+// when the chart changes.
 func installDashboards(
 	ctx context.Context,
-	cl client.Client,
-	fsys fs.FS,
+	chartManager helm.ChartReconciler,
+	chartFS fs.FS,
+	chartPath string,
 	namespace string,
 ) error {
 	log := ctrl.LoggerFrom(ctx)
-	created, existing := 0, 0
 
-	err := forEachDashboardYAML(fsys, func(path string, data []byte) error {
-		dashboard, err := PrepareDashboard(data, namespace)
-		if err != nil {
-			return fmt.Errorf("prepare dashboard %s: %w", path, err)
-		}
-		wasCreated, err := createIfNotExists(ctx, cl, dashboard)
-		if err != nil {
-			return fmt.Errorf("create dashboard %s: %w", dashboard.GetName(), err)
-		}
-		if wasCreated {
-			created++
-		} else {
-			existing++
-		}
-		return nil
-	})
+	if chartFS == nil {
+		chartFS = persesresources.ChartFS
+	}
+	if chartPath == "" {
+		chartPath = persesresources.ChartPath
+	}
+
+	_, err := chartManager.UpgradeOrInstallChart(ctx, chartFS, chartPath, helm.Values{}, namespace, persesReleaseName, nil)
 	if err != nil {
-		return err
-	}
-	if created == 0 && existing == 0 {
-		return fmt.Errorf("no Perses dashboard YAML found under %s/", dashboardsDir)
+		return fmt.Errorf("helm upgrade or install perses dashboards: %w", err)
 	}
 
-	log.Info("Perses dashboards installed", "namespace", namespace, "created", created, "existing", existing)
+	log.Info("Perses dashboards installed or upgraded", "namespace", namespace, "release", persesReleaseName)
 	return nil
-}
-
-func createIfNotExists(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) (bool, error) {
-	existing := &unstructured.Unstructured{}
-	existing.SetGroupVersionKind(desired.GroupVersionKind())
-	err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: desired.GetName()}, existing)
-	if err == nil {
-		return false, nil
-	}
-	if !apierrors.IsNotFound(err) {
-		return false, err
-	}
-	if err := cl.Create(ctx, desired); err != nil {
-		return false, err
-	}
-	return true, nil
 }

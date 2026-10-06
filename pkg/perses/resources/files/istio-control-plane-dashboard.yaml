@@ -351,7 +351,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type) (irate(label_replace(pilot_xds_pushes, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum by (type) (irate(label_replace(pilot_xds_pushes, "__name__",
+                    "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}}'
       "2_1":
         kind: Panel
@@ -385,7 +386,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type, event) (rate(label_replace(pilot_k8s_reg_events, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum by (type, event) (rate(label_replace(pilot_k8s_reg_events,
+                    "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}} {{event}}'
           - kind: TimeSeriesQuery
             spec:
@@ -395,7 +397,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type, event) (rate(label_replace(pilot_k8s_cfg_events, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum by (type, event) (rate(label_replace(pilot_k8s_cfg_events,
+                    "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}} {{event}}'
           - kind: TimeSeriesQuery
             spec:
@@ -405,7 +408,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum by (type) (rate(label_replace(pilot_push_triggers, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum by (type) (rate(label_replace(pilot_push_triggers, "__name__",
+                    "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: '{{type}}'
       "2_2":
         kind: Panel
@@ -594,7 +598,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum(rate(label_replace(galley_validation_passed, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum(rate(label_replace(galley_validation_passed, "__name__",
+                    "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: Success
           - kind: TimeSeriesQuery
             spec:
@@ -604,7 +609,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: sum(rate(label_replace(galley_validation_failed, "__name__", "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
+                  query: sum(rate(label_replace(galley_validation_failed, "__name__",
+                    "$1_total", "__name__", "(.+)")[$__rate_interval:$__interval]))
                   seriesNameFormat: Failure
       "3_1":
         kind: Panel

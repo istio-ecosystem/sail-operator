@@ -24,19 +24,21 @@ procedure.
 | `istio-service-dashboard` | Istio Service Dashboard |
 | `istio-workload-dashboard` | Istio Workload Dashboard |
 | `istio-ztunnel-dashboard` | Istio Ztunnel Dashboard |
+| `istio-wasm-extension-dashboard` | Istio Wasm Extension Dashboard |
 
 Dashboard IDs must remain stable for Kiali and other consumers.
+
+These files are packaged in the embedded Helm chart at `pkg/perses/resources/` (`Chart.yaml`, `files/`, `templates/`).
 
 ## Behavior
 
 When `enablePersesDashboards` is true and the `PersesDashboard` CRD is present,
-the Sail Operator creates every YAML under this directory in its own namespace (the namespace
-where the operator pod runs). The feature is disabled by default upstream. Enable with
+the Sail Operator installs or upgrades every YAML in this directory into its own namespace (the namespace
+where the operator pod runs) via Helm release `sail-perses-dashboards`. The feature is disabled by default upstream. Enable with
 `--enable-perses-dashboards=true` or Helm `operator.enablePersesDashboards: true`.
 Missing CRDs do not block operator installation.
 
-Installation is one-shot create-if-not-exists: existing dashboards are left unchanged.
-Dashboards are not deleted and have no ownerReferences.
+Bundled dashboards are upgraded when the operator starts with a newer chart. Dashboards are not deleted when the feature is disabled and have no ownerReferences.
 
 ## PersesDatasource requirement
 

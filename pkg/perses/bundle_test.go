@@ -56,7 +56,7 @@ func TestBundledDashboardsHaveSpecConfig(t *testing.T) {
 
 func TestEmbeddedDashboardsReadable(t *testing.T) {
 	count := 0
-	err := forEachDashboardYAML(persesresources.FS, func(_ string, data []byte) error {
+	err := forEachDashboardYAML(persesresources.ChartFS, func(_ string, data []byte) error {
 		if len(data) == 0 {
 			t.Fatal("found empty dashboard")
 		}
@@ -72,7 +72,7 @@ func TestEmbeddedDashboardsReadable(t *testing.T) {
 }
 
 func TestBundledDashboardsReferenceRequiredDatasource(t *testing.T) {
-	err := forEachDashboardYAML(persesresources.FS, func(filePath string, data []byte) error {
+	err := forEachDashboardYAML(persesresources.ChartFS, func(filePath string, data []byte) error {
 		if !strings.Contains(string(data), RequiredDatasourceName) {
 			t.Fatalf("dashboard %s does not reference required datasource %q", filePath, RequiredDatasourceName)
 		}
@@ -165,8 +165,8 @@ spec:
   config: {}
 `
 	fsys := fstest.MapFS{
-		"dashboards/README.md": &fstest.MapFile{Data: []byte("# readme")},
-		"dashboards/dash.yaml": &fstest.MapFile{Data: []byte(manifest)},
+		"files/README.md": &fstest.MapFile{Data: []byte("# readme")},
+		"files/dash.yaml": &fstest.MapFile{Data: []byte(manifest)},
 	}
 	count := 0
 	if err := forEachDashboardYAML(fsys, func(string, []byte) error {
@@ -182,7 +182,7 @@ spec:
 
 func TestForEachDashboardYAMLPropagatesCallbackError(t *testing.T) {
 	fsys := fstest.MapFS{
-		"dashboards/dash.yaml": &fstest.MapFile{Data: []byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata:\n  name: dash\n")},
+		"files/dash.yaml": &fstest.MapFile{Data: []byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata:\n  name: dash\n")},
 	}
 	err := forEachDashboardYAML(fsys, func(string, []byte) error {
 		return fmt.Errorf("callback failed")
@@ -195,7 +195,7 @@ func TestForEachDashboardYAMLPropagatesCallbackError(t *testing.T) {
 func TestForEachDashboardYAMLMissingDir(t *testing.T) {
 	err := forEachDashboardYAML(fstest.MapFS{}, func(string, []byte) error { return nil })
 	if err == nil {
-		t.Fatal("expected error when dashboards/ is missing")
+		t.Fatal("expected error when files/ is missing")
 	}
 }
 

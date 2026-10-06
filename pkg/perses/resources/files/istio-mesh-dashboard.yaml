@@ -136,19 +136,14 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: |-
-                    (
-                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m]))
-                      /
-                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m]))
-                    )
-                    and on ()
-                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) > 0
+                  query: |2-
+                          sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m]))
+                        /
+                          sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m]))
+                      and on ()
+                        sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) > 0
                     or on ()
-                      (
-                        sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) == bool 0
-                      )
-                    * 0 + 1
+                      (sum(rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])) == bool 0 * 0 + 1)
       "0_2":
         kind: Panel
         spec:
@@ -180,11 +175,11 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: |-
-                    round(
-                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"4.."}[5m])),
-                      0.01
-                    )
+                  query: |2-
+                      round(
+                        sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"4.."}[5m])),
+                        0.01
+                      )
                     or
                       vector(0)
       "0_3":
@@ -218,11 +213,11 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: |-
-                    round(
-                      sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"5.."}[5m])),
-                      0.01
-                    )
+                  query: |2-
+                      round(
+                        sum(rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code=~"5.."}[5m])),
+                        0.01
+                      )
                     or
                       vector(0)
       "1_0":
@@ -311,19 +306,21 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     label_join(
-                      histogram_quantile(
-                        0.5,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        histogram_quantile(
+                          0.5,
+                          sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                            rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                          )
                         )
-                      )
                       or
-                      histogram_quantile(
-                        0.5,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
-                        )
-                      ) * 1000,
+                          histogram_quantile(
+                            0.5,
+                            sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                            )
+                          )
+                        *
+                          1000,
                       "destination_workload_var",
                       ".",
                       "destination_workload",
@@ -341,19 +338,21 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     label_join(
-                      histogram_quantile(
-                        0.9,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        histogram_quantile(
+                          0.9,
+                          sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                            rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                          )
                         )
-                      )
                       or
-                      histogram_quantile(
-                        0.9,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
-                        )
-                      ) * 1000,
+                          histogram_quantile(
+                            0.9,
+                            sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                            )
+                          )
+                        *
+                          1000,
                       "destination_workload_var",
                       ".",
                       "destination_workload",
@@ -371,19 +370,21 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     label_join(
-                      histogram_quantile(
-                        0.99,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                        histogram_quantile(
+                          0.99,
+                          sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                            rate(istio_request_duration_milliseconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                          )
                         )
-                      )
                       or
-                      histogram_quantile(
-                        0.99,
-                        sum by (le, destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
-                        )
-                      ) * 1000,
+                          histogram_quantile(
+                            0.99,
+                            sum by (le, destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_request_duration_seconds_bucket{reporter=~"source|destination|waypoint"}[5m])
+                            )
+                          )
+                        *
+                          1000,
                       "destination_workload_var",
                       ".",
                       "destination_workload",
@@ -401,27 +402,31 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     label_join(
-                      (
-                        sum by (destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m])
-                        )
-                        /
-                        sum by (destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
-                        )
-                      )
-                      and on (destination_workload, destination_workload_namespace, destination_service) (
-                        sum by (destination_workload, destination_workload_namespace, destination_service) (
-                          rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
-                        ) > 0
-                      )
-                      or on (destination_workload, destination_workload_namespace, destination_service) (
+                            sum by (destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_requests_total{reporter=~"source|destination|waypoint",response_code!~"5.."}[5m])
+                            )
+                          /
+                            sum by (destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                            )
+                        and on (destination_workload, destination_workload_namespace, destination_service)
+                            sum by (destination_workload, destination_workload_namespace, destination_service) (
+                              rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                            )
+                          >
+                            0
+                      or on (destination_workload, destination_workload_namespace, destination_service)
                         (
-                          sum by (destination_workload, destination_workload_namespace, destination_service) (
-                            rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
-                          ) == bool 0
-                        ) * 0 + 1
-                      ),
+                                sum by (destination_workload, destination_workload_namespace, destination_service) (
+                                  rate(istio_requests_total{reporter=~"source|destination|waypoint"}[5m])
+                                )
+                              == bool
+                                0
+                            *
+                              0
+                          +
+                            1
+                        ),
                       "destination_workload_var",
                       ".",
                       "destination_workload",

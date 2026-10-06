@@ -12,16 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resources provides embedded PersesDashboard manifests vendored from community-mixins.
+// Package resources provides embedded Perses dashboard manifests vendored from community-mixins.
 //
-// Paths are relative to this directory, e.g.:
-//   - dashboards/istio-control-plane-dashboard.yaml
-//   - dashboards/README.md
+// Dashboards are packaged as a Helm chart:
+//   - Chart.yaml
+//   - files/*.yaml — PersesDashboard manifests
+//   - templates/persesdashboards.yaml — renders dashboards into the release namespace
 package resources
 
 import "embed"
 
-// FS contains embedded Perses dashboard manifests.
+// ChartFS contains the embedded Perses dashboards Helm chart.
 //
-//go:embed dashboards
-var FS embed.FS
+//go:embed Chart.yaml files templates
+var ChartFS embed.FS
+
+// ChartPath is the path to the chart root within ChartFS.
+const ChartPath = "."

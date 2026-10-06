@@ -1,0 +1,313 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: istio-wasm-extension-dashboard
+    app.kubernetes.io/name: perses-dashboard
+    app.kubernetes.io/part-of: perses-operator
+  name: istio-wasm-extension-dashboard
+  namespace: perses-dev
+spec:
+  config:
+    display:
+      name: Istio Wasm Extension Dashboard
+    duration: 1h
+    layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Wasm VMs
+        items:
+        - content:
+            $ref: '#/spec/panels/0_0'
+          height: 8
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/0_1'
+          height: 8
+          width: 12
+          x: 12
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Wasm Module Remote Load
+        items:
+        - content:
+            $ref: '#/spec/panels/1_0'
+          height: 8
+          width: 8
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_1'
+          height: 8
+          width: 8
+          x: 8
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_2'
+          height: 8
+          width: 8
+          x: 16
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Proxy Resource Usage
+        items:
+        - content:
+            $ref: '#/spec/panels/2_0'
+          height: 8
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/2_1'
+          height: 8
+          width: 12
+          x: 12
+          "y": 0
+    panels:
+      "0_0":
+        kind: Panel
+        spec:
+          display:
+            name: Active
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_envoy_wasm_runtime_null_active)
+                  seriesNameFormat: native
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_envoy_wasm_runtime_v8_active)
+                  seriesNameFormat: v8
+      "0_1":
+        kind: Panel
+        spec:
+          display:
+            name: Created
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_envoy_wasm_runtime_null_created)
+                  seriesNameFormat: native
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_envoy_wasm_runtime_v8_created)
+                  seriesNameFormat: v8
+      "1_0":
+        kind: Panel
+        spec:
+          display:
+            name: Cache Entry
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_cache_entries)
+                  seriesNameFormat: entries
+      "1_1":
+        kind: Panel
+        spec:
+          display:
+            name: Cache Visit
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_cache_hits)
+                  seriesNameFormat: hits
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_cache_misses)
+                  seriesNameFormat: misses
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_cache_negative_hits)
+                  seriesNameFormat: negative hits
+      "1_2":
+        kind: Panel
+        spec:
+          display:
+            name: Remote Fetch
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_fetch_failures)
+                  seriesNameFormat: failures
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: avg(envoy_wasm_remote_load_fetch_successes)
+                  seriesNameFormat: successes
+      "2_0":
+        kind: Panel
+        spec:
+          display:
+            name: Memory
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(container_memory_working_set_bytes{container="istio-proxy"})
+                  seriesNameFormat: Total (k8s)
+      "2_1":
+        kind: Panel
+        spec:
+          display:
+            name: vCPU
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(rate(container_cpu_usage_seconds_total{container="istio-proxy"}[$__rate_interval]))
+                  seriesNameFormat: Total (k8s)
+status: {}

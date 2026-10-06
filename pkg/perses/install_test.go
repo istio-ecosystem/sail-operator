@@ -16,21 +16,19 @@ package perses
 
 import (
 	"context"
-	"os"
-	"path"
+	"fmt"
+	"io/fs"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"helm.sh/helm/v4/pkg/release"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -39,16 +37,17 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 	defer cancel()
 
 	namespace := "sail-operator"
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
-	want := countDashboardYAMLs(t, fsys)
-
 	ready := make(chan struct{})
 	var once sync.Once
+	helmCalls := 0
 	installer := &Installer{
-		Client:      cl,
-		DashboardFS: fsys,
-		Namespace:   namespace,
+		ChartManager: &mockChartReconciler{
+			upgradeOrInstall: func(context.Context, fs.FS, string, helm.Values, string, string, *metav1.OwnerReference) (release.Releaser, error) {
+				helmCalls++
+				return nil, nil
+			},
+		},
+		Namespace: namespace,
 		waitForCRDs: func(ctx context.Context, _ cache.Cache, _ ...string) error {
 			select {
 			case <-ctx.Done():
@@ -62,9 +61,10 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- installer.Start(ctx) }()
 
-	// While CRD is unavailable, no dashboards should exist.
 	time.Sleep(50 * time.Millisecond)
-	assertDashboardCount(t, cl, 0)
+	if helmCalls != 0 {
+		t.Fatalf("helm calls before CRD ready = %d, want 0", helmCalls)
+	}
 
 	once.Do(func() { close(ready) })
 
@@ -77,18 +77,21 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 		t.Fatal("Start did not return after CRD became ready")
 	}
 
-	assertDashboardCount(t, cl, want)
+	if helmCalls != 1 {
+		t.Fatalf("helm calls after install = %d, want 1", helmCalls)
+	}
 }
 
-func TestStartIdempotentCreation(t *testing.T) {
+func TestStartIdempotentHelmUpgrade(t *testing.T) {
 	namespace := "sail-operator"
-	cl := newPersesTestClient(t, testPersesDashboardCRD())
-	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
-	want := countDashboardYAMLs(t, fsys)
-
+	helmCalls := 0
 	installer := &Installer{
-		Client:      cl,
-		DashboardFS: fsys,
+		ChartManager: &mockChartReconciler{
+			upgradeOrInstall: func(context.Context, fs.FS, string, helm.Values, string, string, *metav1.OwnerReference) (release.Releaser, error) {
+				helmCalls++
+				return nil, nil
+			},
+		},
 		Namespace:   namespace,
 		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
 	}
@@ -96,18 +99,21 @@ func TestStartIdempotentCreation(t *testing.T) {
 	if err := installer.Start(context.Background()); err != nil {
 		t.Fatalf("first Start: %v", err)
 	}
-	assertDashboardCount(t, cl, want)
-
 	if err := installer.Start(context.Background()); err != nil {
 		t.Fatalf("second Start: %v", err)
 	}
-	assertDashboardCount(t, cl, want)
+	if helmCalls != 2 {
+		t.Fatalf("helm calls = %d, want 2", helmCalls)
+	}
 }
 
 func TestNewInstallerUsesOperatorNamespace(t *testing.T) {
-	i := NewInstaller("my-operator", nil, nil, nil)
+	i := NewInstaller("my-operator", nil, nil)
 	if i.Namespace != "my-operator" {
 		t.Fatalf("Namespace = %q, want my-operator", i.Namespace)
+	}
+	if i.ChartFS == nil {
+		t.Fatal("expected embedded chart FS")
 	}
 }
 
@@ -130,8 +136,11 @@ func TestStartWaitError(t *testing.T) {
 
 func TestStartInstallErrorDoesNotFailOperator(t *testing.T) {
 	installer := &Installer{
-		Client:      fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(),
-		DashboardFS: os.DirFS(t.TempDir()), // missing dashboards → install error path
+		ChartManager: &mockChartReconciler{
+			upgradeOrInstall: func(context.Context, fs.FS, string, helm.Values, string, string, *metav1.OwnerReference) (release.Releaser, error) {
+				return nil, fmt.Errorf("helm failed")
+			},
+		},
 		Namespace:   "sail-operator",
 		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
 	}
@@ -141,39 +150,37 @@ func TestStartInstallErrorDoesNotFailOperator(t *testing.T) {
 }
 
 func TestSetupWithManager(t *testing.T) {
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	mgr, err := ctrl.NewManager(&rest.Config{Host: "https://127.0.0.1:1"}, ctrl.Options{
 		Scheme:                 scheme.Scheme,
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
-		NewClient: func(*rest.Config, client.Options) (client.Client, error) {
-			return cl, nil
-		},
 	})
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
 
-	installer := &Installer{} // nil Client/Cache → filled from manager
+	installer := &Installer{ChartManager: &mockChartReconciler{}}
 	if err := installer.SetupWithManager(mgr); err != nil {
 		t.Fatalf("SetupWithManager: %v", err)
 	}
-	if installer.Client == nil || installer.Cache == nil {
-		t.Fatal("expected Client and Cache to be set from manager")
+	if installer.Cache == nil {
+		t.Fatal("expected Cache to be set from manager")
 	}
 	if installer.log.GetSink() == nil {
 		t.Fatal("expected logger to be set")
 	}
 }
 
-func assertDashboardCount(t *testing.T, cl client.Client, want int) {
-	t.Helper()
-	list := &unstructured.UnstructuredList{}
-	list.SetGroupVersionKind(schema.GroupVersionKind{Group: "perses.dev", Version: "v1alpha2", Kind: "PersesDashboardList"})
-	if err := cl.List(context.Background(), list, client.InNamespace("sail-operator")); err != nil {
-		t.Fatalf("list dashboards: %v", err)
+func TestSetupWithManagerRequiresChartManager(t *testing.T) {
+	mgr, err := ctrl.NewManager(&rest.Config{Host: "https://127.0.0.1:1"}, ctrl.Options{
+		Scheme:                 scheme.Scheme,
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+	})
+	if err != nil {
+		t.Fatalf("NewManager: %v", err)
 	}
-	if got := len(list.Items); got != want {
-		t.Fatalf("dashboard count = %d, want %d", got, want)
+	if err := (&Installer{}).SetupWithManager(mgr); err == nil {
+		t.Fatal("expected error when ChartManager is nil")
 	}
 }

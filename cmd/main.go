@@ -33,7 +33,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/perses"
-	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
@@ -90,7 +89,6 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	// Perses dashboards live with the package, not under the Istio charts tree.
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
@@ -266,7 +264,7 @@ func main() {
 	}
 
 	if config.Config.EnablePersesDashboards {
-		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, mgr.GetClient(), mgr.GetCache(), persesresources.FS).
+		err = perses.NewInstaller(reconcilerCfg.OperatorNamespace, chartManager, mgr.GetCache()).
 			SetupWithManager(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")

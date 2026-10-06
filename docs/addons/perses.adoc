@@ -23,9 +23,9 @@ link:../README.adoc[Return to Project Root]
 [[perses-dashboards]]
 == Perses Dashboards
 
-The Sail Operator can create bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `pkg/perses/resources/dashboards/`.
+The Sail Operator can install bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `pkg/perses/resources/files/` and deployed via an embedded Helm chart (`pkg/helm`).
 
-Installation is *create-if-not-exists*: existing dashboards are left unchanged, are not deleted, and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
+When enabled, the operator upgrades dashboards on each start so operator updates ship refreshed dashboard content. Dashboards are not deleted when the feature is disabled and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
 
 [[enabling-perses-dashboard-installation]]
 === Enabling Perses dashboard installation
@@ -40,15 +40,15 @@ operator:
 
 Or pass `--enable-perses-dashboards=true` to the operator binary.
 
-When enabled, the operator waits for the `persesdashboards.perses.dev` CRD and creates the bundled dashboards once in the operator namespace (default `sail-operator`). Missing CRDs do not block operator startup.
+When enabled, the operator waits for the `persesdashboards.perses.dev` CRD and installs or upgrades the bundled dashboards in the operator namespace (default `sail-operator`) using Helm release `sail-perses-dashboards`. Missing CRDs do not block operator startup.
 
 [[updating-vendored-dashboards]]
 === Updating vendored dashboards
 
-The manifests under `pkg/perses/resources/dashboards/` are copied from
+The manifests under `pkg/perses/resources/files/` are copied from
 link:https://github.com/perses/community-mixins[perses/community-mixins]
 (`examples/dashboards/operator/istio/`). That repository has no release tags, so Sail
-pins a commit SHA in `pkg/perses/resources/dashboards/README.md`.
+pins a commit SHA in `pkg/perses/resources/files/README.md`.
 
 ==== Pinning and refresh cadence
 
@@ -58,7 +58,7 @@ Maintainers refresh the pin only when upstream dashboards change:
 * Bump the pin when link:https://github.com/perses/community-mixins[perses/community-mixins]
   has Istio dashboard updates worth shipping (typically after Istio or Grafana mixin
   changes are published there). Copy the new manifests and record the commit SHA in
-  `pkg/perses/resources/dashboards/README.md`.
+  `pkg/perses/resources/files/README.md`.
 * Do *not* bump the pin on a Sail patch release unless a dashboard fix is required
   for that release.
 * If community-mixins has no relevant changes, leave the existing pin as-is across
@@ -82,7 +82,7 @@ git -C "${TMP}" remote add origin https://github.com/perses/community-mixins.git
 git -C "${TMP}" fetch --depth 1 origin "${REF}"
 git -C "${TMP}" checkout -q FETCH_HEAD
 
-OUT=pkg/perses/resources/dashboards
+OUT=pkg/perses/resources/files
 find "${OUT}" -maxdepth 1 -type f -name '*.yaml' -delete
 for f in \
   istio-control-plane-dashboard.yaml \
@@ -90,14 +90,15 @@ for f in \
   istio-performance-dashboard.yaml \
   istio-service-dashboard.yaml \
   istio-workload-dashboard.yaml \
-  istio-ztunnel-dashboard.yaml
+  istio-ztunnel-dashboard.yaml \
+  istio-wasm-extension-dashboard.yaml
 do
   cp "${TMP}/examples/dashboards/operator/istio/${f}" "${OUT}/${f}"
 done
 rm -rf "${TMP}"
 ----
 
-. Update the `Ref` / `Last updated` fields in `pkg/perses/resources/dashboards/README.md` to match `${REF}` and today's date, then commit the refreshed YAML.
+. Update the `Ref` / `Last updated` fields in `pkg/perses/resources/files/README.md` to match `${REF}` and today's date, then commit the refreshed YAML.
 
 [[openshift-validation]]
 === OpenShift validation

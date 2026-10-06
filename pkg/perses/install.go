@@ -16,47 +16,51 @@ package perses
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 
 	"github.com/go-logr/logr"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // waitForCRDsFunc waits until the named CRDs are ready. Overridable in tests.
 type waitForCRDsFunc func(ctx context.Context, crdCache cache.Cache, crdNames ...string) error
 
-// Installer waits for the PersesDashboard CRD, then creates dashboards from DashboardFS once in the
-// operator namespace. It does not watch PersesDashboard resources and does not register them as a
-// required type, so the CRD may be absent at manager startup.
+// Installer waits for the PersesDashboard CRD, then installs or upgrades dashboards from the
+// embedded Helm chart once in the operator namespace. It does not watch PersesDashboard resources
+// and does not register them as a required type, so the CRD may be absent at manager startup.
 type Installer struct {
-	Client      client.Client
-	Cache       cache.Cache
-	DashboardFS fs.FS
-	Namespace   string
+	ChartManager helm.ChartReconciler
+	ChartFS      fs.FS
+	ChartPath    string
+	Cache        cache.Cache
+	Namespace    string
 
 	waitForCRDs waitForCRDsFunc
 	log         logr.Logger
 }
 
 // NewInstaller builds an Installer that provisions dashboards in the operator namespace.
-func NewInstaller(namespace string, cl client.Client, crdCache cache.Cache, dashboardFS fs.FS) *Installer {
+func NewInstaller(namespace string, chartManager helm.ChartReconciler, crdCache cache.Cache) *Installer {
 	return &Installer{
-		Client:      cl,
-		Cache:       crdCache,
-		DashboardFS: dashboardFS,
-		Namespace:   namespace,
-		waitForCRDs: kube.WaitForCRDs,
+		ChartManager: chartManager,
+		ChartFS:      persesresources.ChartFS,
+		ChartPath:    persesresources.ChartPath,
+		Cache:        crdCache,
+		Namespace:    namespace,
+		waitForCRDs:  kube.WaitForCRDs,
 	}
 }
 
 // NeedLeaderElection ensures only the leader installs dashboards.
 func (i *Installer) NeedLeaderElection() bool { return true }
 
-// Start waits for the PersesDashboard CRD, creates any missing dashboards once, then returns.
+// Start waits for the PersesDashboard CRD, upgrades dashboards from the embedded chart, then returns.
 // Missing CRDs do not fail the operator; Start blocks until the CRD is ready or the context is cancelled.
 func (i *Installer) Start(ctx context.Context) error {
 	log := i.log
@@ -74,7 +78,7 @@ func (i *Installer) Start(ctx context.Context) error {
 	}
 	log.Info("PersesDashboard CRD is ready; installing dashboards", "namespace", i.Namespace)
 
-	if err := installDashboards(ctrl.LoggerInto(ctx, log), i.Client, i.DashboardFS, i.Namespace); err != nil {
+	if err := installDashboards(ctrl.LoggerInto(ctx, log), i.ChartManager, i.ChartFS, i.ChartPath, i.Namespace); err != nil {
 		// Do not take down the operator for optional dashboard provisioning failures.
 		log.Error(err, "Failed to install Perses dashboards")
 		return nil
@@ -84,14 +88,14 @@ func (i *Installer) Start(ctx context.Context) error {
 
 // SetupWithManager registers the installer as a leader-elected Runnable.
 //
-// +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;create
+// +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;watch;create;update;patch;delete
 func (i *Installer) SetupWithManager(mgr ctrl.Manager) error {
 	i.log = mgr.GetLogger().WithName("perses")
 	if i.Cache == nil {
 		i.Cache = mgr.GetCache()
 	}
-	if i.Client == nil {
-		i.Client = mgr.GetClient()
+	if i.ChartManager == nil {
+		return fmt.Errorf("perses Installer requires a ChartManager")
 	}
 	return mgr.Add(manager.Runnable(i))
 }

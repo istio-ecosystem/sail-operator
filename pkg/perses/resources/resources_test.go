@@ -21,7 +21,7 @@ import (
 )
 
 func TestEmbeddedDashboardsFS(t *testing.T) {
-	entries, err := fs.ReadDir(FS, "dashboards")
+	entries, err := fs.ReadDir(ChartFS, "files")
 	if err != nil {
 		t.Fatalf("ReadDir: %v", err)
 	}

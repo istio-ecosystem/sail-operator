@@ -27,7 +27,8 @@ const (
 	// see pkg/perses/resources/dashboards/README.md.
 	RequiredDatasourceName = "prometheus-datasource"
 
-	dashboardsDir = "dashboards"
+	dashboardsDir     = "files"
+	persesReleaseName = "sail-perses-dashboards"
 
 	persesGroup   = "perses.dev"
 	persesVersion = "v1alpha2"

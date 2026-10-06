@@ -1,0 +1,7 @@
+{{- range $path, $_ := .Files.Glob "files/*.yaml" }}
+---
+{{- $dashboard := $.Files.Get $path | fromYaml }}
+{{- $_ := set $dashboard.metadata "namespace" $.Release.Namespace }}
+{{- $_ := set $dashboard.metadata "ownerReferences" nil }}
+{{ toYaml $dashboard }}
+{{- end }}
