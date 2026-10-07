@@ -15,6 +15,7 @@
 package perses
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -27,14 +28,84 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
+
+func forEachDashboardYAML(fsys fs.FS, fn func(path string, data []byte) error) error {
+	return fs.WalkDir(fsys, dashboardsDir, func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		lower := strings.ToLower(name)
+		if !strings.HasSuffix(lower, ".yaml") && !strings.HasSuffix(lower, ".yml") {
+			return nil
+		}
+		data, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return fmt.Errorf("read dashboard %s: %w", name, err)
+		}
+		return fn(name, data)
+	})
+}
+
+func parseDashboard(data []byte) (*unstructured.Unstructured, error) {
+	obj := &unstructured.Unstructured{}
+	decoder := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 4096)
+	if err := decoder.Decode(obj); err != nil {
+		return nil, fmt.Errorf("decode dashboard: %w", err)
+	}
+	return obj, nil
+}
+
+func prepareDashboard(data []byte, namespace string) (*unstructured.Unstructured, error) {
+	dashboard, err := parseDashboard(data)
+	if err != nil {
+		return nil, err
+	}
+	if dashboard.GroupVersionKind().Group != persesGroup ||
+		dashboard.GroupVersionKind().Version != persesVersion ||
+		dashboard.GetKind() != "PersesDashboard" {
+		return nil, fmt.Errorf("unexpected object kind %q apiVersion %q; want PersesDashboard %s/%s",
+			dashboard.GetKind(), dashboard.GetAPIVersion(), persesGroup, persesVersion)
+	}
+	if dashboard.GetName() == "" {
+		return nil, fmt.Errorf("dashboard missing metadata.name")
+	}
+	dashboard.SetGroupVersionKind(DashboardGVK)
+	dashboard.SetNamespace(namespace)
+	dashboard.SetOwnerReferences(nil)
+	labels := dashboard.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.KubernetesAppManagedByKey] = constants.ManagedByLabelValue
+	dashboard.SetLabels(labels)
+	return dashboard, nil
+}
+
+func countDashboardYAMLs(t *testing.T, fsys fs.FS) int {
+	t.Helper()
+	count := 0
+	err := forEachDashboardYAML(fsys, func(string, []byte) error {
+		count++
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("count dashboards: %v", err)
+	}
+	return count
+}
 
 func TestBundledDashboardsHaveSpecConfig(t *testing.T) {
 	fsys := os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources"))
 	err := forEachDashboardYAML(fsys, func(filePath string, data []byte) error {
-		dashboard, err := ParseDashboard(data)
+		dashboard, err := parseDashboard(data)
 		if err != nil {
-			t.Fatalf("ParseDashboard(%s): %v", filePath, err)
+			t.Fatalf("parseDashboard(%s): %v", filePath, err)
 		}
 		if dashboard.GetName() == "" {
 			t.Fatalf("dashboard %s missing metadata.name", filePath)
@@ -96,9 +167,9 @@ func TestPrepareDashboardSetsNamespaceAndClearsOwners(t *testing.T) {
 	if data == nil {
 		t.Fatal("no dashboard YAML found")
 	}
-	dashboard, err := PrepareDashboard(data, "sail-operator")
+	dashboard, err := prepareDashboard(data, "sail-operator")
 	if err != nil {
-		t.Fatalf("PrepareDashboard: %v", err)
+		t.Fatalf("prepareDashboard: %v", err)
 	}
 	if dashboard.GetNamespace() != "sail-operator" {
 		t.Fatalf("namespace = %q, want sail-operator", dashboard.GetNamespace())
@@ -112,28 +183,28 @@ func TestPrepareDashboardSetsNamespaceAndClearsOwners(t *testing.T) {
 }
 
 func TestParseDashboardInvalid(t *testing.T) {
-	_, err := ParseDashboard([]byte("::: not yaml"))
+	_, err := parseDashboard([]byte("::: not yaml"))
 	if err == nil {
 		t.Fatal("expected decode error")
 	}
 }
 
 func TestPrepareDashboardInvalid(t *testing.T) {
-	_, err := PrepareDashboard([]byte("{"), "ns")
+	_, err := prepareDashboard([]byte("{"), "ns")
 	if err == nil {
 		t.Fatal("expected prepare error for invalid YAML")
 	}
 }
 
 func TestPrepareDashboardMissingName(t *testing.T) {
-	_, err := PrepareDashboard([]byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata: {}\n"), "ns")
+	_, err := prepareDashboard([]byte("apiVersion: perses.dev/v1alpha2\nkind: PersesDashboard\nmetadata: {}\n"), "ns")
 	if err == nil {
 		t.Fatal("expected error for missing metadata.name")
 	}
 }
 
 func TestPrepareDashboardWrongKind(t *testing.T) {
-	_, err := PrepareDashboard([]byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"), "ns")
+	_, err := prepareDashboard([]byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"), "ns")
 	if err == nil {
 		t.Fatal("expected error for wrong kind")
 	}
@@ -147,9 +218,9 @@ metadata:
 spec:
   config: {}
 `
-	dashboard, err := PrepareDashboard([]byte(manifest), "sail-operator")
+	dashboard, err := prepareDashboard([]byte(manifest), "sail-operator")
 	if err != nil {
-		t.Fatalf("PrepareDashboard: %v", err)
+		t.Fatalf("prepareDashboard: %v", err)
 	}
 	if dashboard.GetLabels()[constants.KubernetesAppManagedByKey] != constants.ManagedByLabelValue {
 		t.Fatalf("managed-by label = %q, want %q", dashboard.GetLabels()[constants.KubernetesAppManagedByKey], constants.ManagedByLabelValue)
@@ -197,17 +268,4 @@ func TestForEachDashboardYAMLMissingDir(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when files/ is missing")
 	}
-}
-
-func countDashboardYAMLs(t *testing.T, fsys fs.FS) int {
-	t.Helper()
-	count := 0
-	err := forEachDashboardYAML(fsys, func(string, []byte) error {
-		count++
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("count dashboards: %v", err)
-	}
-	return count
 }

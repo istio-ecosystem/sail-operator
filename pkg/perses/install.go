@@ -79,11 +79,34 @@ func (i *Installer) Start(ctx context.Context) error {
 	}
 	log.Info("PersesDashboard CRD is ready; installing dashboards", "namespace", i.Namespace)
 
-	if err := installDashboards(ctrl.LoggerInto(ctx, log), i.ChartManager, i.ChartFS, i.ChartPath, i.Namespace); err != nil {
+	if err := i.installDashboards(ctrl.LoggerInto(ctx, log)); err != nil {
 		// Do not take down the operator for optional dashboard provisioning failures.
 		log.Error(err, "Failed to install Perses dashboards")
 		return nil
 	}
+	return nil
+}
+
+// installDashboards installs or upgrades bundled PersesDashboard resources from the embedded
+// Helm chart. Dashboard content is upgraded on each operator start when the chart changes.
+func (i *Installer) installDashboards(ctx context.Context) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	chartFS := i.ChartFS
+	if chartFS == nil {
+		chartFS = persesresources.ChartFS
+	}
+	chartPath := i.ChartPath
+	if chartPath == "" {
+		chartPath = persesresources.ChartPath
+	}
+
+	_, err := i.ChartManager.UpgradeOrInstallChart(ctx, chartFS, chartPath, helm.Values{}, i.Namespace, persesReleaseName, nil)
+	if err != nil {
+		return fmt.Errorf("helm upgrade or install perses dashboards: %w", err)
+	}
+
+	log.Info("Perses dashboards installed or upgraded", "namespace", i.Namespace, "release", persesReleaseName)
 	return nil
 }
 
