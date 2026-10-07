@@ -105,11 +105,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -135,11 +133,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -168,11 +164,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -203,11 +197,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -246,11 +238,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -289,11 +279,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -321,11 +309,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -380,11 +366,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line
@@ -421,11 +405,9 @@ spec:
             kind: TimeSeriesChart
             spec:
               legend:
-                mode: table
+                mode: list
                 position: bottom
-                values:
-                - last
-                - max
+                size: medium
               visual:
                 areaOpacity: 0.1
                 display: line

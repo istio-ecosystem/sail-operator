@@ -29,10 +29,18 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	. "github.com/onsi/gomega"
 	"helm.sh/helm/v4/pkg/release"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -273,6 +281,89 @@ func TestRenderPersesDashboardsChart(t *testing.T) {
 	if count != want {
 		t.Fatalf("rendered %d dashboards, want %d", count, want)
 	}
+}
+
+func TestInstallDashboardsEnvtest(t *testing.T) {
+	g := NewWithT(t)
+	ctx := context.Background()
+
+	testEnv, cl, cfg := test.SetupEnv(os.Stdout, false)
+	defer func() {
+		g.Expect(testEnv.Stop()).To(Succeed())
+	}()
+
+	g.Expect(ensurePersesDashboardCRD(ctx, cfg)).To(Succeed())
+
+	ns := "sail-operator-" + rand.String(8)
+	g.Expect(cl.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})).To(Succeed())
+
+	want := countDashboardYAMLs(t, os.DirFS(path.Join(project.RootDir, "pkg", "perses", "resources")))
+
+	installer := &Installer{
+		ChartManager: helm.NewChartManager(cfg, ""),
+		Namespace:    ns,
+	}
+	g.Expect(installer.installDashboards(ctx)).To(Succeed())
+
+	dc, err := dynamic.NewForConfig(cfg)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	list, err := dc.Resource(PersesDashboardGVR).Namespace(ns).List(ctx, metav1.ListOptions{})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(list.Items).To(HaveLen(want))
+
+	g.Expect(installer.installDashboards(ctx)).To(Succeed())
+
+	list, err = dc.Resource(PersesDashboardGVR).Namespace(ns).List(ctx, metav1.ListOptions{})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(list.Items).To(HaveLen(want))
+}
+
+func ensurePersesDashboardCRD(ctx context.Context, cfg *rest.Config) error {
+	crd := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: PersesDashboardCRD},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: persesGroup,
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Plural:   persesDashboardResource,
+				Singular: "persesdashboard",
+				Kind:     "PersesDashboard",
+			},
+			Scope: apiextensionsv1.NamespaceScoped,
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
+				Name:    persesVersion,
+				Served:  true,
+				Storage: true,
+				Schema: &apiextensionsv1.CustomResourceValidation{
+					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+						Type:                   "object",
+						XPreserveUnknownFields: new(true),
+					},
+				},
+			}},
+		},
+	}
+
+	ext, err := apiextensionsclientset.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	if _, err := ext.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+
+	return wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+		got, err := ext.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, PersesDashboardCRD, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		for _, c := range got.Status.Conditions {
+			if c.Type == apiextensionsv1.Established && c.Status == apiextensionsv1.ConditionTrue {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
 }
 
 type mockChartReconciler struct {

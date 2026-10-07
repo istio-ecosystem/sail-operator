@@ -25,7 +25,7 @@ link:../README.adoc[Return to Project Root]
 
 The Sail Operator can install bundled Istio `PersesDashboard` resources in the operator namespace when the `PersesDashboard` CRD is available. Dashboards are vendored from link:https://github.com/perses/community-mixins[perses/community-mixins] under `pkg/perses/resources/files/` and deployed via an embedded Helm chart (`pkg/helm`).
 
-When enabled, the operator upgrades dashboards on each start so operator updates ship refreshed dashboard content. Dashboards are not deleted when the feature is disabled and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
+When enabled, the operator runs a Helm upgrade on each leader start. Refreshed dashboard content ships with a new operator image (updated embedded chart); a restart alone with the same image does not revert manual edits to existing `PersesDashboard` objects. Use different resource names if you need dashboards the operator must not manage. Dashboards are not deleted when the feature is disabled and have no `ownerReferences`. The operator does *not* create or manage `PersesDatasource` resources.
 
 [[enabling-perses-dashboard-installation]]
 === Enabling Perses dashboard installation

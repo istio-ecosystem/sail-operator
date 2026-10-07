@@ -38,7 +38,7 @@ where the operator pod runs) via Helm release `sail-perses-dashboards`. The feat
 `--enable-perses-dashboards=true` or Helm `operator.enablePersesDashboards: true`.
 Missing CRDs do not block operator installation.
 
-Bundled dashboards are upgraded when the operator starts with a newer chart. Dashboards are not deleted when the feature is disabled and have no ownerReferences.
+Bundled dashboards are upgraded via Helm release `sail-perses-dashboards` when the operator leader starts. Content changes apply when the operator image embeds a newer chart; restarting the same image does not undo manual edits. Use a different name for custom dashboards. Dashboards are not deleted when the feature is disabled and have no ownerReferences.
 
 ## PersesDatasource requirement
 
