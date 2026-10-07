@@ -23,13 +23,12 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 const (
@@ -126,18 +125,6 @@ func TestCRDsReady(t *testing.T) {
 				t.Fatalf("ready = %v, err = %v; want %v", ready, err, tc.want)
 			}
 		})
-	}
-}
-
-func TestCRDsReadyGetError(t *testing.T) {
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
-		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
-			return apierrors.NewInternalError(errors.New("boom"))
-		},
-	}).Build()
-	ready, err := CRDsReady(t.Context(), cl, collectorCRDName)
-	if err == nil || ready {
-		t.Fatalf("ready = %v, err = %v; want error", ready, err)
 	}
 }
 

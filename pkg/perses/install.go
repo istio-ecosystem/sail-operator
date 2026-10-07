@@ -23,13 +23,14 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// waitForCRDsFunc waits until the named CRDs are ready. Overridable in tests.
-type waitForCRDsFunc func(ctx context.Context, crdCache cache.Cache, crdNames ...string) error
+// waitForCRDsFunc waits until the requested CRD versions are ready. Overridable in tests.
+type waitForCRDsFunc func(ctx context.Context, crdCache cache.Cache, gvrs ...schema.GroupVersionResource) error
 
 // Installer waits for the PersesDashboard CRD, then installs or upgrades dashboards from the
 // embedded Helm chart once in the operator namespace. It does not watch PersesDashboard resources
@@ -73,7 +74,7 @@ func (i *Installer) Start(ctx context.Context) error {
 	}
 
 	log.Info("Waiting for PersesDashboard CRD")
-	if err := wait(ctx, i.Cache, PersesDashboardCRD); err != nil {
+	if err := wait(ctx, i.Cache, PersesDashboardGVR); err != nil {
 		return err
 	}
 	log.Info("PersesDashboard CRD is ready; installing dashboards", "namespace", i.Namespace)

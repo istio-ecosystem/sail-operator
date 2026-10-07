@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"helm.sh/helm/v4/pkg/release"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -48,7 +49,7 @@ func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
 			},
 		},
 		Namespace: namespace,
-		waitForCRDs: func(ctx context.Context, _ cache.Cache, _ ...string) error {
+		waitForCRDs: func(ctx context.Context, _ cache.Cache, _ ...schema.GroupVersionResource) error {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -93,7 +94,7 @@ func TestStartIdempotentHelmUpgrade(t *testing.T) {
 			},
 		},
 		Namespace:   namespace,
-		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
+		waitForCRDs: func(context.Context, cache.Cache, ...schema.GroupVersionResource) error { return nil },
 	}
 
 	if err := installer.Start(context.Background()); err != nil {
@@ -125,7 +126,7 @@ func TestNeedLeaderElection(t *testing.T) {
 
 func TestStartWaitError(t *testing.T) {
 	installer := &Installer{
-		waitForCRDs: func(context.Context, cache.Cache, ...string) error {
+		waitForCRDs: func(context.Context, cache.Cache, ...schema.GroupVersionResource) error {
 			return context.DeadlineExceeded
 		},
 	}
@@ -142,7 +143,7 @@ func TestStartInstallErrorDoesNotFailOperator(t *testing.T) {
 			},
 		},
 		Namespace:   "sail-operator",
-		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
+		waitForCRDs: func(context.Context, cache.Cache, ...schema.GroupVersionResource) error { return nil },
 	}
 	if err := installer.Start(context.Background()); err != nil {
 		t.Fatalf("Start() error = %v, want nil (install failures must not take down the operator)", err)

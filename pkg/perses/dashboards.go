@@ -22,6 +22,8 @@ const (
 	// PersesDashboardCRD is the name of the PersesDashboard CustomResourceDefinition.
 	PersesDashboardCRD = "persesdashboards.perses.dev"
 
+	persesDashboardResource = "persesdashboards"
+
 	// RequiredDatasourceName is the PersesDatasource metadata.name expected by community-mixins
 	// dashboards. Users must create a datasource with this name in the operator namespace;
 	// see pkg/perses/resources/files/README.md.
@@ -36,3 +38,10 @@ const (
 
 // DashboardGVK is the GroupVersionKind for PersesDashboard resources.
 var DashboardGVK = schema.GroupVersionKind{Group: persesGroup, Version: persesVersion, Kind: "PersesDashboard"}
+
+// PersesDashboardGVR is the API version bundled manifests use when waiting for the CRD.
+var PersesDashboardGVR = schema.GroupVersionResource{
+	Group:    persesGroup,
+	Version:  persesVersion,
+	Resource: persesDashboardResource,
+}
