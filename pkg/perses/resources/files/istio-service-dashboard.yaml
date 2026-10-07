@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: perses-dashboard
     app.kubernetes.io/part-of: perses-operator
   name: istio-service-dashboard
-  namespace: perses-dev
+  namespace: default
 spec:
   config:
     display:
@@ -1289,7 +1289,7 @@ spec:
                     name: prometheus-datasource
                   query: |-
                     histogram_quantile(
-                      0.95,
+                      0.99,
                       sum by (source_workload, source_workload_namespace, le) (
                         irate(
                           istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep"}[5m]
@@ -1602,15 +1602,18 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                     name: prometheus-datasource
-                  query: |-
-                    round(
-                      sum by (destination_workload, destination_workload_namespace, response_code) (
+                  query: |2-
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination",response_code!~"5.*"}[5m]
+                        )
+                      )
+                    /
+                      sum by (destination_workload, destination_workload_namespace) (
                         irate(
                           istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter="destination"}[5m]
                         )
-                      ),
-                      0.001
-                    )
+                      )
                   seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
                     }}'
       "6_0":

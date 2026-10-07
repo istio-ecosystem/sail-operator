@@ -282,6 +282,7 @@ Expected dashboard names:
 * `istio-service-dashboard`
 * `istio-workload-dashboard`
 * `istio-ztunnel-dashboard`
+* `istio-wasm-extension-dashboard`
 
 . Check operator logs for installation messages:
 +

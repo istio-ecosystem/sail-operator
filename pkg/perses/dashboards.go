@@ -24,7 +24,7 @@ const (
 
 	// RequiredDatasourceName is the PersesDatasource metadata.name expected by community-mixins
 	// dashboards. Users must create a datasource with this name in the operator namespace;
-	// see pkg/perses/resources/dashboards/README.md.
+	// see pkg/perses/resources/files/README.md.
 	RequiredDatasourceName = "prometheus-datasource"
 
 	dashboardsDir     = "files"

@@ -6,7 +6,7 @@ Source: `examples/dashboards/operator/istio/`
 
 | Sail Version | Ref | Updated
 |-------|-------|-------|
-| 1.31.0 | `d4e23ad64ea8087c74b94ffc4bd2aae1122f2386` | `2026-09-28` |
+| 1.31.0 | `d4e23ad64ea8087c74b94ffc4bd2aae1122f2386` | `2026-10-06` |
 
 Pin cadence: bump the Ref only when community-mixins has dashboard changes worth
 shipping (typically after Istio or Grafana mixin updates land there). There is no

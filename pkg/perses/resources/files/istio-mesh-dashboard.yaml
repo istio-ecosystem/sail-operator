@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: perses-dashboard
     app.kubernetes.io/part-of: perses-operator
   name: istio-mesh-dashboard
-  namespace: perses-dev
+  namespace: default
 spec:
   config:
     display:
@@ -438,7 +438,7 @@ spec:
         kind: Panel
         spec:
           display:
-            description: Bytes sent and recieived information for TCP services
+            description: Bytes sent and received information for TCP services
             name: TCP Workloads
           plugin:
             kind: Table
