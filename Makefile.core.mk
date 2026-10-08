@@ -62,6 +62,9 @@ ifndef GIT_STATUS
 GIT_STATUS := $(shell git diff-index --quiet HEAD -- 2> /dev/null; if [ "$$?" = "0" ]; then echo Clean; else echo Modified; fi)
 endif
 
+# metric name prefix
+METRIC_PREFIX := $(shell yq eval '.name' chart/values.yaml)
+
 # Linker flags for the go builds
 GO_MODULE = github.com/istio-ecosystem/sail-operator
 LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
@@ -69,6 +72,7 @@ LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YAML_FILE}
+LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/analyze.metricPrefix=${METRIC_PREFIX}
 
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
@@ -875,3 +879,8 @@ COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scri
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@
+
+##@ Generate the metrics documentation
+.PHONY: generate-metricsdocs
+generate-metricsdocs:
+	go run -ldflags="$(LD_FLAGS)" ./pkg/analyze/metricsdocs > docs/common/analytics-metrics.md
