@@ -95,6 +95,10 @@ link:../[Return to Project Root]
 ** link:addons/observability.adoc#integrating-with-kiali[Integrating with Kiali]
 *** link:addons/observability.adoc#integrating-kiali-with-the-openshift-monitoring-stack[Integrating Kiali with the OpenShift monitoring stack]
 *** link:addons/observability.adoc#integrating-kiali-with-openshift-distributed-tracing[Integrating Kiali with OpenShift Distributed Tracing]
+* link:addons/perses.adoc#perses-dashboards[Perses Dashboards]
+** link:addons/perses.adoc#enabling-perses-dashboard-installation[Enabling Perses dashboard installation]
+** link:addons/perses.adoc#updating-vendored-dashboards[Updating vendored dashboards]
+** link:addons/perses.adoc#openshift-validation[OpenShift validation]
 * Certificates management
 ** link:general/plugin-ca.adoc[Plug in CA Certificates]
 * Advanced Configuration
