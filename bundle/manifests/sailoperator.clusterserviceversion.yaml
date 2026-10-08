@@ -775,6 +775,18 @@ spec:
                 - delete
                 - get
                 - list
+            - apiGroups:
+                - perses.dev
+              resources:
+                - persesdashboards
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
           serviceAccountName: sail-operator
       deployments:
         - label:
@@ -897,6 +909,7 @@ spec:
                       - --health-probe-bind-address=:8081
                       - --metrics-bind-address=:8443
                       - --zap-log-level=info
+                      - --enable-perses-dashboards=true
                     command:
                       - /sail-operator
                     image: quay.io/sail-dev/sail-operator:1.31-latest
