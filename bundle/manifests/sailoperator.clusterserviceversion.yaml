@@ -956,11 +956,18 @@ spec:
                       - mountPath: /etc/sail-operator
                         name: operator-config
                         readOnly: true
+                      - mountPath: /var/run/secrets/serving-cert
+                        name: serving-cert
                 securityContext:
                   runAsNonRoot: true
                 serviceAccountName: sail-operator
                 terminationGracePeriodSeconds: 10
                 volumes:
+                  - name: serving-cert
+                    secret:
+                      defaultMode: 420
+                      optional: true
+                      secretName: serving-cert
                   - downwardAPI:
                       defaultMode: 420
                       items:

@@ -117,11 +117,18 @@ spec:
         - mountPath: /etc/sail-operator
           name: operator-config
           readOnly: true
+        - mountPath: /var/run/secrets/serving-cert
+          name: serving-cert
       securityContext:
         runAsNonRoot: true
       serviceAccountName: {{ .Values.serviceAccountName }}
       terminationGracePeriodSeconds: 10
       volumes:
+      - name: serving-cert
+        secret:
+          secretName: serving-cert
+          defaultMode: 420
+          optional: true
       - downwardAPI:
           defaultMode: 420
           items:

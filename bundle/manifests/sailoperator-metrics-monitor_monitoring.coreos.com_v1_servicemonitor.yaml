@@ -17,7 +17,8 @@ spec:
     port: https
     scheme: https
     tlsConfig:
-      insecureSkipVerify: true
+      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+      serverName: sail-operator-metrics-service.openshift-operators.svc
   selector:
     matchLabels:
       control-plane: sail-operator

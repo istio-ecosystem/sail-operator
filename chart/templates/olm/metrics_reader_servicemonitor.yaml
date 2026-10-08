@@ -22,6 +22,7 @@ spec:
       port: https
       scheme: https
       tlsConfig:
-        insecureSkipVerify: true
+        caFile: /etc/prometheus/configmaps/kubelet-serving-ca-bundle/ca-bundle.crt
+        serverName: {{ .Values.deployment.name }}-metrics-service.{{ .Release.Namespace }}.svc
 {{- end }}
 {{ end }}

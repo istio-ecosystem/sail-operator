@@ -181,7 +181,9 @@ func main() {
 	}
 
 	metricsServerOptions := metricsserver.Options{
-		BindAddress:    metricsAddr,
+		BindAddress: metricsAddr,
+		// Point to the mounted directory containing tls.crt and tls.key
+		CertDir:        "/var/run/secrets/serving-cert",
 		SecureServing:  true,
 		FilterProvider: filters.WithAuthenticationAndAuthorization,
 		TLSOpts:        metricsServerTLSOptions,
