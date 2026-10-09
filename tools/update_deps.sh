@@ -33,6 +33,13 @@ TOOLS_ONLY=${TOOLS_ONLY:-false}
 # that reference them are generated. Off by default because it requires push credentials for
 # the mirror; the update-deps workflow sets it to true.
 MIRROR_IMAGES=${MIRROR_IMAGES:-false}
+# Optional override for the build-tools container image registry/project. Older release
+# branches (release-1.30 and earlier) reference build-tools images that are only published
+# to gcr.io/istio-testing, while upstream common-files points them at registry.istio.io.
+# Setting these lets the update-deps workflow pin the correct registry so no manual fixups
+# are needed after `make update-common` regenerates setup_env.sh / devcontainer.json.
+BUILD_TOOLS_REGISTRY=${BUILD_TOOLS_REGISTRY:-}
+BUILD_TOOLS_PROJECT=${BUILD_TOOLS_PROJECT:-}
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOTDIR=$(dirname "${SCRIPTPATH}")
@@ -118,6 +125,20 @@ function getLatestVersionFromDockerHub() {
 
 # Update common files
 make update-common
+
+# make update-common overwrites setup_env.sh and devcontainer.json from upstream
+# common-files. If a build-tools registry override is requested, reapply it here so the
+# committed references point at a registry that actually hosts the image.
+if [[ -n "${BUILD_TOOLS_REGISTRY}" && -n "${BUILD_TOOLS_PROJECT}" ]]; then
+  "$SED_CMD" -i \
+    -e "s|^TOOLS_REGISTRY_PROVIDER=.*|TOOLS_REGISTRY_PROVIDER=\${TOOLS_REGISTRY_PROVIDER:-${BUILD_TOOLS_REGISTRY}}|" \
+    -e "s|^PROJECT_ID=.*|PROJECT_ID=\${PROJECT_ID:-${BUILD_TOOLS_PROJECT}}|" \
+    common/scripts/setup_env.sh
+  "$SED_CMD" -i -E \
+    "s|(\"image\": \")[^\"]*/build-tools:|\1${BUILD_TOOLS_REGISTRY}/${BUILD_TOOLS_PROJECT}/build-tools:|" \
+    .devcontainer/devcontainer.json
+  echo "Overrode build-tools registry to ${BUILD_TOOLS_REGISTRY}/${BUILD_TOOLS_PROJECT}"
+fi
 
 # update build container used in github actions
 NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)

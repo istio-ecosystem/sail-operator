@@ -76,7 +76,7 @@ jobs:
           --email=openshiftservicemeshbot@gmail.com \
           --modifier=update_deps \
           --token-env \
-          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.30 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --cmd='BUILD_WITH_CONTAINER=0 BUILD_TOOLS_REGISTRY=gcr.io BUILD_TOOLS_PROJECT=istio-testing UPDATE_BRANCH=release-1.30 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
           --signoff
     - name: Run Automator release-1.29
       run: |
@@ -89,7 +89,7 @@ jobs:
           --email=openshiftservicemeshbot@gmail.com \
           --modifier=update_deps \
           --token-env \
-          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.29 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --cmd='BUILD_WITH_CONTAINER=0 BUILD_TOOLS_REGISTRY=gcr.io BUILD_TOOLS_PROJECT=istio-testing UPDATE_BRANCH=release-1.29 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
           --signoff
     - name: Run Automator release-1.28
       run: |
@@ -102,5 +102,5 @@ jobs:
           --email=openshiftservicemeshbot@gmail.com \
           --modifier=update_deps \
           --token-env \
-          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.28 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --cmd='BUILD_WITH_CONTAINER=0 BUILD_TOOLS_REGISTRY=gcr.io BUILD_TOOLS_PROJECT=istio-testing UPDATE_BRANCH=release-1.28 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
           --signoff

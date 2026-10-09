@@ -1,0 +1,31 @@
+name: Publish Bookinfo images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "samples/bookinfo/**"
+      - ".github/workflows/bookinfo-images.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PWD }}
+
+      - name: Build and push Bookinfo images
+        working-directory: samples/bookinfo
+        run: make PUSH=1
