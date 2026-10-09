@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi10/ubi@sha256:7b345008df0328d31a4325894d3fe79c3d6ffc55c733c9e72c8671771b0639b6 AS packager
+FROM registry.access.redhat.com/ubi10/ubi@sha256:27e14f4987d7abe56664d7e1b1dddcd0226d4ca593da5726f0f65697a17d0fee AS packager
 ARG TARGETOS TARGETARCH
 
 RUN dnf -y --setopt=install_weak_deps=0 --nodocs \
