@@ -24,6 +24,7 @@ import (
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/profiling"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -52,7 +53,7 @@ func TestMigration(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Migration Test Suite")
+	profiling.WrapSuite("migration", func() { RunSpecs(t, "Migration Test Suite") })
 }
 
 func setup() {

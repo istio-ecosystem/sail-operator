@@ -23,6 +23,7 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
     1. [Customizing the test run](#customizing-the-test-run)
     1. [Detecting and investigating flaky tests](#detecting-and-investigating-flaky-tests)
+    1. [Performance tests](#performance-tests)
     1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
@@ -227,6 +228,7 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 | `multicluster` | Multi-cluster deployments |
 | `multi-control-plane` | Multiple Istio CRs in a single cluster |
 | `migration` | Sidecar-to-ambient migration procedures |
+| `performance` | Operator performance: heap allocation, live-heap, CPU, and API call delta comparison against per-suite baseline |
 
 **Sub-feature** — optional, for finer filtering within a feature area
 
@@ -276,6 +278,7 @@ Complete label set per test file:
 | `multicontrolplane/multi_control_plane_test.go` | `multi-control-plane`, `slow`, `sidecar` |
 | `migration/migration_procedure_test.go` | `migration`, `migration-procedure`, `slow` |
 | `migration/migration_coexistence_test.go` | `migration`, `migration-coexistence`, `slow` |
+| `performance/performance_test.go` | `performance`, `slow` |
 
 ### Common Filter Examples
 
@@ -425,6 +428,12 @@ The following environment variables define the behavior of the test run:
 * OPERATOR_DEPLOY_TIMEOUT - Helm deploy wait timeout (default `5m`).
 * GINKGO_LABEL_FILTER - Quoted-safe Ginkgo label filter; preferred over embedding `--label-filter` in `GINKGO_FLAGS` when the expression contains `&&` / `||` / `!`.
 
+**Performance-test-specific variables** (only apply when `PPROF_ENABLED=true`):
+* `PPROF_ENABLED=true` — Enables pprof profiling in the operator and activates baseline comparison in the performance suite.
+* `PERF_DEGRADATION_FACTOR=1.2` — Multiplier applied to heap and API-call baseline values to compute failure thresholds. A value of 1.2 allows up to 20% regression above the baseline; increase temporarily on noisy clusters.
+* `PERF_CPU_DEGRADATION_FACTOR=2.0` — Separate multiplier applied only to `cpuSeconds`. Defaults to 2.0 to absorb the natural variance between CI environments (dualstack vs. single-stack kind clusters).
+* `PERF_BASELINE_FILE` — Path to an alternative baseline file (default: `tests/e2e/performance/baseline.json`).
+
 ### Customizing the test run
 
 The test run can be customized by setting the following environment variables:
@@ -561,6 +570,64 @@ Ran 82 of 82 Specs in 224.026 seconds
 FAIL! -- 81 Passed | 1 Failed | 0 Pending | 0 Skipped
 Ginkgo ran 1 suite in 3m46.401610849s
 Test Suite Failed
+```
+
+### Performance tests
+
+The performance suite (`tests/e2e/performance/`) compares per-suite heap and CPU profiles against a committed baseline. It does not run its own workload — it reads `$ARTIFACTS/profiles/<suite>.json` files written by `profiling.WrapSuite` during the other E2E suites.
+
+#### What each metric measures
+
+Each profile contains six fields. Understanding what they measure — and what they do **not** — is important for interpreting regressions.
+
+| Field | pprof / Prometheus source | What it measures |
+|---|---|---|
+| `allocBytes` | pprof `alloc_space` | Cumulative bytes allocated by the operator during the suite (includes memory that was later GC'd) |
+| `allocObjects` | pprof `alloc_objects` | Cumulative number of heap objects allocated during the suite |
+| `inuseBytes` | pprof `inuse_space` (after-snapshot with `?gc=1`) | Net live-heap change after a forced GC — best available proxy for memory growth |
+| `inuseObjects` | pprof `inuse_objects` (after-snapshot with `?gc=1`) | Net live-object count change after a forced GC |
+| `cpuSeconds` | `process_cpu_seconds_total` | CPU time consumed by the operator process (user + system) |
+| `apiCallsPatch` | `rest_client_requests_total{method="PATCH"}` | Number of PATCH calls made to the Kubernetes API server |
+
+**`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive at any time; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing a lot of work, not that the operator is leaking memory.
+
+**`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
+
+What each signal detects:
+
+* **`allocBytes` / `allocObjects` increase** — the operator's reconciliation paths are creating or processing more objects per unit of work. Common causes: a new API call that allocates a large response, a hot loop that builds intermediate slices on every reconcile, or more Istio resources being created per test scenario.
+* **`inuseBytes` / `inuseObjects` increase** — the operator is retaining more live heap across the suite. Common causes: a memory leak, an unbounded cache, or resources not being released after the suite's workload completes.
+* **`cpuSeconds` increase** — the operator is spending more CPU time. Common causes: more reconcile iterations, more expensive Helm rendering, or heavier API server interaction. CPU time varies significantly across CI environments (a dualstack cluster runs roughly 2× heavier than a single-stack kind cluster), so `cpuSeconds` uses a separate, looser degradation factor (`PERF_CPU_DEGRADATION_FACTOR`, default 2.0×) rather than the general 1.2× factor.
+* **`apiCallsPatch` increase** — the operator is issuing more PATCH calls. Common causes: a code path that applies resources on every reconcile even when nothing changed, or additional resources being managed per test scenario.
+
+The three newer fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted once the baseline entry is non-zero, so the first CI run with these fields collects data without failing.
+
+The committed baseline values and their first-run context are in [`tests/e2e/performance/baseline.json`](performance/baseline.json). Those values were captured on a KIND cluster and reflect the normal operating cost of each suite.
+
+#### Running with profiling enabled
+
+```bash
+PPROF_ENABLED=true make test.e2e.kind
+```
+
+The performance suite runs last alphabetically, so by the time it executes every other suite has already written its profile file.
+
+#### Updating the baseline
+
+Before updating, run at least two CI runs to confirm the new values are stable across runs. Take values from a run where no other changes are in flight on the cluster. Copy the values from the `--- ACTUAL VALUES ---` blocks in the performance suite output:
+
+```bash
+PPROF_ENABLED=true make test.e2e.kind
+
+# Edit baseline.json with the observed values, then commit
+git add tests/e2e/performance/baseline.json
+git commit -s -m "perf: update baseline after <description of change>"
+```
+
+The degradation factor (default 1.2×) is the regression margin on top of the baseline. You can loosen it for a single run without touching the file:
+
+```bash
+PERF_DEGRADATION_FACTOR=1.5 PPROF_ENABLED=true make test.e2e.kind
 ```
 
 ### Detecting and investigating flaky tests
