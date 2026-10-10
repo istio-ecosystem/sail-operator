@@ -16,6 +16,7 @@ package helm
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -145,5 +146,157 @@ func TestSetIfAbsent(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDroppedKeys(t *testing.T) {
+	tests := []struct {
+		name         string
+		original     Values
+		roundTripped Values
+		expected     []string
+	}{
+		{
+			name: "no dropped keys",
+			original: Values{
+				"foo": "bar",
+				"baz": float64(42),
+			},
+			roundTripped: Values{
+				"foo": "bar",
+				"baz": float64(42),
+			},
+			expected: nil,
+		},
+		{
+			name: "top-level key dropped",
+			original: Values{
+				"known":   "value",
+				"unknown": "dropped",
+			},
+			roundTripped: Values{
+				"known": "value",
+			},
+			expected: []string{"unknown"},
+		},
+		{
+			name: "nested key dropped",
+			original: Values{
+				"global": map[string]any{
+					"hub":           "docker.io/istio",
+					"unknownNested": "dropped",
+				},
+			},
+			roundTripped: Values{
+				"global": map[string]any{
+					"hub": "docker.io/istio",
+				},
+			},
+			expected: []string{"global.unknownNested"},
+		},
+		{
+			name: "deeply nested key dropped",
+			original: Values{
+				"global": map[string]any{
+					"proxy": map[string]any{
+						"image":   "proxyv2",
+						"unknown": "dropped",
+					},
+				},
+			},
+			roundTripped: Values{
+				"global": map[string]any{
+					"proxy": map[string]any{
+						"image": "proxyv2",
+					},
+				},
+			},
+			expected: []string{"global.proxy.unknown"},
+		},
+		{
+			name: "multiple dropped keys at different levels",
+			original: Values{
+				"topUnknown": "dropped",
+				"global": map[string]any{
+					"hub":           "docker.io/istio",
+					"nestedUnknown": "dropped",
+				},
+			},
+			roundTripped: Values{
+				"global": map[string]any{
+					"hub": "docker.io/istio",
+				},
+			},
+			expected: []string{"global.nestedUnknown", "topUnknown"},
+		},
+		{
+			name:         "both empty",
+			original:     Values{},
+			roundTripped: Values{},
+			expected:     nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := DroppedKeys(test.original, test.roundTripped, "")
+			sort.Strings(got)
+			if !reflect.DeepEqual(got, test.expected) {
+				t.Errorf("DroppedKeys() = %v, want %v", got, test.expected)
+			}
+		})
+	}
+}
+
+type testStruct struct {
+	Name  string `json:"name,omitempty"`
+	Value int    `json:"value,omitempty"`
+}
+
+func TestToValuesWithUnknownKeys(t *testing.T) {
+	input := Values{
+		"name":    "test",
+		"value":   float64(42),
+		"unknown": "should be dropped",
+	}
+
+	result, err := ToValues(input, testStruct{})
+	if err != nil {
+		t.Fatalf("ToValues returned error: %v", err)
+	}
+
+	if result.Name != "test" {
+		t.Errorf("expected Name='test', got %q", result.Name)
+	}
+	if result.Value != 42 {
+		t.Errorf("expected Value=42, got %d", result.Value)
+	}
+
+	roundTripped := FromValues(result)
+	dropped := DroppedKeys(input, roundTripped, "")
+	if len(dropped) != 1 || dropped[0] != "unknown" {
+		t.Errorf("expected dropped=[unknown], got %v", dropped)
+	}
+}
+
+func TestToValuesNoUnknownKeys(t *testing.T) {
+	input := Values{
+		"name":  "test",
+		"value": float64(42),
+	}
+
+	result, err := ToValues(input, testStruct{})
+	if err != nil {
+		t.Fatalf("ToValues returned error: %v", err)
+	}
+
+	roundTripped := FromValues(result)
+	dropped := DroppedKeys(input, roundTripped, "")
+	if len(dropped) != 0 {
+		t.Errorf("expected no dropped keys, got %v", dropped)
+	}
+
+	if result.Name != "test" || result.Value != 42 {
+		t.Errorf("unexpected result: %+v", result)
 	}
 }

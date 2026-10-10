@@ -17,9 +17,12 @@ package helm
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"istio.io/istio/pkg/log"
 )
 
 type Values map[string]any
@@ -82,5 +85,32 @@ func ToValues[V any](helmValues Values, values V) (V, error) {
 	if err != nil {
 		return values, fmt.Errorf("failed to unmarshal into Values struct: %w:\n%v", err, string(data))
 	}
+
+	if dropped := DroppedKeys(helmValues, FromValues(values), ""); len(dropped) > 0 {
+		sort.Strings(dropped)
+		log.Warnf("ToValues: the following Helm value keys were dropped during conversion to typed struct "+
+			"(they have no matching field in the Go type): %v", dropped)
+	}
+
 	return values, nil
+}
+
+// DroppedKeys recursively compares original with roundTripped and returns the
+// dot-separated key paths present in original but missing from roundTripped.
+func DroppedKeys(original, roundTripped Values, prefix string) []string {
+	var dropped []string
+	for key, val := range original {
+		fullKey := prefix + key
+		rtVal, exists := roundTripped[key]
+		if !exists {
+			dropped = append(dropped, fullKey)
+			continue
+		}
+		if origMap, ok := val.(map[string]any); ok {
+			if rtMap, ok := rtVal.(map[string]any); ok {
+				dropped = append(dropped, DroppedKeys(Values(origMap), Values(rtMap), fullKey+".")...)
+			}
+		}
+	}
+	return dropped
 }
