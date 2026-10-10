@@ -31,6 +31,23 @@ metadata:
           }
         },
         {
+          "apiVersion": "sailoperator.io/v1alpha1",
+          "kind": "MetricsIntegration",
+          "metadata": {
+            "name": "openshift-observability"
+          },
+          "spec": {
+            "targetRefs": [
+              {
+                "kind": "Istio",
+                "name": "default"
+              }
+            ],
+            "type": "UserWorkloadMonitoring",
+            "userWorkloadMonitoring": {}
+          }
+        },
+        {
           "apiVersion": "sailoperator.io/v1",
           "kind": "ZTunnel",
           "metadata": {
@@ -378,6 +395,30 @@ spec:
             displayName: Helm Values
             path: values
         version: v1
+      - description: MetricsIntegration configures metrics collection integrations for Istio and related resources.
+        displayName: Metrics Integration
+        kind: MetricsIntegration
+        name: metricsintegrations.sailoperator.io
+        specDescriptors:
+          - description: Type specifies the metrics integration type.
+            displayName: Type
+            path: type
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:UserWorkloadMonitoring
+              - urn:alm:descriptor:com.tectonic.ui:select:ClusterObservabilityOperator
+          - description: TargetRefs specifies the resources that this integration configures.
+            displayName: Target References
+            path: targetRefs
+          - description: |-
+              ClusterObservabilityOperator configures integration with the Cluster Observability
+              Operator's MonitoringStack resource for metrics collection.
+            displayName: Cluster Observability Operator
+            path: clusterObservabilityOperator
+          - description: UserWorkloadMonitoring configures integration with OpenShift User Workload Monitoring.
+            displayName: User Workload Monitoring
+            path: userWorkloadMonitoring
+        version: v1alpha1
       - description: ZTunnel represents a deployment of the Istio ztunnel component.
         displayName: ZTunnel
         kind: ZTunnel

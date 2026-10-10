@@ -4,4 +4,6 @@
 {{ .Files.Get "samples/istiocni-sample.yaml" }}
 ---
 {{ .Files.Get "samples/ztunnel-sample.yaml" }}
+---
+{{ .Files.Get "samples/metricsintegration-sample.yaml" }}
 {{ end }}

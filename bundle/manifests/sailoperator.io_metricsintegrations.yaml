@@ -1,0 +1,202 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  creationTimestamp: null
+  name: metricsintegrations.sailoperator.io
+spec:
+  group: sailoperator.io
+  names:
+    categories:
+    - istio-io
+    kind: MetricsIntegration
+    listKind: MetricsIntegrationList
+    plural: metricsintegrations
+    shortNames:
+    - metricsint
+    singular: metricsintegration
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: The metrics integration type.
+      jsonPath: .spec.type
+      name: Type
+      type: string
+    - description: Whether the MetricsIntegration has been reconciled.
+      jsonPath: .status.conditions[?(@.type=="Reconciled")].status
+      name: Reconciled
+      type: string
+    - description: The current state of this object.
+      jsonPath: .status.state
+      name: Status
+      type: string
+    - description: The age of the object
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: MetricsIntegration configures metrics collection integrations
+          for Istio and related resources.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MetricsIntegrationSpec defines the desired state of MetricsIntegration
+            properties:
+              clusterObservabilityOperator:
+                description: |-
+                  ClusterObservabilityOperator configures integration with the Cluster Observability
+                  Operator's MonitoringStack resource for metrics collection.
+                properties:
+                  monitoringStackRef:
+                    description: |-
+                      MonitoringStackRef is a reference to a MonitoringStack resource that defines
+                      the Prometheus stack used for scraping Istio metrics.
+                    properties:
+                      name:
+                        description: Name is the name of the referenced object.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the referenced
+                          object.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - monitoringStackRef
+                type: object
+              targetRefs:
+                description: TargetRefs specifies the resources that this integration
+                  configures.
+                items:
+                  description: TargetReference identifies a resource that the integration
+                    configures.
+                  properties:
+                    kind:
+                      description: Kind is the kind of the target resource.
+                      enum:
+                      - Istio
+                      - Kiali
+                      - Perses
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the target resource.
+                        Only required for namespace-scoped resources like Kiali.
+                      maxLength: 63
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  type: object
+                minItems: 1
+                type: array
+              type:
+                description: Type specifies the metrics integration type.
+                enum:
+                - UserWorkloadMonitoring
+                - ClusterObservabilityOperator
+                type: string
+              userWorkloadMonitoring:
+                description: UserWorkloadMonitoring configures integration with OpenShift
+                  User Workload Monitoring.
+                type: object
+            required:
+            - targetRefs
+            - type
+            type: object
+            x-kubernetes-validations:
+            - message: userWorkloadMonitoring is required when type is UserWorkloadMonitoring
+              rule: 'self.type == ''UserWorkloadMonitoring'' ? has(self.userWorkloadMonitoring)
+                : true'
+            - message: clusterObservabilityOperator is required when type is ClusterObservabilityOperator
+              rule: 'self.type == ''ClusterObservabilityOperator'' ? has(self.clusterObservabilityOperator)
+                : true'
+            - message: clusterObservabilityOperator must not be set when type is UserWorkloadMonitoring
+              rule: self.type != 'UserWorkloadMonitoring' || !has(self.clusterObservabilityOperator)
+            - message: userWorkloadMonitoring must not be set when type is ClusterObservabilityOperator
+              rule: self.type != 'ClusterObservabilityOperator' || !has(self.userWorkloadMonitoring)
+          status:
+            description: MetricsIntegrationStatus defines the observed state of MetricsIntegration
+            properties:
+              conditions:
+                description: Represents the latest available observations of the object's
+                  current state.
+                items:
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        the last transition.
+                      type: string
+                    reason:
+                      description: Unique, single-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: The status of this condition. Can be True, False
+                        or Unknown.
+                      type: string
+                    type:
+                      description: The type of this condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the most recent generation observed for this
+                  MetricsIntegration object. It corresponds to the object's generation, which is
+                  updated on mutation by the API Server. The information in the status
+                  pertains to this particular generation of the object.
+                format: int64
+                type: integer
+              state:
+                description: Reports the current state of the object.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null
