@@ -45,7 +45,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.31-latest
-    createdAt: "2026-10-12T05:15:17Z"
+    createdAt: "2026-10-12T15:32:00Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -339,13 +339,9 @@ spec:
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:number
           - description: |-
-              Defines whether the workloads should be moved from one control plane instance to another
-              automatically. If updateWorkloads is true, the operator moves the workloads from the old
-              control plane instance to the new one after the new control plane is ready.
-              If updateWorkloads is false, the user must move the workloads manually by updating the
-              istio.io/rev labels on the namespace and/or the pods.
-              Defaults to false.
-            displayName: Update Workloads Automatically
+              Deprecated: This field has never been implemented and will be removed in a future release.
+              Use IstioRevisionTag with targetRef pointing to the Istio resource for automatic workload migration.
+            displayName: Update Workloads Automatically (Deprecated)
             path: updateStrategy.updateWorkloads
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:booleanSwitch

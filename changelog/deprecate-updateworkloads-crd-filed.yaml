@@ -1,0 +1,6 @@
+category: changed
+title: Deprecate `updateWorkloads` CRD field
+description: |
+    Extended explanation that will appear indented under the title
+    in the rendered changelog.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2103
