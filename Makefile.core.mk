@@ -235,6 +235,18 @@ test.scorecard: operator-sdk ## Run the operator scorecard test. Use OCP=true to
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
+.PHONY: test.e2e.ocp.prepare
+test.e2e.ocp.prepare: ## Build and deploy for OCP end-to-end tests without running Ginkgo.
+	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh --prepare-only
+
+.PHONY: test.e2e.ocp.test-only
+test.e2e.ocp.test-only: istioctl operator-sdk helm ## Run OCP end-to-end tests against an operator prepared by test.e2e.ocp.prepare.
+	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh --test-only
+
+.PHONY: test.e2e.ocp.contract
+test.e2e.ocp.contract: ## Exercise the split OCP E2E phases with controlled external dependencies.
+	${SOURCE_DIR}/tests/e2e/ocp-phase-contract-test.sh
+
 .PHONY: test.e2e.ocp.cleanup
 test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.ocp tests
 	${SOURCE_DIR}/tests/e2e/cleanup-ocp.sh
