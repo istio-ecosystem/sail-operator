@@ -231,6 +231,32 @@ test.integration: envtest ## Run integration tests located in the tests/integrat
 test.scorecard: operator-sdk ## Run the operator scorecard test. Use OCP=true to run against an existing OCP cluster instead of Kind.
 	OCP=$${OCP:-false} OPERATOR_SDK=$(OPERATOR_SDK) SCORECARD_NAMESPACE="$${SCORECARD_NAMESPACE:-scorecard-test}" ${SOURCE_DIR}/tests/scorecard-test.sh
 
+# OCP end-to-end test targets
+#
+# The standard entry point for local development:
+#   make test.e2e.ocp         - full flow: build image, deploy, run Ginkgo, clean up
+#
+# Two-phase split for CI environments (avoids running a long Ginkgo suite
+# inside an oc exec WebSocket, which can drop silently on apiserver restarts):
+#
+#   Phase 1 — make test.e2e.ocp.prepare
+#     Runs inside the privileged CI builder pod (via oc exec).
+#     Builds and pushes the operator image, deploys it to the cluster, and
+#     writes a versioned state file (E2E_STATE_FILE) containing the exact
+#     image coordinates and deployment parameters used.  Exits once the
+#     operator is Running; Ginkgo is never started.
+#
+#   Phase 2 — make test.e2e.ocp.test-only
+#     Runs directly in the CI source container (no oc exec).
+#     Reads the state file produced by phase 1 and runs the Ginkgo suite
+#     against the already-deployed operator.  Skips build and deploy
+#     entirely so the test container needs no registry credentials.
+#
+#   make test.e2e.ocp.contract
+#     Validates the prepare/test-only boundary locally without a cluster,
+#     using a mock binary in place of oc, helm, operator-sdk, and go.
+#     Run this to catch regressions in the phase split logic itself.
+
 .PHONY: test.e2e.ocp
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
