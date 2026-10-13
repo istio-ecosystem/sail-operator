@@ -389,6 +389,22 @@ spec:
 						Expect(err).NotTo(HaveOccurred(), "Failed to enable TLSAdherence feature gate")
 						Success("TLSAdherence feature gate enabled")
 
+						// The switch to CustomNoUpgrade is irreversible, but the gate itself can be
+						// turned off again, so leave the cluster with TLSAdherence disabled.
+						DeferCleanup(func(ctx SpecContext) {
+							Step("Disabling the TLSAdherence feature gate")
+							Eventually(func(g Gomega) {
+								fg := &configv1.FeatureGate{}
+								g.Expect(cl.Get(ctx, client.ObjectKey{Name: "cluster"}, fg)).To(Succeed(), "Failed to get FeatureGate")
+								fg.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{}
+								g.Expect(cl.Update(ctx, fg)).To(Succeed(), "Failed to disable TLSAdherence feature gate")
+							}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
+
+							Step("Waiting for kube-apiserver to finish rolling out after disabling the feature gate")
+							waitForAPIServerStable(ctx, cl)
+							Success("TLSAdherence feature gate disabled")
+						})
+
 						Step("Waiting for TLSAdherence feature gate to become active")
 						Eventually(func(g Gomega) {
 							fg := &configv1.FeatureGate{}
