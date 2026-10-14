@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,6 +57,7 @@ func setup() {
 	var err error
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
+	Expect(operatorv1.Install(cl.Scheme())).To(Succeed())
 
 	k = kubectl.New()
 }
