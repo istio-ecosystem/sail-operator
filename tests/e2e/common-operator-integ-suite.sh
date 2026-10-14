@@ -445,17 +445,13 @@ cleanup() {
   echo "JUnit report: ${ARTIFACTS}/report.xml"
 }
 
-# shellcheck disable=SC2317  # Function is invoked indirectly via signal traps.
+# shellcheck disable=SC2317,SC2329  # Function is invoked indirectly via signal traps.
 handle_signal() {
   local signal_number=$1
   trap - EXIT INT TERM
   cleanup
   exit "$((128 + signal_number))"
 }
-
-trap cleanup EXIT
-trap 'handle_signal 2' INT
-trap 'handle_signal 15' TERM
 
 # Main script flow
 check_arguments "$@"
@@ -464,6 +460,10 @@ if [ "${TEST_ONLY}" == "true" ]; then
   read_preparation_state
 fi
 initialize_variables
+
+trap cleanup EXIT
+trap 'handle_signal 2' INT
+trap 'handle_signal 15' TERM
 
 # Export necessary vars
 export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY

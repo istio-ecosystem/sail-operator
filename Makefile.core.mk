@@ -267,7 +267,7 @@ test.e2e.ocp.prepare: ## Build and deploy for OCP end-to-end tests without runni
 
 .PHONY: test.e2e.ocp.test-only
 test.e2e.ocp.test-only: istioctl operator-sdk helm ## Run OCP end-to-end tests against an operator prepared by test.e2e.ocp.prepare.
-	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh --test-only
+	PATH="$(LOCALBIN):$$PATH" LOCALBIN="$(LOCALBIN)" ISTIOCTL="$(ISTIOCTL)" GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh --test-only
 
 .PHONY: test.e2e.ocp.contract
 test.e2e.ocp.contract: ## Exercise the split OCP E2E phases with controlled external dependencies.
