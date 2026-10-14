@@ -88,5 +88,8 @@ else
   # Apply Gateway API CRDs needed for library tests
   KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
 
+  # Apply ServiceMonitor CRD needed for kind olm tests
+  KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/monitoring/monitoring.coreos.com_servicemonitors.yaml"
+
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
