@@ -25,8 +25,14 @@ displays reviews with black stars. If a user does not log into the `bookinfo`
 application, then the mesh routes requests to the `reviews-v3` service, and the 
 application displays reviews with red stars.
 
-For more information, see https://istio.io/latest/docs/examples/bookinfo/[Bookinfo Application] in the upstream Istio documentation.
+For more information about the application, see https://istio.io/latest/docs/examples/bookinfo/[Bookinfo Application] in the upstream Istio documentation.
 
-After following the instructions for https://istio.io/latest/docs/examples/bookinfo/#start-the-application-services[Deploying the application], *you 
-will need to create and configure a gateway* for the `bookinfo` application to 
-be accessible outside the cluster.
+Deploy the Sail Bookinfo images:
+
+[source,bash]
+----
+kubectl apply -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
+----
+
+You will need to create and configure a gateway for the `bookinfo` application
+to be accessible outside the cluster.

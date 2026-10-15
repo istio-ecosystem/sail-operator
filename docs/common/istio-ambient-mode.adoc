@@ -223,7 +223,7 @@ kubectl label namespace bookinfo istio-discovery=enabled
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 ----
 
@@ -438,7 +438,7 @@ NOTE: You must remove workloads from the ambient data plane before uninstalling 
 
 [source,bash,subs="attributes+"]
 ----
-kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl delete -n bookinfo -f https://raw.githubusercontent.com/dgn/sail-operator/new-bookinfo/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ----
