@@ -15,7 +15,7 @@ jobs:
   sync-changelog:
     runs-on: ubuntu-latest
     container:
-      image: registry.istio.io/testing/build-tools:master-3d06fb2820260b49713de5d906e085598facaa43
+      image: registry.istio.io/testing/build-tools:master-ac2b6e645509b897fb2a5c63893fe6cef85ad70a
       options: --entrypoint ''
 
     steps:
