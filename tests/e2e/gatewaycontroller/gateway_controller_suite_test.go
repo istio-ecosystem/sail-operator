@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/operandimages"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/profiling"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
@@ -64,7 +65,7 @@ func TestGatewayController(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Gateway Controller Test Suite")
+	profiling.WrapSuite("gatewaycontroller", func() { RunSpecs(t, "Gateway Controller Test Suite") })
 }
 
 func setup() {
