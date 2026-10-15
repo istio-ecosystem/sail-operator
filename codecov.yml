@@ -1,29 +1,31 @@
 codecov:
   notify:
-    require_ci_to_pass: no
-    after_n_builds: 2
+    wait_for_ci: true
+    after_n_builds: 2   # keep in sync with the number of coverage uploads per commit
 
 comment:
-  behavior: default
-  require_changes: false
+  behavior: spam_less
+  require_changes: true
 
 coverage:
+  precision: 2
+  round: down
   status:
     project:
       default:
         target: auto
-        informational: false
+        threshold: 1%
+        flags: [unit-tests, integration-tests]
     patch:
       default:
         target: 80%
-        threshold: 0%
-        informational: false
+        threshold: 5%
 
+# Flags are auto-registered by the uploads in .github/workflows/.
+# carryforward is intentionally omitted: it's a paid feature (we're on free tier).
 flags:
-  unit-tests:
-    carryforward: true
-  integration-tests:
-    carryforward: true
+  unit-tests: {}
+  integration-tests: {}
 
 ignore:
   # Generated code and API types
@@ -36,6 +38,7 @@ ignore:
   # Documentation and examples
   - "docs/**"
   - "enhancements/**"
+  - "samples/**"
   # Infrastructure and configuration
   - "chart/**"
   - "licenses/**"
