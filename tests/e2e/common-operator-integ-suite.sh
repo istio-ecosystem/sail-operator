@@ -256,6 +256,16 @@ install_operator() {
   helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" "${helm_sets[@]}"
 }
 
+install_perses_dashboard_crd() {
+  local crd="${WD}/setup/testdata/perses/persesdashboards.perses.dev.yaml"
+  if [ ! -f "${crd}" ]; then
+    echo "PersesDashboard CRD manifest not found at ${crd}"
+    return 1
+  fi
+  echo "Ensuring PersesDashboard CRD is installed (KUBECONFIG=${KUBECONFIG})"
+  "${COMMAND}" apply --server-side -f "${crd}"
+}
+
 await_operator() {
   echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
   local name="${DEPLOYMENT_NAME}"
@@ -387,6 +397,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
         pod-security.kubernetes.io/warn=privileged \
         pod-security.kubernetes.io/audit=privileged --overwrite || true
     fi
+    install_perses_dashboard_crd
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
 
     await_operator
