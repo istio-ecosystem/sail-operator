@@ -430,7 +430,7 @@ fi
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
---timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${LABEL_FILTER_ARGS[@]}" "${WD}"/...
+--timeout "${GINKGO_TIMEOUT:-120m}" --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${LABEL_FILTER_ARGS[@]}" "${WD}"/...
 TEST_EXIT_CODE=$?
 
 exit "${TEST_EXIT_CODE}"

@@ -397,7 +397,7 @@ spec:
 							fg.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{}
 							updateAndWaitForAPIServerRollout(ctx, cl, fg)
 							Success("TLSAdherence feature gate disabled")
-						})
+						}, NodeTimeout(35*time.Minute))
 
 						updateAndWaitForAPIServerRollout(ctx, cl, featureGate)
 						Success("TLSAdherence feature gate enabled")
@@ -449,7 +449,12 @@ spec:
 					apiServer.Spec.TLSAdherence = originalTLSAdherence
 				}
 				updateAndWaitForAPIServerRollout(ctx, cl, apiServer)
-			})
+				// This test can take awhile and easily timeout.
+				// Wrapping it in NodeTimeout helps ensure we don't
+				// leave the APIServer in a bad state for other tests.
+				// Even if the overall Ginkgo timeout has expired this
+				// will continue.
+			}, NodeTimeout(35*time.Minute))
 
 			Step("Creating Istio")
 			// The cleaner should delete these.
