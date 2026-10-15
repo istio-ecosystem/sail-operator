@@ -91,5 +91,8 @@ else
   # Apply ServiceMonitor CRD needed for kind olm tests
   KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/monitoring/monitoring.coreos.com_servicemonitors.yaml"
 
+  # PersesDashboard CRD must exist before the OLM operator starts when enablePersesDashboards is on.
+  KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/perses/persesdashboards.perses.dev.yaml"
+
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
