@@ -227,36 +227,46 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 			{Name: "v1.23.4", Version: semver.MustParse("1.23.4")},
 		}
 
-		baseVer, newVer, err := GetTwoConsecutiveMinorVersions(semver.MustParse("1.23.0"))
+		baseVer, newVer, err := GetTwoConsecutiveMinorVersions(Sidecar)
 
 		assert.NoError(t, err)
 		assert.Equal(t, "v1.24.2", baseVer.Name)
 		assert.Equal(t, "v1.25.0", newVer.Name)
 	})
 
-	t.Run("min version filters out older versions", func(t *testing.T) {
+	t.Run("ambient mode filters out versions below 1.24", func(t *testing.T) {
+		t.Setenv("FIPS_CLUSTER", "false")
 		List = []VersionInfo{
-			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
-			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
 			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
 			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
 		}
 
-		baseVer, newVer, err := GetTwoConsecutiveMinorVersions(semver.MustParse("1.24.0"))
-
+		baseVer, newVer, err := GetTwoConsecutiveMinorVersions(Sidecar)
 		assert.NoError(t, err)
-		assert.Equal(t, "v1.24.2", baseVer.Name)
-		assert.Equal(t, "v1.25.0", newVer.Name)
+		assert.Equal(t, "v1.23.5", baseVer.Name)
+		assert.Equal(t, "v1.24.1", newVer.Name)
+
+		_, _, err = GetTwoConsecutiveMinorVersions(Ambient)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "insufficient versions available")
 	})
 
-	t.Run("insufficient versions returns error", func(t *testing.T) {
+	t.Run("ambient mode on a FIPS cluster filters out versions below 1.28", func(t *testing.T) {
 		List = []VersionInfo{
-			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
-			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "v1.28.0", Version: semver.MustParse("1.28.0")},
+			{Name: "v1.27.0", Version: semver.MustParse("1.27.0")},
+			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
 		}
 
-		_, _, err := GetTwoConsecutiveMinorVersions(semver.MustParse("1.25.0"))
+		t.Setenv("FIPS_CLUSTER", "false")
+		baseVer, newVer, err := GetTwoConsecutiveMinorVersions(Ambient)
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.27.0", baseVer.Name)
+		assert.Equal(t, "v1.28.0", newVer.Name)
 
+		t.Setenv("FIPS_CLUSTER", "true")
+		_, _, err = GetTwoConsecutiveMinorVersions(Ambient)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "insufficient versions available")
 	})
@@ -264,7 +274,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 	t.Run("empty list returns error", func(t *testing.T) {
 		List = []VersionInfo{}
 
-		_, _, err := GetTwoConsecutiveMinorVersions(semver.MustParse("1.23.0"))
+		_, _, err := GetTwoConsecutiveMinorVersions(Sidecar)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "insufficient versions available")
@@ -276,7 +286,91 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 			{Name: "v1.25.1", Version: semver.MustParse("1.25.1")},
 		}
 
-		_, _, err := GetTwoConsecutiveMinorVersions(semver.MustParse("1.24.0"))
+		_, _, err := GetTwoConsecutiveMinorVersions(Sidecar)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "insufficient versions available")
+	})
+}
+
+func TestGetOldestAndNewestMinorVersions(t *testing.T) {
+	t.Run("skips over the minors in between", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
+			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
+			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
+			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
+		}
+
+		oldestVer, newestVer, err := GetOldestAndNewestMinorVersions(Sidecar)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.22.0", oldestVer.Name)
+		assert.Equal(t, "v1.25.0", newestVer.Name)
+	})
+
+	t.Run("ambient mode raises the oldest version to 1.24", func(t *testing.T) {
+		t.Setenv("FIPS_CLUSTER", "false")
+		List = []VersionInfo{
+			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
+			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
+			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
+		}
+
+		oldestVer, newestVer, err := GetOldestAndNewestMinorVersions(Ambient)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.24.2", oldestVer.Name)
+		assert.Equal(t, "v1.25.0", newestVer.Name)
+	})
+
+	t.Run("ambient mode on a FIPS cluster raises the oldest version to 1.28", func(t *testing.T) {
+		t.Setenv("FIPS_CLUSTER", "true")
+		List = []VersionInfo{
+			{Name: "v1.29.0", Version: semver.MustParse("1.29.0")},
+			{Name: "v1.28.0", Version: semver.MustParse("1.28.0")},
+			{Name: "v1.27.0", Version: semver.MustParse("1.27.0")},
+			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
+		}
+
+		oldestVer, newestVer, err := GetOldestAndNewestMinorVersions(Ambient)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.28.0", oldestVer.Name)
+		assert.Equal(t, "v1.29.0", newestVer.Name)
+	})
+
+	t.Run("two minors are returned even though they are consecutive", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
+			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
+		}
+
+		oldestVer, newestVer, err := GetOldestAndNewestMinorVersions(Sidecar)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.24.2", oldestVer.Name)
+		assert.Equal(t, "v1.25.0", newestVer.Name)
+	})
+
+	t.Run("single minor returns error", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "v1.25.1", Version: semver.MustParse("1.25.1")},
+			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
+		}
+
+		_, _, err := GetOldestAndNewestMinorVersions(Sidecar)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "insufficient versions available")
+	})
+
+	t.Run("empty list returns error", func(t *testing.T) {
+		List = []VersionInfo{}
+
+		_, _, err := GetOldestAndNewestMinorVersions(Sidecar)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "insufficient versions available")
