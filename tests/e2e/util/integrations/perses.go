@@ -116,20 +116,6 @@ func (p *PersesInstaller) UninstallDashboardCRD(ctx context.Context) error {
 	})
 }
 
-// RolloutRestartOperator restarts the operator deployment so leader-elected runnables
-// (for example the Perses dashboard installer) run again after optional CRDs are installed.
-func (p *PersesInstaller) RolloutRestartOperator(deploymentName string) error {
-	cmd := fmt.Sprintf(
-		"kubectl rollout restart deployment/%s --namespace %q",
-		deploymentName, p.operatorNamespace,
-	)
-	out, err := shell.ExecuteCommand(cmd)
-	if err != nil {
-		return fmt.Errorf("kubectl rollout restart deployment/%s: %w\n%s", deploymentName, err, out)
-	}
-	return nil
-}
-
 // SetOperatorPersesDashboards toggles operator.enablePersesDashboards via Helm upgrade.
 func (p *PersesInstaller) SetOperatorPersesDashboards(enabled bool) error {
 	chartPath := filepath.Join(project.RootDir, "chart")

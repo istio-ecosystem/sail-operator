@@ -77,10 +77,6 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 		BeforeAll(func(ctx SpecContext) {
 			if env.GetBool("OLM", false) {
 				Expect(operatorPersesDashboardsEnabled(ctx)).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
-				// OLM starts the operator before the test installs the PersesDashboard CRD; restart so
-				// the Perses installer runs with the CRD already established (same effect as Helm rollout).
-				Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
-				Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
 				return
 			}
 			if initialPersesDashboardsEnabled {
