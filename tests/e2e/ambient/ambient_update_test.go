@@ -22,12 +22,12 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/update"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,7 +40,7 @@ var _ = Describe("Ambient Update & Lifecycle", Label("ambient", "update", "slow"
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	// Get two consecutive minor versions for update testing
-	baseVersion, newVersion, err := update.GetTwoConsecutiveAmbientVersions(fipsCluster)
+	baseVersion, newVersion, err := istioversion.GetTwoConsecutiveMinorVersions(istioversion.Ambient)
 	if err != nil {
 		Skip(fmt.Sprintf("Skipping ambient update tests: %v", err))
 		return
