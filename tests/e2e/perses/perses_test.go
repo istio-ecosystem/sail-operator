@@ -41,7 +41,7 @@ var expectedDashboardNames = []string{
 	"istio-ztunnel-dashboard",
 }
 
-var _ = Describe("Perses dashboards with enablePersesDashboards disabled", Label("perses"), func() {
+var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 	BeforeAll(func(ctx SpecContext) {
 		Expect(installer.InstallDashboardCRD(ctx)).To(Succeed())
 		DeferCleanup(func(ctx SpecContext) {
@@ -49,7 +49,7 @@ var _ = Describe("Perses dashboards with enablePersesDashboards disabled", Label
 		})
 	})
 
-	It("does not create PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
+	It("does not create PersesDashboard resources when enablePersesDashboards is disabled", func(ctx SpecContext) {
 		if env.GetBool("OLM", false) {
 			Skip("OLM bundle enables Perses dashboards")
 		}
@@ -61,33 +61,19 @@ var _ = Describe("Perses dashboards with enablePersesDashboards disabled", Label
 		Expect(err).NotTo(HaveOccurred())
 		Expect(items).To(BeEmpty())
 	})
-})
 
-var _ = Describe("Perses dashboards with enablePersesDashboards enabled", Label("perses"), Ordered, Serial, func() {
-	BeforeAll(func(ctx SpecContext) {
-		Expect(installer.InstallDashboardCRD(ctx)).To(Succeed())
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(installer.UninstallDashboardCRD(ctx)).To(Succeed())
-		})
-
+	It("installs bundled PersesDashboard resources when enablePersesDashboards is enabled", func(ctx SpecContext) {
 		if env.GetBool("OLM", false) {
 			Expect(operatorPersesDashboardsEnabled(ctx)).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
-			return
-		}
-
-		if operatorPersesDashboardsEnabled(ctx) {
-			return
-		}
-
-		Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
-		Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(installer.SetOperatorPersesDashboards(false)).To(Succeed())
+		} else if !operatorPersesDashboardsEnabled(ctx) {
+			Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(installer.SetOperatorPersesDashboards(false)).To(Succeed())
+				Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+			})
 			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
-		})
-	})
+		}
 
-	It("installs bundled PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
 		want := bundledDashboardCount()
 		Expect(want).To(Equal(len(expectedDashboardNames)))
 
