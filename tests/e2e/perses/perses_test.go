@@ -27,7 +27,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,84 +41,82 @@ var expectedDashboardNames = []string{
 	"istio-ztunnel-dashboard",
 }
 
-var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
-	var initialPersesDashboardsEnabled bool
-	var operatorConfigChanged bool
-
+var _ = Describe("Perses dashboards with enablePersesDashboards disabled", Label("perses"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		Expect(installer.InstallDashboardCRD(ctx)).To(Succeed())
-		initialPersesDashboardsEnabled = operatorPersesDashboardsEnabled(ctx)
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(installer.UninstallDashboardCRD(ctx)).To(Succeed())
+		})
 	})
 
-	AfterAll(func(ctx SpecContext) {
-		if operatorConfigChanged {
-			Expect(installer.SetOperatorPersesDashboards(initialPersesDashboardsEnabled)).To(Succeed())
-			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+	It("does not create PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
+		if env.GetBool("OLM", false) {
+			Skip("OLM bundle enables Perses dashboards")
 		}
-		Expect(installer.UninstallDashboardCRD(ctx)).To(Succeed())
-	})
+		if operatorPersesDashboardsEnabled(ctx) {
+			Skip("operator was installed with --enable-perses-dashboards=true")
+		}
 
-	When("enablePersesDashboards is disabled", func() {
-		It("does not create PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
-			if initialPersesDashboardsEnabled {
-				Skip("operator was installed with --enable-perses-dashboards=true")
-			}
-			if env.GetBool("OLM", false) {
-				Skip("OLM manages the operator configuration")
-			}
-			list, err := dc.Resource(perses.PersesDashboardGVR).Namespace(operatorNamespace).List(ctx, metav1.ListOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(list.Items).To(BeEmpty())
-		})
-	})
-
-	When("enablePersesDashboards is enabled", func() {
-		BeforeAll(func(ctx SpecContext) {
-			if env.GetBool("OLM", false) {
-				Expect(operatorPersesDashboardsEnabled(ctx)).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
-				return
-			}
-			if initialPersesDashboardsEnabled {
-				return
-			}
-			Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
-			operatorConfigChanged = true
-			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
-		})
-
-		It("installs bundled PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
-			want := bundledDashboardCount()
-			Expect(want).To(Equal(len(expectedDashboardNames)))
-
-			Eventually(func(g Gomega) {
-				list, err := dc.Resource(perses.PersesDashboardGVR).Namespace(operatorNamespace).List(ctx, metav1.ListOptions{})
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(list.Items).To(HaveLen(want))
-
-				names := make([]string, 0, len(list.Items))
-				for _, item := range list.Items {
-					names = append(names, item.GetName())
-					spec, found, err := unstructured.NestedMap(item.Object, "spec")
-					g.Expect(err).NotTo(HaveOccurred())
-					g.Expect(found).To(BeTrue(), "dashboard %s should have spec", item.GetName())
-					g.Expect(spec).NotTo(BeEmpty())
-				}
-				g.Expect(names).To(ConsistOf(expectedDashboardNames))
-			}).Should(Succeed())
-		})
-	})
-
-	When("OpenShift console validation is requested", func() {
-		It("validates dashboards in the Perses UI with live metrics", func(ctx SpecContext) {
-			if !env.GetBool("OCP", false) || !env.GetBool("PERSES_E2E_CONSOLE", false) {
-				Skip("Set OCP=true and PERSES_E2E_CONSOLE=true after COO Perses, PersesDatasource, and mesh metrics are configured; see docs/addons/perses.adoc")
-			}
-			// The Ginkgo/kubectl e2e framework does not drive the OpenShift console or Perses HTTP API.
-			// Manual or downstream automation should verify Observe → Monitoring after the prerequisites in perses.adoc.
-			Skip("console and Perses UI checks are out of scope for the default e2e runner")
-		})
+		items, err := listPersesDashboards(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(items).To(BeEmpty())
 	})
 })
+
+var _ = Describe("Perses dashboards with enablePersesDashboards enabled", Label("perses"), Ordered, Serial, func() {
+	BeforeAll(func(ctx SpecContext) {
+		Expect(installer.InstallDashboardCRD(ctx)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(installer.UninstallDashboardCRD(ctx)).To(Succeed())
+		})
+
+		if env.GetBool("OLM", false) {
+			Expect(operatorPersesDashboardsEnabled(ctx)).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
+			return
+		}
+
+		if operatorPersesDashboardsEnabled(ctx) {
+			return
+		}
+
+		Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
+		Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(installer.SetOperatorPersesDashboards(false)).To(Succeed())
+			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+		})
+	})
+
+	It("installs bundled PersesDashboard resources in the operator namespace", func(ctx SpecContext) {
+		want := bundledDashboardCount()
+		Expect(want).To(Equal(len(expectedDashboardNames)))
+
+		Eventually(func(g Gomega) {
+			items, err := listPersesDashboards(ctx)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(items).To(HaveLen(want))
+
+			names := make([]string, 0, len(items))
+			for _, item := range items {
+				names = append(names, item.GetName())
+				spec, found, err := unstructured.NestedMap(item.Object, "spec")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(found).To(BeTrue(), "dashboard %s should have spec", item.GetName())
+				g.Expect(spec).NotTo(BeEmpty())
+			}
+			g.Expect(names).To(ConsistOf(expectedDashboardNames))
+		}).Should(Succeed())
+	})
+})
+
+func listPersesDashboards(ctx context.Context) ([]unstructured.Unstructured, error) {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(perses.DashboardGVK)
+	if err := cl.List(ctx, list, client.InNamespace(operatorNamespace)); err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
 
 func bundledDashboardCount() int {
 	matches, err := fs.Glob(persesresources.ChartFS, path.Join("files", "*.yaml"))

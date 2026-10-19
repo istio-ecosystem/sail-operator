@@ -26,13 +26,11 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/integrations"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	cl        client.Client
-	dc        dynamic.Interface
 	installer *integrations.PersesInstaller
 
 	operatorNamespace  = common.OperatorNamespace
@@ -57,9 +55,6 @@ func TestPerses(t *testing.T) {
 	restConf, err := k8sclient.GetConfig("")
 	Expect(err).NotTo(HaveOccurred())
 	installer = integrations.NewPersesInstaller(restConf)
-
-	dc, err = dynamic.NewForConfig(restConf)
-	Expect(err).NotTo(HaveOccurred())
 
 	RunSpecs(t, "Perses Dashboards Test Suite")
 }

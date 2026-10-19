@@ -323,11 +323,8 @@ GINKGO_FLAGS="--label-filter=control-plane && !update" make test.e2e.kind
 GINKGO_FLAGS="--label-filter=ambient-targetref" make test.e2e.kind
 
 # Perses dashboard provisioning (KinD or OCP; not part of smoke).
-# KinD applies the PersesDashboard CRD during cluster setup so OLM can provision dashboards at operator start.
+# The perses suite installs the PersesDashboard CRD in test setup when needed.
 GINKGO_FLAGS="--label-filter=perses" make test.e2e.kind
-
-# Optional OpenShift console/UI validation hook (skipped unless PERSES_E2E_CONSOLE=true; see docs/addons/perses.adoc)
-PERSES_E2E_CONSOLE=true GINKGO_FLAGS="--label-filter=perses" make test.e2e.ocp
 ```
 
 ## Running the tests
