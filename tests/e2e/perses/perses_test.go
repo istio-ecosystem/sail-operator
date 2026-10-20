@@ -53,7 +53,10 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 		if env.GetBool("OLM", false) {
 			Skip("OLM bundle enables Perses dashboards")
 		}
-		if operatorPersesDashboardsEnabled(ctx) {
+
+		enabled, err := operatorPersesDashboardsEnabled(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		if enabled {
 			Skip("operator was installed with --enable-perses-dashboards=true")
 		}
 
@@ -63,14 +66,26 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 	})
 
 	It("installs bundled PersesDashboard resources when enablePersesDashboards is enabled", func(ctx SpecContext) {
-		if env.GetBool("OLM", false) {
-			Expect(operatorPersesDashboardsEnabled(ctx)).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
-		} else if !operatorPersesDashboardsEnabled(ctx) {
+		enabled, err := operatorPersesDashboardsEnabled(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		switch {
+		case env.GetBool("OLM", false):
+			Expect(enabled).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
+			// OLM starts the operator before this suite installs the PersesDashboard CRD; restart so
+			// the Perses installer runs with the CRD already established (same effect as Helm rollout).
+			Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
+			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+		case !enabled:
 			Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
 			DeferCleanup(func(ctx SpecContext) {
 				Expect(installer.SetOperatorPersesDashboards(false)).To(Succeed())
 				Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
 			})
+			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+		default:
+			// Operator was installed with dashboards enabled before the CRD existed in BeforeAll.
+			Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
 			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
 		}
 
@@ -112,20 +127,20 @@ func bundledDashboardCount() int {
 	return len(matches)
 }
 
-func operatorPersesDashboardsEnabled(ctx context.Context) bool {
+func operatorPersesDashboardsEnabled(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: operatorNamespace, Name: operatorDeployment}, deployment); err != nil {
-		return false
+		return false, err
 	}
 	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		return false
+		return false, nil
 	}
 	for _, arg := range deployment.Spec.Template.Spec.Containers[0].Args {
 		if arg == "--enable-perses-dashboards=true" {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func deploymentIsRolledOut(ctx context.Context, namespace, name string) bool {
