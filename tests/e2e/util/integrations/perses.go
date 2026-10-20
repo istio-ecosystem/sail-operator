@@ -116,16 +116,20 @@ func (p *PersesInstaller) UninstallDashboardCRD(ctx context.Context) error {
 	})
 }
 
-// RolloutRestartOperator restarts the operator deployment so leader-elected runnables
+// RolloutRestartOperator forces a new operator process so leader-elected runnables
 // (for example the Perses dashboard installer) run again after optional CRDs are installed.
+//
+// Pods are deleted instead of `kubectl rollout restart`: under OLM the CSV owns the
+// Deployment and a rollout restart often does not replace the running pod, leaving the
+// Perses installer stuck after a one-shot Helm discovery failure.
 func (p *PersesInstaller) RolloutRestartOperator(deploymentName string) error {
 	cmd := fmt.Sprintf(
-		"kubectl rollout restart deployment/%s --namespace %q",
-		deploymentName, p.operatorNamespace,
+		"kubectl delete pod --namespace %q --selector=control-plane=sail-operator --wait=true --timeout=3m",
+		p.operatorNamespace,
 	)
 	out, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("kubectl rollout restart deployment/%s: %w\n%s", deploymentName, err, out)
+		return fmt.Errorf("kubectl delete pod (restart %s): %w\n%s", deploymentName, err, out)
 	}
 	return nil
 }
