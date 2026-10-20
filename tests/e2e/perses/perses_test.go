@@ -51,43 +51,28 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 
 	It("does not create PersesDashboard resources when enablePersesDashboards is disabled", func(ctx SpecContext) {
 		if env.GetBool("OLM", false) {
-			Skip("OLM bundle enables Perses dashboards")
+			Skip("OLM bundle always enables Perses dashboards and cannot be turned off via Helm")
 		}
 
-		enabled, err := operatorPersesDashboardsEnabled(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		if enabled {
-			Skip("operator was installed with --enable-perses-dashboards=true")
-		}
+		ensureOperatorPersesDashboards(ctx, false)
+		Expect(deleteAllPersesDashboards(ctx)).To(Succeed())
+		Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
+		Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
 
-		items, err := listPersesDashboards(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(items).To(BeEmpty())
+		Eventually(func(g Gomega) {
+			items, err := listPersesDashboards(ctx)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(items).To(BeEmpty())
+		}).Should(Succeed())
 	})
 
 	It("installs bundled PersesDashboard resources when enablePersesDashboards is enabled", func(ctx SpecContext) {
-		enabled, err := operatorPersesDashboardsEnabled(ctx)
-		Expect(err).NotTo(HaveOccurred())
-
-		switch {
-		case env.GetBool("OLM", false):
-			Expect(enabled).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
-			// OLM starts the operator before this suite installs the PersesDashboard CRD; restart so
-			// the Perses installer runs with the CRD already established (same effect as Helm rollout).
-			Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
-			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
-		case !enabled:
-			Expect(installer.SetOperatorPersesDashboards(true)).To(Succeed())
+		if !env.GetBool("OLM", false) {
 			DeferCleanup(func(ctx SpecContext) {
-				Expect(installer.SetOperatorPersesDashboards(false)).To(Succeed())
-				Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+				ensureOperatorPersesDashboards(ctx, false)
 			})
-			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
-		default:
-			// Operator was installed with dashboards enabled before the CRD existed in BeforeAll.
-			Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
-			Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
 		}
+		ensureOperatorPersesDashboards(ctx, true)
 
 		want := bundledDashboardCount()
 		Expect(want).To(Equal(len(expectedDashboardNames)))
@@ -109,6 +94,36 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 		}).Should(Succeed())
 	})
 })
+
+// ensureOperatorPersesDashboards sets enablePersesDashboards and waits for a rolled-out operator.
+// On OLM the flag is fixed true in the bundle; only a rollout restart is applied.
+func ensureOperatorPersesDashboards(ctx context.Context, wantEnabled bool) {
+	if env.GetBool("OLM", false) {
+		Expect(wantEnabled).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
+		Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
+	} else {
+		Expect(installer.SetOperatorPersesDashboards(wantEnabled)).To(Succeed())
+	}
+	Eventually(deploymentIsRolledOut).WithArguments(ctx, operatorNamespace, operatorDeployment).Should(BeTrue())
+	Eventually(func(g Gomega) {
+		enabled, err := operatorPersesDashboardsEnabled(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(enabled).To(Equal(wantEnabled))
+	}).Should(Succeed())
+}
+
+func deleteAllPersesDashboards(ctx context.Context) error {
+	items, err := listPersesDashboards(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range items {
+		if err := cl.Delete(ctx, &items[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func listPersesDashboards(ctx context.Context) ([]unstructured.Unstructured, error) {
 	list := &unstructured.UnstructuredList{}
