@@ -21,6 +21,8 @@ sail-operator/
 │   ├── istiocni/           # CNI plugin controller
 │   ├── istiorevision/      # Revision lifecycle via Helm charts
 │   ├── istiorevisiontag/   # Revision tag management
+│   ├── monitoring/         # Prometheus ServiceMonitor/PodMonitor controller
+│   ├── rbac/               # Shared kubebuilder RBAC markers
 │   ├── webhook/            # ValidatingWebhookConfiguration controller
 │   └── ztunnel/            # Ambient mesh tunnel controller
 ├── docs/                   # Documentation
@@ -99,6 +101,7 @@ which provides common reconciliation flow with finalizer support.
 | `istiocni` | `IstioCNI` | Deploys the Istio CNI DaemonSet via the cni chart |
 | `ztunnel` | `ZTunnel` | Deploys the ZTunnel DaemonSet for ambient mode via the ztunnel chart |
 | `webhook` | *(none)* | Manages ValidatingWebhookConfigurations for CRD validation |
+| `monitoring` | `Istio` | Creates ServiceMonitor and PodMonitor resources for Prometheus when monitoring is enabled |
 
 ### Custom Resource Relationships
 
@@ -147,13 +150,16 @@ When an `IstioRevision` is reconciled, values are assembled through a pipeline
 before being passed to Helm:
 
 ```
+Image digest injection (from config.properties)
+        │
+        ▼
+Vendor-specific defaults (vendor_defaults.yaml)
+        │
+        ▼
 Chart defaults (values.yaml from embedded chart)
         │
         ▼
 Profile overlay (default, openshift, demo, ambient, etc.)
-        │
-        ▼
-Image digest injection (from config.properties)
         │
         ▼
 User-provided overrides (Istio CR spec.values)
