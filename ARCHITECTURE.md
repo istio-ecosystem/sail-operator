@@ -10,7 +10,7 @@ See also [AGENTS.md](AGENTS.md) for development workflow, commands, and contribu
 sail-operator/
 ├── api/                    # CRD type definitions
 │   ├── v1/                 # Stable API group (Istio, IstioRevision, IstioRevisionTag, IstioCNI, ZTunnel)
-│   └── v1alpha1/           # Experimental API group (ZTunnel)
+│   └── v1alpha1/           # Deprecated/legacy API group (ZTunnel)
 ├── bundle/                 # OLM bundle (ClusterServiceVersion, metadata)
 ├── chart/                  # Operator's own Helm chart for deployment
 ├── cmd/                    # Operator binary entry point
@@ -83,7 +83,7 @@ The operator binary. Responsibilities:
 - Load operator configuration from `/etc/sail-operator/config.properties`
 - Initialize embedded or filesystem-based Istio chart resources
 - Create the controller-runtime Manager with leader election and secure metrics
-- Register all six controllers and start the manager
+- Register all seven controllers and start the manager
 - On OpenShift: fetch cluster TLS profile and watch for changes (triggers restart on change)
 
 ### Controllers (`controllers/`)
