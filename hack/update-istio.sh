@@ -124,15 +124,44 @@ title: Add support for Istio ${formatted}
 EOF
 }
 
+function get_all_releases() {
+    local page=1 response release_count
+    while true; do
+        response=$(curl -fsSL "https://api.github.com/repos/istio/istio/releases?per_page=100&page=${page}")
+        if ! jq -e 'type == "array"' >/dev/null <<< "${response}"; then
+            echo "GitHub returned an invalid releases response on page ${page}" >&2
+            return 1
+        fi
+
+        jq -r '.[].tag_name' <<< "${response}"
+        release_count=$(jq 'length' <<< "${response}")
+        if (( release_count < 100 )); then
+            break
+        fi
+        ((page += 1))
+    done
+}
+
+function get_latest_release_for_minor() {
+    local releases=${1}
+    local major=${2}
+    local minor=${3}
+    printf '%s\n' "${releases}" | grep -E "^${major}\\.${minor}\\.[0-9]+$" | sort -V | tail -n 1 || true
+}
+
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
+    all_releases=$(get_all_releases)
     supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
     new_versions=()
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
         version="${version:1}" # remove 'v' prefix, e.g. v1.21.0 => 1.21.0
         IFS="." read -r -a version_array <<< "${version}" # split version into an array for major, minor and patch
-        latest_release=$(echo "${all_releases}" | grep "${version_array[0]}.${version_array[1]}." | head -1) # get the latest release for "major.minor"
+        latest_release=$(get_latest_release_for_minor "${all_releases}" "${version_array[0]}" "${version_array[1]}")
+        if [[ -z "${latest_release}" ]]; then
+            echo "No GitHub releases found for Istio ${version_array[0]}.${version_array[1]}; skipping" >&2
+            continue
+        fi
         if [[ "${version}" != "${latest_release}" ]]; then
             add_stable_version "${latest_release}" "${version}"
             update_alias "v${version_array[0]}.${version_array[1]}-latest" "v${latest_release}"
@@ -183,5 +212,7 @@ function update_prerelease() {
     update_alias "master" "v${VERSION}"
 }
 
-update_stable
-update_prerelease
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    update_stable
+    update_prerelease
+fi
