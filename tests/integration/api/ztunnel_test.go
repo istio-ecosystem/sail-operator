@@ -194,31 +194,6 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 	})
 
-	// TODO: Remove this test when Istio 1.29 goes out of support
-	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true and version < 1.30", func() {
-		istiovalues.EnableFIPS(GinkgoTB())
-
-		ztunnel := &v1.ZTunnel{
-			Name: ztunnelName,
-			Spec: v1.ZTunnelSpec{
-				Version:   "v1.29.3",
-				Namespace: fipsZTunnelNamespace,
-			},
-		}
-		Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
-		DeferCleanup(func() {
-			Expect(k8sClient.Delete(ctx, ztunnel)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, fipsZTunnelKey, &v1.ZTunnel{}).Should(ReturnNotFoundError())
-		})
-
-		ds := &appsv1.DaemonSet{}
-		Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
-
-		Expect(ds).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
-			ContainElement(corev1.EnvVar{Name: "TLS12_ENABLED", Value: "true"})))),
-			"Expected TLS12_ENABLED to be set to true on ztunnel DaemonSet when FIPS is enabled")
-	})
-
 	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
 		istiovalues.EnableFIPS(GinkgoTB())
 
