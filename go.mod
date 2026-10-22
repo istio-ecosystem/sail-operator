@@ -30,8 +30,8 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.0
-	istio.io/client-go v1.32.0-alpha.0.0.20261014081751-80686f49f5c5
-	istio.io/istio v0.0.0-20261014161551-4e2c1c576e33
+	istio.io/client-go v1.32.0-alpha.0.0.20261021201855-5a3fa7c63379
+	istio.io/istio v0.0.0-20261021223355-ac152d313bbc
 	k8s.io/api v0.36.4
 	k8s.io/apiextensions-apiserver v0.36.4
 	k8s.io/apimachinery v0.36.4
@@ -172,7 +172,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	istio.io/api v1.32.0-alpha.0.0.20261014081352-15dd444282ea // indirect
+	istio.io/api v1.32.0-alpha.0.0.20261021201554-855754b46d81 // indirect
 	k8s.io/apiserver v0.36.4 // indirect
 	k8s.io/component-base v0.36.4 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
