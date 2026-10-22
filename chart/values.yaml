@@ -2,6 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_31_2.ztunnel: quay.io/sail-dev/ztunnel:1.31.2
+    images.v1_31_2.istiod: quay.io/sail-dev/pilot:1.31.2
+    images.v1_31_2.proxy: quay.io/sail-dev/proxyv2:1.31.2
+    images.v1_31_2.cni: quay.io/sail-dev/install-cni:1.31.2
     images.v1_31_1.ztunnel: quay.io/sail-dev/ztunnel:1.31.1
     images.v1_31_1.istiod: quay.io/sail-dev/pilot:1.31.1
     images.v1_31_1.proxy: quay.io/sail-dev/proxyv2:1.31.1
@@ -10,6 +14,10 @@ deployment:
     images.v1_31_0.istiod: quay.io/sail-dev/pilot:1.31.0
     images.v1_31_0.proxy: quay.io/sail-dev/proxyv2:1.31.0
     images.v1_31_0.cni: quay.io/sail-dev/install-cni:1.31.0
+    images.v1_30_6.ztunnel: registry.istio.io/release/ztunnel:1.30.6
+    images.v1_30_6.istiod: registry.istio.io/release/pilot:1.30.6
+    images.v1_30_6.proxy: registry.istio.io/release/proxyv2:1.30.6
+    images.v1_30_6.cni: registry.istio.io/release/install-cni:1.30.6
     images.v1_30_5.ztunnel: registry.istio.io/release/ztunnel:1.30.5
     images.v1_30_5.istiod: registry.istio.io/release/pilot:1.30.5
     images.v1_30_5.proxy: registry.istio.io/release/proxyv2:1.30.5
@@ -34,10 +42,14 @@ deployment:
     images.v1_30_0.istiod: registry.istio.io/release/pilot:1.30.0
     images.v1_30_0.proxy: registry.istio.io/release/proxyv2:1.30.0
     images.v1_30_0.cni: registry.istio.io/release/install-cni:1.30.0
-    images.v1_33_0-alpha_4e2c1c57.ztunnel: registry.istio.io/testing/ztunnel:1.33.0-alpha.4e2c1c576e33a7b411ee7f38ac4bb9dd45c36631
-    images.v1_33_0-alpha_4e2c1c57.istiod: registry.istio.io/testing/pilot:1.33.0-alpha.4e2c1c576e33a7b411ee7f38ac4bb9dd45c36631
-    images.v1_33_0-alpha_4e2c1c57.proxy: registry.istio.io/testing/proxyv2:1.33.0-alpha.4e2c1c576e33a7b411ee7f38ac4bb9dd45c36631
-    images.v1_33_0-alpha_4e2c1c57.cni: registry.istio.io/testing/install-cni:1.33.0-alpha.4e2c1c576e33a7b411ee7f38ac4bb9dd45c36631
+    images.v1_29_9.ztunnel: registry.istio.io/release/ztunnel:1.29.9
+    images.v1_29_9.istiod: registry.istio.io/release/pilot:1.29.9
+    images.v1_29_9.proxy: registry.istio.io/release/proxyv2:1.29.9
+    images.v1_29_9.cni: registry.istio.io/release/install-cni:1.29.9
+    images.v1_33_0-alpha_ac152d31.ztunnel: registry.istio.io/testing/ztunnel:1.33.0-alpha.ac152d313bbc4065d67ff4fe27d62dec14a375c9
+    images.v1_33_0-alpha_ac152d31.istiod: registry.istio.io/testing/pilot:1.33.0-alpha.ac152d313bbc4065d67ff4fe27d62dec14a375c9
+    images.v1_33_0-alpha_ac152d31.proxy: registry.istio.io/testing/proxyv2:1.33.0-alpha.ac152d313bbc4065d67ff4fe27d62dec14a375c9
+    images.v1_33_0-alpha_ac152d31.cni: registry.istio.io/testing/install-cni:1.33.0-alpha.ac152d313bbc4065d67ff4fe27d62dec14a375c9
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -54,17 +66,20 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.31-latest
+    - v1.31.2
     - v1.31.1
     - v1.31.0
     - v1.30-latest
+    - v1.30.6
     - v1.30.5
     - v1.30.4
     - v1.30.3
     - v1.30.2
     - v1.30.1
     - v1.30.0
+    - v1.29.9
     - master
-    - v1.33.0-alpha.4e2c1c57
+    - v1.33.0-alpha.ac152d31
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
