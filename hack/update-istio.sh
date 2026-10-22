@@ -124,8 +124,29 @@ title: Add support for Istio ${formatted}
 EOF
 }
 
+function get_all_releases() {
+    local page=1 response release_count
+    while true; do
+        if ! response=$(curl --fail-with-body -sSL "https://api.github.com/repos/istio/istio/releases?per_page=100&page=${page}"); then
+            printf 'Failed to fetch GitHub releases on page %s: %s\n' "${page}" "${response}" >&2
+            return 1
+        fi
+        if ! jq -e 'type == "array"' >/dev/null <<< "${response}"; then
+            printf 'GitHub returned an invalid releases response on page %s: %s\n' "${page}" "${response}" >&2
+            return 1
+        fi
+
+        jq -r '.[].tag_name' <<< "${response}"
+        release_count=$(jq 'length' <<< "${response}")
+        if (( release_count < 100 )); then
+            break
+        fi
+        ((page += 1))
+    done
+}
+
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
+    all_releases=$(get_all_releases)
     supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
     new_versions=()
     # For each supported version, look for a greater version in the all_releases list
