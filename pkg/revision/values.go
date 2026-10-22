@@ -54,6 +54,10 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
+	// The upstream default profile sets ztunnel.resourceName, which is only consumed by the ztunnel chart
+	// (see ZTunnelValues) and has no field in v1.Values. Drop it here to avoid a spurious "dropped keys" warning.
+	delete(mergedHelmValues, "ztunnel")
+
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
