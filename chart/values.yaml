@@ -6,10 +6,6 @@ deployment:
     images.v1_30_7.istiod: registry.istio.io/release/pilot:1.30.7
     images.v1_30_7.proxy: registry.istio.io/release/proxyv2:1.30.7
     images.v1_30_7.cni: registry.istio.io/release/install-cni:1.30.7
-    images.v1_30_6.ztunnel: registry.istio.io/release/ztunnel:1.30.6
-    images.v1_30_6.istiod: registry.istio.io/release/pilot:1.30.6
-    images.v1_30_6.proxy: registry.istio.io/release/proxyv2:1.30.6
-    images.v1_30_6.cni: registry.istio.io/release/install-cni:1.30.6
     images.v1_30_5.ztunnel: registry.istio.io/release/ztunnel:1.30.5
     images.v1_30_5.istiod: registry.istio.io/release/pilot:1.30.5
     images.v1_30_5.proxy: registry.istio.io/release/proxyv2:1.30.5
@@ -131,7 +127,6 @@ csv:
 
     - v1.30-latest
     - v1.30.7
-    - v1.30.6
     - v1.30.5
     - v1.30.4
     - v1.30.3
