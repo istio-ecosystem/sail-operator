@@ -73,7 +73,12 @@ jobs:
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           COMMIT_HASH="${GITHUB_SHA:0:7}"
           TAG="ci-test-${COMMIT_HASH}-amd64"
-          make docker-push HUB=${HUB} TAG=${TAG}
+          # Setting IMAGE explicitly because vendor makefile overrides may have IMAGE placeholders
+          # overriding setting HUB/TAG here.
+          make docker-push \
+            HUB="${HUB}" \
+            TAG="${TAG}" \
+            IMAGE="${HUB}/sail-operator:${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
   # One CRC cluster for all smoke suites. A matrix would start CRC 3x (~30m each)
