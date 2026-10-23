@@ -114,6 +114,7 @@ initialize_variables() {
   CONTROL_PLANE_NS="${CONTROL_PLANE_NS:-istio-system}"
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+  PPROF_ENABLED="${PPROF_ENABLED:-true}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
   ISTIOCTL_PATH="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
@@ -250,6 +251,9 @@ install_operator() {
   fi
   if [ -n "${OPERATOR_CPU_LIMIT:-}" ]; then
     helm_sets+=(--set "operator.resources.limits.cpu=${OPERATOR_CPU_LIMIT}")
+  fi
+  if [ "${PPROF_ENABLED:-true}" == "true" ]; then
+    helm_sets+=(--set "pprofBindAddress=:6060")
   fi
 
   echo "Helm install overrides: ${helm_sets[*]}"
@@ -395,7 +399,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER PPROF_ENABLED
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153

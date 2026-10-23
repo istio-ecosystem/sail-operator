@@ -74,6 +74,9 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=:8443
         - --zap-log-level={{ .Values.operatorLogLevel }}
+        {{- if .Values.pprofBindAddress }}
+        - --pprof-bind-address={{ .Values.pprofBindAddress }}
+        {{- end }}
         - --enable-perses-dashboards={{ ternary true .Values.operator.enablePersesDashboards .Values.bundleGeneration }}
         {{- with .Values.operator.extraArgs }}
         {{- tpl (toYaml .) $ | nindent 8 }}

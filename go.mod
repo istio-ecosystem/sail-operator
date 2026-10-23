@@ -11,6 +11,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.1.0
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
+	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -101,7 +102,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.28.1 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
