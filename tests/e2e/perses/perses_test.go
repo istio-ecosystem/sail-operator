@@ -21,7 +21,6 @@ import (
 	"io/fs"
 	"path"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/perses"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,7 +49,7 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 	})
 
 	It("does not create PersesDashboard resources when enablePersesDashboards is disabled", func(ctx SpecContext) {
-		if env.GetBool("OLM", false) {
+		if isOLM {
 			Skip("OLM bundle always enables Perses dashboards and cannot be turned off via Helm")
 		}
 
@@ -67,7 +66,7 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 	})
 
 	It("installs bundled PersesDashboard resources when enablePersesDashboards is enabled", func(ctx SpecContext) {
-		if !env.GetBool("OLM", false) {
+		if !isOLM {
 			DeferCleanup(func(ctx SpecContext) {
 				ensureOperatorPersesDashboards(ctx, false)
 			})
@@ -98,7 +97,7 @@ var _ = Describe("Perses dashboards", Label("perses"), Ordered, Serial, func() {
 // ensureOperatorPersesDashboards sets enablePersesDashboards and waits for a rolled-out operator.
 // On OLM the flag is fixed true in the bundle; only a rollout restart is applied.
 func ensureOperatorPersesDashboards(ctx context.Context, wantEnabled bool) {
-	if env.GetBool("OLM", false) {
+	if isOLM {
 		Expect(wantEnabled).To(BeTrue(), "the OLM bundle must enable Perses dashboards")
 		Expect(installer.RolloutRestartOperator(operatorDeployment)).To(Succeed())
 	} else {

@@ -67,7 +67,7 @@ func (p *PersesInstaller) InstallDashboardCRD(ctx context.Context) error {
 		return fmt.Errorf("get PersesDashboard CRD: %w", err)
 	}
 
-	crd := persesDashboardCRD()
+	crd := perses.DashboardCRD()
 	if _, err = ext.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("create PersesDashboard CRD: %w", err)
 	}
@@ -146,30 +146,4 @@ func (p *PersesInstaller) SetOperatorPersesDashboards(enabled bool) error {
 		return fmt.Errorf("helm upgrade sail-operator (enablePersesDashboards=%t): %w\n%s", enabled, err, out)
 	}
 	return nil
-}
-
-func persesDashboardCRD() *apiextensionsv1.CustomResourceDefinition {
-	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: perses.PersesDashboardCRD},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: "perses.dev",
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Plural:   "persesdashboards",
-				Singular: "persesdashboard",
-				Kind:     "PersesDashboard",
-			},
-			Scope: apiextensionsv1.NamespaceScoped,
-			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
-				Name:    "v1alpha2",
-				Served:  true,
-				Storage: true,
-				Schema: &apiextensionsv1.CustomResourceValidation{
-					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
-						Type:                   "object",
-						XPreserveUnknownFields: new(true),
-					},
-				},
-			}},
-		},
-	}
 }

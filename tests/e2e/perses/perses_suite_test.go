@@ -37,6 +37,7 @@ var (
 	operatorDeployment = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	multicluster       = env.GetBool("MULTICLUSTER", false)
 	ipFamily           = env.Get("IP_FAMILY", "ipv4")
+	isOLM              = env.GetBool("OLM", false)
 )
 
 func TestPerses(t *testing.T) {
