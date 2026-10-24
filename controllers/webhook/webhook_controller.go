@@ -337,7 +337,7 @@ func (r *Reconciler) findOwnedWebhookConfig(ctx context.Context, webhookName str
 	}
 	for i := range configs.Items {
 		for _, webhook := range configs.Items[i].Webhooks {
-			if webhook.Name == webhookName && IsOwnedByRevisionWithRemoteControlPlane(r.Client, &configs.Items[i]) {
+			if webhook.Name == webhookName && IsOwnedByRevisionWithRemoteControlPlane(ctx, r.Client, &configs.Items[i]) {
 				return configs.Items[i].Name
 			}
 		}
@@ -381,28 +381,27 @@ func isWebhookFailureEvent(obj client.Object) bool {
 	return evt.Type == corev1.EventTypeWarning && strings.Contains(evt.Message, webhookFailurePrefix)
 }
 
+const predicateTimeout = 10 * time.Second
+
 func ownedByRemoteIstioRevisionPredicate(cl client.Client) predicate.Predicate {
+	check := func(obj client.Object) bool {
+		ctx, cancel := context.WithTimeout(context.Background(), predicateTimeout)
+		defer cancel()
+		return IsOwnedByRevisionWithRemoteControlPlane(ctx, cl, obj)
+	}
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.ObjectNew)
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
-		},
-		GenericFunc: func(e event.GenericEvent) bool {
-			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
-		},
+		CreateFunc:  func(e event.CreateEvent) bool { return check(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return check(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return check(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return check(e.Object) },
 	}
 }
 
-func IsOwnedByRevisionWithRemoteControlPlane(cl client.Client, obj client.Object) bool {
+func IsOwnedByRevisionWithRemoteControlPlane(ctx context.Context, cl client.Client, obj client.Object) bool {
 	for _, ownerRef := range obj.GetOwnerReferences() {
 		if ownerRef.APIVersion == v1.GroupVersion.String() && ownerRef.Kind == v1.IstioRevisionKind {
 			rev := &v1.IstioRevision{}
-			err := cl.Get(context.Background(), client.ObjectKey{Name: ownerRef.Name}, rev)
+			err := cl.Get(ctx, client.ObjectKey{Name: ownerRef.Name}, rev)
 			if err != nil {
 				return false
 			}
