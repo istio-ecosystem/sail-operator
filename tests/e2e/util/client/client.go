@@ -44,6 +44,12 @@ func getConfig(kubeconfig string) (*rest.Config, error) {
 	return config, nil
 }
 
+// GetConfig returns a rest.Config for the given kubeconfig path, or the current
+// context when kubeconfig is empty.
+func GetConfig(kubeconfig string) (*rest.Config, error) {
+	return getConfig(kubeconfig)
+}
+
 // InitK8sClient returns the kubernetes clientset
 // Arguments:
 // Kubeconfig: string
