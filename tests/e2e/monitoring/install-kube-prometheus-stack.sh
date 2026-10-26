@@ -54,6 +54,16 @@ if helm status "${PROM_RELEASE}" -n "${PROM_NAMESPACE}" &>/dev/null; then
   exit 0
 fi
 
+# Helm 4 installs chart CRDs with server-side apply. If Prometheus Operator CRDs already
+# exist (e.g. leftover after uninstall, or owned by kubectl), that conflicts on fields such
+# as operator.prometheus.io/version. Skip chart CRD install when they are already present,
+# matching how other e2e suites treat existing Gateway API CRDs.
+crd_args=()
+if kubectl get crd servicemonitors.monitoring.coreos.com &>/dev/null; then
+  echo "Prometheus Operator CRDs already present; installing chart with crds.enabled=false"
+  crd_args=(--set crds.enabled=false)
+fi
+
 # Admission webhooks require a certgen Job that talks to the webhook Service. On KinD
 # that Job frequently times out (the webhook Service is not reachable until kube-proxy
 # is healthy), which would also make helm --wait hang. The monitoring e2e only needs CRDs
@@ -65,6 +75,7 @@ helm install "${PROM_RELEASE}" kube-prometheus-stack \
   --create-namespace \
   --wait \
   --timeout "${WAIT_TIMEOUT}" \
+  "${crd_args[@]}" \
   --set grafana.enabled=false \
   --set alertmanager.enabled=false \
   --set prometheusOperator.admissionWebhooks.enabled=false \
