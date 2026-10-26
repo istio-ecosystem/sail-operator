@@ -64,11 +64,12 @@ fi
 # Collect existing version headers on main
 existing_versions=$(grep -oP '^## v\K[0-9]+\.[0-9]+\.[0-9]+' "$CHANGELOG" || true)
 
+git fetch --quiet "$REMOTE" "+refs/heads/release-*:refs/remotes/${REMOTE}/release-*"
+
 if [[ $# -gt 0 ]]; then
   branches=("$@")
 else
-  git fetch "$REMOTE" 2>/dev/null || true
-  mapfile -t branches < <(git branch -r --list "${REMOTE}/release-*" | sed "s|${REMOTE}/||" | sort -V)
+  mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' "refs/remotes/${REMOTE}/release-*" | sort -V)
 fi
 
 added=0
