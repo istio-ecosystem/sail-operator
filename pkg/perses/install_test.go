@@ -28,6 +28,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
+	"github.com/istio-ecosystem/sail-operator/pkg/perses/testutil"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -320,7 +321,7 @@ func TestInstallDashboardsEnvtest(t *testing.T) {
 }
 
 func ensurePersesDashboardCRD(ctx context.Context, cfg *rest.Config) error {
-	crd := DashboardCRD()
+	crd := testutil.DashboardCRD()
 
 	ext, err := apiextensionsclientset.NewForConfig(cfg)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/perses"
+	"github.com/istio-ecosystem/sail-operator/pkg/perses/testutil"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -67,7 +68,7 @@ func (p *PersesInstaller) InstallDashboardCRD(ctx context.Context) error {
 		return fmt.Errorf("get PersesDashboard CRD: %w", err)
 	}
 
-	crd := perses.DashboardCRD()
+	crd := testutil.DashboardCRD()
 	if _, err = ext.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("create PersesDashboard CRD: %w", err)
 	}

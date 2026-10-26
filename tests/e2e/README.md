@@ -323,7 +323,7 @@ GINKGO_FLAGS="--label-filter=control-plane && !update" make test.e2e.kind
 GINKGO_FLAGS="--label-filter=ambient-targetref" make test.e2e.kind
 
 # Perses dashboard provisioning (KinD or OCP; not part of smoke).
-# The perses suite installs the PersesDashboard CRD from pkg/perses (DashboardCRD) when needed.
+# The perses suite installs the PersesDashboard CRD from pkg/perses/testutil when needed.
 GINKGO_FLAGS="--label-filter=perses" make test.e2e.kind
 ```
 

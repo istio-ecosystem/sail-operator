@@ -12,29 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package perses
+package testutil
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DashboardCRD returns a minimal CustomResourceDefinition for PersesDashboard. It matches
-// the API version and shape used by bundled dashboards and is intended for tests or clusters
-// where the full Perses operator CRD is not already installed.
+const (
+	dashboardCRDName  = "persesdashboards.perses.dev"
+	dashboardGroup    = "perses.dev"
+	dashboardVersion  = "v1alpha2"
+	dashboardResource = "persesdashboards"
+	dashboardKind     = "PersesDashboard"
+)
+
 func DashboardCRD() *apiextensionsv1.CustomResourceDefinition {
 	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: PersesDashboardCRD},
+		ObjectMeta: metav1.ObjectMeta{Name: dashboardCRDName},
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: persesGroup,
+			Group: dashboardGroup,
 			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Plural:   persesDashboardResource,
+				Plural:   dashboardResource,
 				Singular: "persesdashboard",
-				Kind:     "PersesDashboard",
+				Kind:     dashboardKind,
 			},
 			Scope: apiextensionsv1.NamespaceScoped,
 			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
-				Name:    persesVersion,
+				Name:    dashboardVersion,
 				Served:  true,
 				Storage: true,
 				Schema: &apiextensionsv1.CustomResourceValidation{
