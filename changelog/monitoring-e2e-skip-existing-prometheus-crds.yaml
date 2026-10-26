@@ -1,0 +1,5 @@
+category: changed
+title: Skip kube-prometheus-stack CRD install in monitoring e2e when CRDs exist
+description: |
+  Avoids Helm 4 server-side-apply field-manager conflicts when Prometheus
+  Operator CRDs are already present by installing with crds.enabled=false.
