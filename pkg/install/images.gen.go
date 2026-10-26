@@ -80,6 +80,12 @@ func init() {
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
 		},
+		"v1.29.10": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.10",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.10",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.10",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.10",
+		},
 		"v1.29.8": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.29.8",
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.8",
