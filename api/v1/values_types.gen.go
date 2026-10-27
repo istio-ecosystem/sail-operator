@@ -2360,7 +2360,7 @@ type MeshConfigServiceSettings struct {
 //
 // ```yaml
 // serviceScopeConfigs:
-//   - namespacesSelector:
+//   - namespaceSelector:
 //     matchExpressions:
 //   - key: istio.io/global
 //     operator: In

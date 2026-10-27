@@ -16,7 +16,17 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.31-latest
-    ref: v1.31.1
+    ref: v1.31.3
+  - name: v1.31.3
+    version: 1.31.3
+    repo: https://github.com/istio/istio
+    commit: 1.31.3
+    charts:
+      - https://blob.istio.io/istio-release/charts/base-1.31.3.tgz
+      - https://blob.istio.io/istio-release/charts/istiod-1.31.3.tgz
+      - https://blob.istio.io/istio-release/charts/gateway-1.31.3.tgz
+      - https://blob.istio.io/istio-release/charts/cni-1.31.3.tgz
+      - https://blob.istio.io/istio-release/charts/ztunnel-1.31.3.tgz
   - name: v1.31.1
     version: 1.31.1
     repo: https://github.com/istio/istio
@@ -38,7 +48,17 @@ versions:
       - https://blob.istio.io/istio-release/charts/cni-1.31.0.tgz
       - https://blob.istio.io/istio-release/charts/ztunnel-1.31.0.tgz
   - name: v1.30-latest
-    ref: v1.30.5
+    ref: v1.30.7
+  - name: v1.30.7
+    version: 1.30.7
+    repo: https://github.com/istio/istio
+    commit: 1.30.7
+    charts:
+      - https://blob.istio.io/istio-release/charts/base-1.30.7.tgz
+      - https://blob.istio.io/istio-release/charts/istiod-1.30.7.tgz
+      - https://blob.istio.io/istio-release/charts/gateway-1.30.7.tgz
+      - https://blob.istio.io/istio-release/charts/cni-1.30.7.tgz
+      - https://blob.istio.io/istio-release/charts/ztunnel-1.30.7.tgz
   - name: v1.30.5
     version: 1.30.5
     repo: https://github.com/istio/istio
@@ -100,7 +120,17 @@ versions:
       - https://blob.istio.io/istio-release/charts/cni-1.30.0.tgz
       - https://blob.istio.io/istio-release/charts/ztunnel-1.30.0.tgz
   - name: v1.29-latest
-    ref: v1.29.8
+    ref: v1.29.10
+  - name: v1.29.10
+    version: 1.29.10
+    repo: https://github.com/istio/istio
+    commit: 1.29.10
+    charts:
+      - https://blob.istio.io/istio-release/charts/base-1.29.10.tgz
+      - https://blob.istio.io/istio-release/charts/istiod-1.29.10.tgz
+      - https://blob.istio.io/istio-release/charts/gateway-1.29.10.tgz
+      - https://blob.istio.io/istio-release/charts/cni-1.29.10.tgz
+      - https://blob.istio.io/istio-release/charts/ztunnel-1.29.10.tgz
   - name: v1.29.8
     version: 1.29.8
     repo: https://github.com/istio/istio
