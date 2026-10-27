@@ -28,6 +28,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	persesresources "github.com/istio-ecosystem/sail-operator/pkg/perses/resources"
+	"github.com/istio-ecosystem/sail-operator/pkg/perses/testutil"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -320,29 +321,7 @@ func TestInstallDashboardsEnvtest(t *testing.T) {
 }
 
 func ensurePersesDashboardCRD(ctx context.Context, cfg *rest.Config) error {
-	crd := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: PersesDashboardCRD},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: persesGroup,
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Plural:   persesDashboardResource,
-				Singular: "persesdashboard",
-				Kind:     "PersesDashboard",
-			},
-			Scope: apiextensionsv1.NamespaceScoped,
-			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
-				Name:    persesVersion,
-				Served:  true,
-				Storage: true,
-				Schema: &apiextensionsv1.CustomResourceValidation{
-					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
-						Type:                   "object",
-						XPreserveUnknownFields: new(true),
-					},
-				},
-			}},
-		},
-	}
+	crd := testutil.DashboardCRD()
 
 	ext, err := apiextensionsclientset.NewForConfig(cfg)
 	if err != nil {
