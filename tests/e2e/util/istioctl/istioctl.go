@@ -53,9 +53,11 @@ func CreateRemoteSecret(remoteKubeconfig, namespace, secretName, internalIP stri
 	if len(additionalFlags) != 0 {
 		cmd += (" " + strings.Join(additionalFlags, " "))
 	}
-	if env.GetBool("OCP", false) {
-		cmd += " --create-service-account=false"
-	}
+	// Let the operator provision the ServiceAccount and RBAC.
+	// Creating them here can race with the remote Istio installation.
+	// If istioctl creates them then the resources do not get the helm
+	// release annotations and won't get cleaned up on uninstall.
+	cmd += " --create-service-account=false"
 
 	yaml, err := shell.ExecuteCommand(cmd)
 
