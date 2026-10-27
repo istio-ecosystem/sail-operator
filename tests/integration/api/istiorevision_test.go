@@ -667,10 +667,9 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
 			expectNoReconciliation(istioRevisionController, func() {
-				By("adding sailoperator.io/ignore annotation to ConfigMap")
-				webhook.Annotations = map[string]string{
-					"sailoperator.io/ignore": "true",
-				}
+				By("adding sailoperator.io/ignore annotation to MutatingWebhookConfiguration")
+				// Preserve Helm ownership annotations so uninstall can delete the webhook.
+				metav1.SetMetaDataAnnotation(&webhook.ObjectMeta, "sailoperator.io/ignore", "true")
 				webhook.Labels["app"] = "sidecar-injector-test"
 				Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
 			})
