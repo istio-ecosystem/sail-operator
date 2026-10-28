@@ -1,0 +1,30 @@
+name: Regression check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: ['release-*']
+
+jobs:
+  regression-check:
+    runs-on: ubuntu-latest
+    if: >-
+      !contains(github.event.pull_request.labels.*.name, 'skip-regression-check')
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Fetch all release branches
+      run: |
+        git fetch --prune --no-tags origin \
+          '+refs/heads/release-*:refs/remotes/origin/release-*' \
+          '+refs/heads/main:refs/remotes/origin/main'
+
+    - name: Check changes are present on higher branches (regression check)
+      env:
+        BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: hack/regression-check.sh
