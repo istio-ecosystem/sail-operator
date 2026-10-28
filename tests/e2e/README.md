@@ -229,6 +229,8 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 | `multi-control-plane` | Multiple Istio CRs in a single cluster |
 | `migration` | Sidecar-to-ambient migration procedures |
 | `performance` | Operator performance: heap allocation, live-heap, CPU, and API call delta comparison against per-suite baseline |
+| `monitoring` | ServiceMonitor/PodMonitor reconciliation with Prometheus |
+| `perses` | Bundled PersesDashboard provisioning when `enablePersesDashboards` is enabled |
 
 **Sub-feature** — optional, for finer filtering within a feature area
 
@@ -279,6 +281,8 @@ Complete label set per test file:
 | `migration/migration_procedure_test.go` | `migration`, `migration-procedure`, `slow` |
 | `migration/migration_coexistence_test.go` | `migration`, `migration-coexistence`, `slow` |
 | `performance/performance_test.go` | `performance`, `slow` |
+| `monitoring/monitoring_test.go` | `smoke`, `monitoring` |
+| `perses/perses_test.go` | `perses` |
 
 ### Common Filter Examples
 
@@ -320,6 +324,10 @@ GINKGO_FLAGS="--label-filter=control-plane && !update" make test.e2e.kind
 
 # Run a specific sub-feature
 GINKGO_FLAGS="--label-filter=ambient-targetref" make test.e2e.kind
+
+# Perses dashboard provisioning (KinD or OCP; not part of smoke).
+# The perses suite installs the PersesDashboard CRD from pkg/perses/testutil when needed.
+GINKGO_FLAGS="--label-filter=perses" make test.e2e.kind
 ```
 
 ## Running the tests
