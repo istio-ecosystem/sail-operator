@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 The changelog for the next version is compiled from the YAML files in the
 `changelog/` directory at release time, and the files are deleted afterwards.
 
+## v1.31.2 - 2026-10-29
+
+### Added
+- Add analytics metrics for Sail Operator components
+  Introduce custom metrics that help measure Istio version counts, ZTunnel version counts,
+  managed namespace counts etc.
+
+- Add Istio 1.31.3, 1.30.7 and 1.29.10 support
+
+- Add monitoring controller for Istio metrics
+  Creates Prometheus Operator ServiceMonitor and PodMonitor resources when the
+  Istio CR is annotated with sailoperator.io/monitoring: enabled, so control-plane
+  and sidecar proxy metrics can be scraped without manual Prometheus config.
+
+### Changed
+- Fix kube-prometheus-stack install in monitoring e2e on KinD
+  KinD setup pre-applies only the ServiceMonitor CRD for OLM metrics. Remove it
+  before installing kube-prometheus-stack when the Prometheus CRD is absent so
+  Helm 4 server-side apply can install the chart CRDs without field-manager conflicts.
+
 ## v1.31.1 - 2026-09-25
 
 ### Added
