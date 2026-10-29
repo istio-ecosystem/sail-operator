@@ -39,8 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 // Reconciler reconciles an Istio object
@@ -129,23 +127,17 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, version,
-		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
+		r.Config.Platform,
+		r.Config.DefaultProfile, istio.Spec.Profile,
 		r.Config.ResourceFS, getActiveRevisionName(istio), r.Config.TLSConfig)
 	if err != nil {
 		return err
 	}
 
-	return revision.CreateOrUpdate(ctx, r.Client,
+	return revision.CreateOrUpdate(ctx, r.Client, r.Scheme,
 		getActiveRevisionName(istio),
 		version, istio.Spec.Namespace, values,
-		metav1.OwnerReference{
-			APIVersion:         v1.GroupVersion.String(),
-			Kind:               v1.IstioKind,
-			Name:               istio.Name,
-			UID:                istio.UID,
-			Controller:         ptr.Of(true),
-			BlockOwnerDeletion: ptr.Of(true),
-		})
+		istio)
 }
 
 func getPruningGracePeriod(istio *v1.Istio) time.Duration {
@@ -187,7 +179,17 @@ func getActiveRevisionName(istio *v1.Istio) string {
 	case v1.UpdateStrategyTypeInPlace:
 		return istio.Name
 	case v1.UpdateStrategyTypeRevisionBased:
-		return istio.Name + "-" + strings.ReplaceAll(istio.Spec.Version, ".", "-")
+		// Use the resolved version (e.g. "v1.30.3") rather than the raw spec.Version so that
+		// moving a version alias (e.g. "v1.30-latest") to a new patch produces a new revision
+		// name. Otherwise the existing revision would be updated in place, defeating the
+		// canary upgrade behavior that RevisionBased is meant to provide. If the version can't
+		// be resolved (e.g. it's invalid), fall back to the raw value; reconcileActiveRevision
+		// will already have failed reconciliation in that case.
+		version := istio.Spec.Version
+		if resolved, err := istioversion.Resolve(version); err == nil {
+			version = resolved
+		}
+		return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
 	}
 }
 

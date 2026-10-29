@@ -41,9 +41,7 @@ func TestValidateTargetNamespace(t *testing.T) {
 			name: "success",
 			objects: []client.Object{
 				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-namespace",
-					},
+					Name: "my-namespace",
 				},
 			},
 			expectErr: "",

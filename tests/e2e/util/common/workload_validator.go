@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -99,8 +101,8 @@ func (w *WorkloadValidator) DeployWorkload(ctx context.Context) error {
 	return nil
 }
 
-// ValidateConnectivity validates that workloads can communicate
-func (w *WorkloadValidator) ValidateConnectivity(ctx context.Context) error {
+// WaitForConnectivity validates that workloads can communicate, retrying internally.
+func (w *WorkloadValidator) WaitForConnectivity(ctx context.Context) error {
 	// Wait for pods to be ready in workload namespace
 	if err := CheckPodsReady(ctx, w.Cl, w.Namespace); err != nil {
 		return fmt.Errorf("workload pods not ready in %s: %w", w.Namespace, err)
@@ -120,8 +122,16 @@ func (w *WorkloadValidator) ValidateConnectivity(ctx context.Context) error {
 		return fmt.Errorf("no pods found in %s namespace", w.Namespace)
 	}
 
-	return CheckHTTPConnectivity(w.K, w.Namespace, sleepPods.Items[0].Name, SleepContainerName,
-		fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", HttpbinNamespace), "200", 5)
+	targetURL := fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", HttpbinNamespace)
+	var lastErr error
+	pollErr := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+		lastErr = CheckHTTPConnectivity(w.K, w.Namespace, sleepPods.Items[0].Name, SleepContainerName, targetURL, "200", 5)
+		return lastErr == nil, nil
+	})
+	if pollErr != nil {
+		return lastErr
+	}
+	return nil
 }
 
 // ValidateProxyVersion validates proxy version based on dataplane mode

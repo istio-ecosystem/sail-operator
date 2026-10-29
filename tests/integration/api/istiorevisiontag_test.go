@@ -63,22 +63,16 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioRevisionTagNamespace,
-		},
+		Name: istioRevisionTagNamespace,
 	}
 	workloadNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: workloadNamespace,
-		},
+		Name: workloadNamespace,
 	}
 	workload := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-workload",
-			Namespace: workloadNamespace,
-			Labels: map[string]string{
-				"istio.io/rev": "default",
-			},
+		Name:      "test-workload",
+		Namespace: workloadNamespace,
+		Labels: map[string]string{
+			"istio.io/rev": "default",
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -109,15 +103,13 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 				BeforeAll(func() {
 					Step("Creating the Istio resource")
 					istio = &v1.Istio{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: istioName,
-						},
+						Name: istioName,
 						Spec: v1.IstioSpec{
 							Version:   istioversion.Base,
 							Namespace: istioRevisionTagNamespace,
 							UpdateStrategy: &v1.IstioUpdateStrategy{
 								Type: updateStrategy,
-								InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+								InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 							},
 						},
 					}
@@ -139,9 +131,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 							targetRef.Name = istioName
 						}
 						tag = &v1.IstioRevisionTag{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "default",
-							},
+							Name: "default",
 							Spec: v1.IstioRevisionTagSpec{
 								TargetRef: targetRef,
 							},
@@ -277,29 +267,25 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 		BeforeAll(func() {
 			Step("Creating the Istio resources")
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Base,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Base,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
@@ -309,9 +295,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 				g.Expect(istio.Status.ObservedGeneration).To(Equal(istio.Generation))
 			}).Should(Succeed())
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "Istio",
@@ -354,9 +338,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 	When("Creating an IstioRevisionTag with a dangling TargetRef", func() {
 		BeforeAll(func() {
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "Istio",
@@ -379,15 +361,13 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 		When("attempting to create IstioRevision with same name as the tag's", func() {
 			BeforeAll(func() {
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
+					Name: "default",
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Base,
 						Namespace: istioRevisionTagNamespace,
 						UpdateStrategy: &v1.IstioUpdateStrategy{
 							Type: v1.UpdateStrategyTypeInPlace,
-							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+							InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 						},
 					},
 				}
@@ -410,39 +390,33 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 		BeforeAll(func() {
 			Step("Create primary Istio")
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Base,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
 			Step("Create secondary Istio")
 			istio2 = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName + "2",
-				},
+				Name: istioName + "2",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Base,
 					Namespace: workloadNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio2)).To(Succeed())
 			Step("Create IstioRevisionTag default")
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
+				Name: defaultTagName,
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "Istio",
@@ -468,15 +442,13 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 
 			Step("Create conflicting Istio and IstioRevisionTags")
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
+				Name: defaultTagName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Base,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
@@ -487,9 +459,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 			}).Should(Succeed())
 
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
+				Name: defaultTagName,
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "Istio",

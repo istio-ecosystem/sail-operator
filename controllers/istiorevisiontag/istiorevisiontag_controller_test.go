@@ -30,8 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 const revName = "istio-revision"
@@ -203,21 +201,17 @@ func TestDetermineInUseCondition(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				g := NewWithT(t)
 				rev := &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: revName,
-					},
+					Name: revName,
 				}
 				if tc.enableAllNamespaces {
 					rev.Spec.Values = &v1.Values{
 						SidecarInjectorWebhook: &v1.SidecarInjectorConfig{
-							EnableNamespacesByDefault: ptr.Of(true),
+							EnableNamespacesByDefault: new(true),
 						},
 					}
 				}
 				tag := &v1.IstioRevisionTag{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: tagName,
-					},
+					Name: tagName,
 					Spec: v1.IstioRevisionTagSpec{
 						TargetRef: v1.TargetReference{
 							Kind: "IstioRevision",
@@ -228,19 +222,15 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 				namespace := "bookinfo"
 				ns := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   namespace,
-						Labels: tc.nsLabels,
-					},
+					Name:   namespace,
+					Labels: tc.nsLabels,
 				}
 
 				pod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "some-pod",
-						Namespace:   namespace,
-						Labels:      tc.podLabels,
-						Annotations: tc.podAnnotations,
-					},
+					Name:        "some-pod",
+					Namespace:   namespace,
+					Labels:      tc.podLabels,
+					Annotations: tc.podAnnotations,
 				}
 
 				cl := fake.NewClientBuilder().
@@ -296,9 +286,7 @@ func TestValidation(t *testing.T) {
 		{
 			name: "targetRef not set",
 			tag: &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{},
 				},
@@ -309,9 +297,7 @@ func TestValidation(t *testing.T) {
 		{
 			name: "remote IstioRevision",
 			tag: &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
@@ -321,12 +307,10 @@ func TestValidation(t *testing.T) {
 			},
 			objs: []client.Object{
 				&v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: revName,
-					},
+					Name: revName,
 					Spec: v1.IstioRevisionSpec{
 						Values: &v1.Values{
-							Profile: ptr.Of("remote"),
+							Profile: new("remote"),
 						},
 					},
 				},

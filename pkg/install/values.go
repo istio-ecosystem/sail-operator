@@ -20,8 +20,6 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 // GatewayAPIDefaults returns Values pre-configured for Gateway API support.
@@ -39,8 +37,8 @@ func GatewayAPIDefaults(namespace string) *v1.Values {
 			},
 		},
 		Global: &v1.GlobalConfig{
-			IstioNamespace:  ptr.Of(namespace),
-			TrustBundleName: ptr.Of("openshift-gateway-ca-cert"),
+			IstioNamespace:  new(namespace),
+			TrustBundleName: new("openshift-gateway-ca-cert"),
 		},
 	}
 }

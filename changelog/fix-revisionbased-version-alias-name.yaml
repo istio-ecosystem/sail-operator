@@ -1,0 +1,10 @@
+category: fixed
+title: Derive RevisionBased revision names from the resolved version, not a version alias
+description: |
+  When `spec.version` was set to a version alias (e.g. `v1.30-latest`), the
+  `RevisionBased` update strategy named the `IstioRevision` after the raw
+  alias instead of the resolved version. If the alias later started
+  pointing at a different patch release, the operator kept updating the
+  same revision in place instead of performing a canary upgrade to a new
+  revision.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2080

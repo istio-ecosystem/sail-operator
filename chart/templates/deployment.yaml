@@ -74,6 +74,7 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=:8443
         - --zap-log-level={{ .Values.operatorLogLevel }}
+        - --enable-perses-dashboards={{ ternary true .Values.operator.enablePersesDashboards .Values.bundleGeneration }}
         {{- with .Values.operator.extraArgs }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
@@ -117,11 +118,18 @@ spec:
         - mountPath: /etc/sail-operator
           name: operator-config
           readOnly: true
+        - mountPath: /var/run/secrets/serving-cert
+          name: serving-cert
       securityContext:
         runAsNonRoot: true
       serviceAccountName: {{ .Values.serviceAccountName }}
       terminationGracePeriodSeconds: 10
       volumes:
+      - name: serving-cert
+        secret:
+          secretName: serving-cert
+          defaultMode: 420
+          optional: true
       - downwardAPI:
           defaultMode: 420
           items:

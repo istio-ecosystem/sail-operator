@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/magiconair/properties"
@@ -60,7 +61,5 @@ func MergeImageDigests(digests map[string]IstioImageConfig) {
 	if Config.ImageDigests == nil {
 		Config.ImageDigests = make(map[string]IstioImageConfig, len(digests))
 	}
-	for k, v := range digests {
-		Config.ImageDigests[k] = v
-	}
+	maps.Copy(Config.ImageDigests, digests)
 }

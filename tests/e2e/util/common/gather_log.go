@@ -215,11 +215,9 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 		}
 
 		// Collect sample namespace info
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			logTestApplicationNamespaces(k, suite, artifactsDir, clusterName, printDebug)
-		}()
+		})
 
 		wg.Wait()
 
@@ -272,8 +270,8 @@ func getPodsInNamespace(k kubectl.Kubectl, namespace string) ([]string, error) {
 	}
 
 	var pods []string
-	lines := strings.Split(strings.TrimSpace(podList), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(strings.TrimSpace(podList), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -407,6 +405,8 @@ func logTestApplicationNamespaces(k kubectl.Kubectl, suite testSuite, artifactsD
 	case DualStack:
 		// Dual-stack tests use specific namespaces for TCP services
 		sampleNamespaces = append(sampleNamespaces, "dual-stack", "ipv4", "ipv6")
+	case Monitoring:
+		sampleNamespaces = append(sampleNamespaces, "monitoring", "monitoring-injection", "monitoring-rev")
 	}
 
 	for _, ns := range sampleNamespaces {
@@ -492,10 +492,7 @@ func truncateForJUnit(s string) string {
 	}
 
 	const truncationMsg = "\n\n... [truncated due to size limit] ..."
-	truncateAt := maxJUnitErrorMessageSize - len(truncationMsg)
-	if truncateAt < 0 {
-		truncateAt = 0
-	}
+	truncateAt := max(maxJUnitErrorMessageSize-len(truncationMsg), 0)
 
 	return s[:truncateAt] + truncationMsg
 }

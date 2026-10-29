@@ -313,7 +313,7 @@ Gather all status information and display a comprehensive summary.
 
 2. Deploy bookinfo sample:
    kubectl label namespace default istio-injection=enabled
-   kubectl apply -n default -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml
+   kubectl apply -n default -f samples/bookinfo/platform/kube/bookinfo.yaml
 
 3. Configure ingress gateway:
    See docs/common/create-and-configure-gateways.adoc
@@ -388,7 +388,7 @@ Gather all status information and display a comprehensive summary.
 
 3. Deploy bookinfo sample:
    kubectl label namespace default istio.io/dataplane-mode=ambient
-   kubectl apply -n default -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml
+   kubectl apply -n default -f samples/bookinfo/platform/kube/bookinfo.yaml
 
 4. Check ztunnel workloads:
    istioctl ztunnel-config workloads -n ztunnel

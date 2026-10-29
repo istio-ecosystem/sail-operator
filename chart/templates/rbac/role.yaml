@@ -228,32 +228,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - sailoperator.io
-  resources:
-  - remoteistios
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - sailoperator.io
-  resources:
-  - remoteistios/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - sailoperator.io
-  resources:
-  - remoteistios/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - policy
   resources:
   - poddisruptionbudgets
@@ -294,6 +268,7 @@ rules:
   - config.openshift.io
   resources:
   - apiservers
+  - clusterversions
   verbs:
   - get
   - list
@@ -324,3 +299,25 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  - podmonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+- apiGroups:
+  - perses.dev
+  resources:
+  - persesdashboards
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

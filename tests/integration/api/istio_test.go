@@ -25,6 +25,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -63,9 +64,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioNamespace,
-		},
+		Name: istioNamespace,
 	}
 
 	BeforeAll(func() {
@@ -86,15 +85,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 	Describe("validation", func() {
 		It("rejects an Istio where spec.values.global.istioNamespace doesn't match spec.namespace", func() {
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("wrong-namespace"),
+							IstioNamespace: new("wrong-namespace"),
 						},
 					},
 				},
@@ -107,21 +104,19 @@ var _ = Describe("Istio resource", Ordered, func() {
 		BeforeAll(func() {
 			Step("Creating the custom resource")
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 					},
 					Values: &v1.Values{
 						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
 							Cni: &v1.CNIUsageConfig{
-								Enabled: ptr.Of(true),
+								Enabled: new(true),
 							},
 						},
 					},
@@ -150,13 +145,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Namespace: istio.Spec.Namespace,
 				Values: &v1.Values{
 					Global: &v1.GlobalConfig{
-						ConfigValidation: ptr.Of(true),
+						ConfigValidation: new(true),
 						IstioNamespace:   &istio.Spec.Namespace,
 					},
 					Pilot: &v1.PilotConfig{
 						Image: ptr.Of(pilotImage),
 						Cni: &v1.CNIUsageConfig{
-							Enabled: ptr.Of(true),
+							Enabled: new(true),
 						},
 					},
 					Revision:        &revKey.Name,
@@ -217,9 +212,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 			BeforeAll(func() {
 				rev = &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istio.Name,
-					},
+					Name: istio.Name,
 				}
 				Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
 			})
@@ -232,13 +225,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Namespace: istio.Spec.Namespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							ConfigValidation: ptr.Of(true),
+							ConfigValidation: new(true),
 							IstioNamespace:   &istio.Spec.Namespace,
 						},
 						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
 							Cni: &v1.CNIUsageConfig{
-								Enabled: ptr.Of(true),
+								Enabled: new(true),
 							},
 						},
 						Revision:        &revKey.Name,
@@ -257,9 +250,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 			It("deletes the IstioRevision", func() {
 				revKey := client.ObjectKey{Name: istioName}
 				rev := &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istio.Name,
-					},
+					Name: istio.Name,
 				}
 				Eventually(k8sClient.Get).WithContext(ctx).WithArguments(revKey, rev).Should(ReturnNotFoundError())
 			})
@@ -281,11 +272,9 @@ var _ = Describe("Istio resource", Ordered, func() {
 				if withWorkloads {
 					BeforeAll(func() {
 						workloadNs = &corev1.Namespace{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: workloadNamespace,
-								Labels: map[string]string{
-									"istio.io/rev": istioName,
-								},
+							Name: workloadNamespace,
+							Labels: map[string]string{
+								"istio.io/rev": istioName,
 							},
 						}
 						Expect(k8sClient.Create(ctx, workloadNs)).To(Succeed())
@@ -303,15 +292,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 					BeforeAll(func() {
 						istio = &v1.Istio{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: istioName,
-							},
+							Name: istioName,
 							Spec: v1.IstioSpec{
 								Version:   istioversion.Base,
 								Namespace: istioNamespace,
 								UpdateStrategy: &v1.IstioUpdateStrategy{
 									Type: v1.UpdateStrategyTypeInPlace,
-									InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+									InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 								},
 							},
 						}
@@ -398,15 +385,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Context("with RevisionBased update strategy", func() {
 					BeforeAll(func() {
 						istio = &v1.Istio{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: istioName,
-							},
+							Name: istioName,
 							Spec: v1.IstioSpec{
 								Version:   istioversion.Base,
 								Namespace: istioNamespace,
 								UpdateStrategy: &v1.IstioUpdateStrategy{
 									Type: v1.UpdateStrategyTypeRevisionBased,
-									InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+									InactiveRevisionDeletionGracePeriodSeconds: new(int64(gracePeriod.Seconds())),
 								},
 							},
 						}
@@ -535,9 +520,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 		When("creating Istio resource with spec.version that is past EOL", func() {
 			It("produces a ReconcileError", func() {
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName,
-					},
+					Name: istioName,
 					Spec: v1.IstioSpec{
 						Version:   istioversion.EOL[0],
 						Namespace: istioNamespace,
@@ -562,9 +545,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 			})
 
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -608,9 +589,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 			})
 
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
+				Name: istioName,
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -660,9 +639,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 		validatorWebhookKey := client.ObjectKey{Name: "istiod-default-validator"}
 		It("creates istiod-default-validator when the Istio is named 'default' with InPlace strategy", func() {
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -678,9 +655,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 		It("does not create istiod-default-validator when the Istio name is not 'default' with InPlace strategy", func() {
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "custom",
-				},
+				Name: "custom",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -699,9 +674,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 		It("does not create istiod-default-validator with RevisionBased strategy", func() {
 			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -713,6 +686,111 @@ var _ = Describe("Istio resource", Ordered, func() {
 			createIstioWithCleanup(ctx, istio)
 
 			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
+		})
+	})
+
+	Describe("RevisionBased strategy with a version alias", func() {
+		// Regression test for https://github.com/istio-ecosystem/sail-operator/issues/2080:
+		// revision names used to be derived from the raw (unresolved) spec.Version. This meant
+		// that a version alias (e.g. "v1.30-latest") always produced the same revision name even
+		// after the alias started pointing at a different patch release, so what should have been
+		// a RevisionBased canary upgrade instead silently mutated the existing revision in place.
+		var (
+			aliasVersion    string
+			resolvedVersion string
+		)
+
+		BeforeAll(func() {
+			resolvedVersion = istioversion.New
+			aliasVersion = findAliasFor(resolvedVersion)
+			if aliasVersion == "" {
+				Skip("no version alias points to the latest version; skipping alias regression test")
+			}
+		})
+
+		It("names the IstioRevision after the resolved version, not the alias", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   aliasVersion,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeRevisionBased,
+						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			revKey := getRevisionKey(istio, resolvedVersion)
+			rev := &v1.IstioRevision{}
+			Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+			Expect(rev.Spec.Version).To(Equal(resolvedVersion))
+
+			aliasRevKey := getRevisionKey(istio, aliasVersion)
+			Consistently(k8sClient.Get).WithArguments(ctx, aliasRevKey, &v1.IstioRevision{}).Should(ReturnNotFoundError())
+		})
+
+		// Simulates upgrading the operator across this fix: an existing revision was named after
+		// the alias by a pre-fix operator build; the newly-reconciled Istio must not keep updating
+		// that revision in place. Instead it should create a new, correctly-named revision and
+		// prune the old one once its grace period expires.
+		When("an old-style revision (named after the alias) already exists from before the fix", func() {
+			var oldRevisionKey client.ObjectKey
+
+			BeforeAll(func() {
+				istio = &v1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: istioName,
+					},
+					Spec: v1.IstioSpec{
+						Version:   aliasVersion,
+						Namespace: istioNamespace,
+						UpdateStrategy: &v1.IstioUpdateStrategy{
+							Type: v1.UpdateStrategyTypeRevisionBased,
+							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+
+				// Recreate what a pre-fix operator would have created: a revision named after
+				// the raw alias instead of the resolved version.
+				oldRevisionKey = getRevisionKey(istio, aliasVersion)
+				values, err := revision.ComputeValues(
+					istio.Spec.Values, istio.Spec.Namespace, resolvedVersion,
+					istioReconciler.Config.Platform, istioReconciler.Config.DefaultProfile, istio.Spec.Profile,
+					istioReconciler.Config.ResourceFS, oldRevisionKey.Name, istioReconciler.Config.TLSConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(revision.CreateOrUpdate(ctx, k8sClient, istioReconciler.Scheme,
+					oldRevisionKey.Name, resolvedVersion, istio.Spec.Namespace, values,
+					istio)).To(Succeed())
+			})
+
+			AfterAll(func() {
+				deleteAllIstiosAndRevisions(ctx)
+			})
+
+			It("creates a new, correctly-named IstioRevision instead of reusing the old one", func() {
+				revKey := getRevisionKey(istio, resolvedVersion)
+				rev := &v1.IstioRevision{}
+				Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+				Expect(rev.Spec.Version).To(Equal(resolvedVersion))
+			})
+
+			It("doesn't immediately delete the old alias-named revision", func() {
+				marginOfError := 2 * time.Second
+				Consistently(k8sClient.Get, gracePeriod-marginOfError).WithArguments(ctx, oldRevisionKey, &v1.IstioRevision{}).Should(Succeed())
+			})
+
+			When("grace period expires", func() {
+				It("prunes the old alias-named revision", func() {
+					marginOfError := 30 * time.Second
+					Eventually(k8sClient.Get, gracePeriod+marginOfError).WithArguments(ctx, oldRevisionKey, &v1.IstioRevision{}).Should(ReturnNotFoundError())
+				})
+			})
 		})
 	})
 })
@@ -758,6 +836,17 @@ func getRevisionName(istio *v1.Istio, version string) string {
 		return istio.Name
 	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
+}
+
+// findAliasFor returns a version alias name (e.g. "v1.30-latest") that currently resolves to
+// target, or "" if none exists.
+func findAliasFor(target string) string {
+	for name, info := range istioversion.Map {
+		if name != target && info.Name == target {
+			return name
+		}
+	}
+	return ""
 }
 
 func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {

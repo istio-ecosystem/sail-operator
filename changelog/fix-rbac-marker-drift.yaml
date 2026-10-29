@@ -1,0 +1,10 @@
+category: fixed
+title: Align RBAC markers with shipped ClusterRole
+description: |
+  Controller RBAC markers had drifted from the shipped ClusterRole: several
+  controllers declared wildcard `resources="*", verbs="*"` markers while the
+  shipped role was explicit. This change replaces wildcards with explicit
+  resources and verbs, centralises shared/startup-time markers in
+  `controllers/rbac/markers.go`, and removes stale `remoteistios` grants from
+  the Helm and CSV RBAC manifests.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2117

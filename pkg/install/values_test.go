@@ -19,8 +19,6 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	. "github.com/onsi/gomega"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestMergeValues(t *testing.T) {
@@ -33,17 +31,17 @@ func TestMergeValues(t *testing.T) {
 		{
 			name:    "nil base returns overlay",
 			base:    nil,
-			overlay: &v1.Values{Global: &v1.GlobalConfig{IstioNamespace: ptr.Of("custom")}},
+			overlay: &v1.Values{Global: &v1.GlobalConfig{IstioNamespace: new("custom")}},
 			check: func(g Gomega, result *v1.Values) {
-				g.Expect(result.Global.IstioNamespace).To(Equal(ptr.Of("custom")))
+				g.Expect(result.Global.IstioNamespace).To(Equal(new("custom")))
 			},
 		},
 		{
 			name:    "nil overlay returns base",
-			base:    &v1.Values{Global: &v1.GlobalConfig{IstioNamespace: ptr.Of("base-ns")}},
+			base:    &v1.Values{Global: &v1.GlobalConfig{IstioNamespace: new("base-ns")}},
 			overlay: nil,
 			check: func(g Gomega, result *v1.Values) {
-				g.Expect(result.Global.IstioNamespace).To(Equal(ptr.Of("base-ns")))
+				g.Expect(result.Global.IstioNamespace).To(Equal(new("base-ns")))
 			},
 		},
 		{

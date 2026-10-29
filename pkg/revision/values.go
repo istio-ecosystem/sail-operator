@@ -35,7 +35,8 @@ import (
 // The resourceFS parameter accepts any fs.FS implementation (embed.FS, os.DirFS, etc.).
 func ComputeValues(
 	userValues *v1.Values, namespace string, version string,
-	platform config.Platform, defaultProfile, userProfile string, resourceFS fs.FS,
+	platform config.Platform,
+	defaultProfile, userProfile string, resourceFS fs.FS,
 	activeRevisionName string, tlsConfig *config.TLSConfig,
 ) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user
@@ -53,6 +54,10 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
+	// The upstream default profile sets ztunnel.resourceName, which is only consumed by the ztunnel chart
+	// (see ZTunnelValues) and has no field in v1.Values. Drop it here to avoid a spurious "dropped keys" warning.
+	delete(mergedHelmValues, "ztunnel")
+
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
@@ -62,7 +67,9 @@ func ComputeValues(
 	istiovalues.ApplyTLSConfig(tlsConfig, version, values)
 
 	// apply FipsValues on top of merged values from profile
-	istiovalues.ApplyFipsValues(values)
+	if err := istiovalues.ApplyFipsValues(values, version); err != nil {
+		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
+	}
 
 	// override values that are not configurable by the user
 	istiovalues.ApplyOverrides(activeRevisionName, namespace, values)

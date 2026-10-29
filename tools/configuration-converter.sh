@@ -84,18 +84,27 @@ if ! command -v yq &>/dev/null; then
 fi
 
 function add_mandatory_fields(){
-    yq -i eval ".apiVersion = \"sailoperator.io/v1\" 
-    | .kind = \"Istio\" 
-    | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
+    # The Sail Operator Istio CR uses metadata.name as the revision identifier.
+    # If the IOP defines spec.revision, use it as the CR name; otherwise default to "default".
+    local CR_NAME
+    CR_NAME=$(yq '.spec.revision // ""' "$OUTPUT")
+    if [[ -z "$CR_NAME" ]]; then
+        CR_NAME="default"
+    fi
+
+    yq -i eval ".apiVersion = \"sailoperator.io/v1\"
+    | .kind = \"Istio\"
+    | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig
     | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni
-    | .metadata.name = \"default\" 
-    | .spec.namespace = \"$NAMESPACE\" 
+    | .metadata.name = \"$CR_NAME\"
+    | .spec.namespace = \"$NAMESPACE\"
+    | del(.spec.revision)
     | del(.spec.values.istio_cni)
     | del(.spec.meshConfig)
     | del(.spec.hub) 
     | del(.spec.tag) 
     | del(.spec.values.gateways)" "$OUTPUT" 
-    
+
     # If VERSION is not empty, add .spec.version
     if [[ -n "$VERSION" ]]; then
         yq -i ".spec.version = \"$VERSION\"" "$OUTPUT"  

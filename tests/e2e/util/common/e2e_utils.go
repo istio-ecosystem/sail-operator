@@ -48,6 +48,7 @@ const (
 	MultiCluster      testSuite = "multi-cluster"
 	Operator          testSuite = "operator"
 	MultiControlPlane testSuite = "multi-control-plane"
+	Monitoring        testSuite = "monitoring"
 )
 
 const (
@@ -91,6 +92,41 @@ func GetObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj 
 func GetList(ctx context.Context, cl client.Client, list client.ObjectList, opts ...client.ListOption) (client.ObjectList, error) {
 	err := cl.List(ctx, list, opts...)
 	return list, err
+}
+
+// WaitForDeletion waits until all the given resources have been deleted.
+func WaitForDeletion(ctx context.Context, cl client.Client, resources ...client.Object) {
+	if len(resources) == 0 {
+		return
+	}
+
+	resourceDescriptions := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		namespace := resource.GetNamespace()
+		if namespace == "" {
+			namespace = "<cluster-scoped>"
+		}
+		resourceDescriptions = append(resourceDescriptions,
+			fmt.Sprintf("%s/%s: %T", namespace, resource.GetName(), resource))
+	}
+	resourcesDescription := strings.Join(resourceDescriptions, ", ")
+
+	By("Waiting for resources to be deleted: " + resourcesDescription)
+	Eventually(func() (remaining []client.ObjectKey, err error) {
+		for _, resource := range resources {
+			got := resource.DeepCopyObject().(client.Object)
+			key := client.ObjectKeyFromObject(resource)
+			if err = cl.Get(ctx, key, got); err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				return remaining, err
+			}
+			remaining = append(remaining, key)
+		}
+		return remaining, nil
+	}).Should(BeEmpty(), "Failed while waiting for resources to be deleted: "+resourcesDescription)
+	Success("Finished waiting for resources to be deleted: " + resourcesDescription)
 }
 
 // GetPodNameByLabel returns the name of the pod with the given label
@@ -177,7 +213,7 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 
 	var lastErr error
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		ips, err := net.LookupIP(hostDomain)
 		if err == nil {
 			var ipv6Addr string

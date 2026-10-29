@@ -22,8 +22,6 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestApplyVendorDefaults(t *testing.T) {
@@ -63,7 +61,7 @@ v1.24.2:
 			},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: ptr.Of("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			expectedIstioError:    false,
@@ -88,7 +86,7 @@ v1.24.2:
 				},
 				MeshConfig: &v1.MeshConfig{
 					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
-						Enabled: ptr.Of(true),
+						Enabled: new(true),
 					},
 				},
 			},
@@ -102,7 +100,7 @@ v1.24.2:
 				},
 				MeshConfig: &v1.MeshConfig{
 					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
-						Enabled: ptr.Of(true),
+						Enabled: new(true),
 					},
 				},
 			},
@@ -125,7 +123,7 @@ v1.24.2:
 			istoPostValues:    &v1.Values{},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: ptr.Of("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			expectedIstioError:    false,
@@ -288,7 +286,15 @@ func TestValidateVendorDefaultsFile(t *testing.T) {
 	for version := range vendorDefaults {
 		_, err := ApplyIstioVendorDefaults(version, &v1.Values{})
 		if err != nil {
-			t.Errorf("failed to parse vendor_defaults.yaml at version %s: %v", version, err)
+			t.Errorf("failed to parse vendor_defaults.yaml for istio at version %s: %v", version, err)
+		}
+		_, err = ApplyIstioCNIVendorDefaults(version, &v1.CNIValues{})
+		if err != nil {
+			t.Errorf("failed to parse vendor_defaults.yaml for istiocni at version %s: %v", version, err)
+		}
+		_, err = ApplyZTunnelVendorDefaults(version, &v1.ZTunnelValues{})
+		if err != nil {
+			t.Errorf("failed to parse vendor_defaults.yaml for ztunnel at version %s: %v", version, err)
 		}
 	}
 }

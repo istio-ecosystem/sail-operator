@@ -83,7 +83,12 @@ jobs:
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           COMMIT_HASH="${GITHUB_SHA:0:7}"
           TAG="ci-test-${COMMIT_HASH}-amd64"
-          make docker-push HUB=${HUB} TAG=${TAG}
+          # Setting IMAGE explicitly because vendor makefile overrides may have IMAGE placeholders
+          # overriding setting HUB/TAG here.
+          make docker-push \
+            HUB="${HUB}" \
+            TAG="${TAG}" \
+            IMAGE="${HUB}/sail-operator:${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
   # One CRC cluster for all tiers. A matrix would start CRC 3x (~30m each)
@@ -91,9 +96,9 @@ jobs:
   e2e:
     name: e2e openshift local (${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }})
     needs: [preflight, build-push]
-    runs-on: ubuntu-latest
-    env:
-      TEST_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }}
+    # ubuntu-latest is Ubuntu 26.04, where qemu-kvm is only a virtual package.
+    # crc-org/crc-github-action@v1 installs qemu-kvm and fails before the cluster starts.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:

@@ -16,6 +16,11 @@ on:
         type: boolean
         required: false
         default: false
+      prevent_image_overwrite:
+        description: "Check if the image already exists before overwriting. Uncheck only when overwriting broken release!!!"
+        type: boolean
+        required: false
+        default: true
 
 run-name: ${{ inputs.run_name }}
 
@@ -48,7 +53,7 @@ jobs:
       run: |
         make docker-buildx
       env:
-        PREVENT_IMAGE_OVERWRITE: true
+        PREVENT_IMAGE_OVERWRITE: ${{ inputs.prevent_image_overwrite }}
 
     - name: Generate bundle metadata
       run: |

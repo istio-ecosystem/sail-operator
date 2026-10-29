@@ -34,7 +34,7 @@ var (
 )
 
 var readOnlyTypes = map[reflect.Type]bool{
-	reflect.TypeOf(&discoveryv1.EndpointSlice{}): true,
+	reflect.TypeFor[*discoveryv1.EndpointSlice](): true,
 }
 
 // LibraryRBACRules returns the RBAC PolicyRules that the library consumer

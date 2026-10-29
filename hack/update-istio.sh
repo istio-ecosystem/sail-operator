@@ -32,7 +32,7 @@ function add_stable_version() {
     istiod_remote_line=""
     if [[ ${1} == 1.23.* ]]
     then
-      istiod_remote_line="\"https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz\","
+      istiod_remote_line="\"https://blob.istio.io/istio-release/charts/istiod-remote-${1}.tgz\","
     fi
     template=$(cat <<-END
 {
@@ -41,12 +41,12 @@ function add_stable_version() {
   "repo": "https://github.com/istio/istio",
   "commit": "${1}",
   "charts": [
-    "https://istio-release.storage.googleapis.com/charts/base-${1}.tgz",
-    "https://istio-release.storage.googleapis.com/charts/istiod-${1}.tgz",
+    "https://blob.istio.io/istio-release/charts/base-${1}.tgz",
+    "https://blob.istio.io/istio-release/charts/istiod-${1}.tgz",
     ${istiod_remote_line}
-    "https://istio-release.storage.googleapis.com/charts/gateway-${1}.tgz",
-    "https://istio-release.storage.googleapis.com/charts/cni-${1}.tgz",
-    "https://istio-release.storage.googleapis.com/charts/ztunnel-${1}.tgz"
+    "https://blob.istio.io/istio-release/charts/gateway-${1}.tgz",
+    "https://blob.istio.io/istio-release/charts/cni-${1}.tgz",
+    "https://blob.istio.io/istio-release/charts/ztunnel-${1}.tgz"
     ]
 }
 END
@@ -124,8 +124,29 @@ title: Add support for Istio ${formatted}
 EOF
 }
 
+function get_all_releases() {
+    local page=1 response release_count
+    while true; do
+        if ! response=$(curl --fail-with-body -sSL "https://api.github.com/repos/istio/istio/releases?per_page=100&page=${page}"); then
+            printf 'Failed to fetch GitHub releases on page %s: %s\n' "${page}" "${response}" >&2
+            return 1
+        fi
+        if ! jq -e 'type == "array"' >/dev/null <<< "${response}"; then
+            printf 'GitHub returned an invalid releases response on page %s: %s\n' "${page}" "${response}" >&2
+            return 1
+        fi
+
+        jq -r '.[].tag_name' <<< "${response}"
+        release_count=$(jq 'length' <<< "${response}")
+        if (( release_count < 100 )); then
+            break
+        fi
+        ((page += 1))
+    done
+}
+
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
+    all_releases=$(get_all_releases)
     supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
     new_versions=()
     # For each supported version, look for a greater version in the all_releases list
@@ -154,10 +175,10 @@ function update_prerelease() {
     fi
 
     echo Updating "${VERSION_CURRENT}" to commit "${COMMIT}"
-    echo "Verifying the artifacts are available on GCS, this might take a while - you can abort the wait with CTRL+C"
+    echo "Verifying the artifacts are available, this might take a while - you can abort the wait with CTRL+C"
 
-    URL="https://storage.googleapis.com/istio-build/dev/${COMMIT}"
-    until curl --output /dev/null --silent --head --fail "${URL}"; do
+    URL="https://blob.istio.io/istio-build/dev/${COMMIT}"
+    until curl --output /dev/null --silent --head --fail --location "${URL}"; do
         echo -n '.'
         sleep ${SLEEP_TIME}
     done
@@ -173,11 +194,11 @@ function update_prerelease() {
         (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .version) = "'"${full_version}"'" |
         (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .commit) = "'"${COMMIT}"'" |
         (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .charts) = [
-            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/base-'"${full_version}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/cni-'"${full_version}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/gateway-'"${full_version}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/istiod-'"${full_version}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/ztunnel-'"${full_version}"'.tgz"
+            "https://blob.istio.io/istio-build/dev/'"${full_version}"'/helm/base-'"${full_version}"'.tgz",
+            "https://blob.istio.io/istio-build/dev/'"${full_version}"'/helm/cni-'"${full_version}"'.tgz",
+            "https://blob.istio.io/istio-build/dev/'"${full_version}"'/helm/gateway-'"${full_version}"'.tgz",
+            "https://blob.istio.io/istio-build/dev/'"${full_version}"'/helm/istiod-'"${full_version}"'.tgz",
+            "https://blob.istio.io/istio-build/dev/'"${full_version}"'/helm/ztunnel-'"${full_version}"'.tgz"
         ] |
         (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .name) = "'"v${VERSION}"'"' "${VERSIONS_YAML_PATH}"
     update_alias "master" "v${VERSION}"

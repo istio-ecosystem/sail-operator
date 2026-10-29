@@ -1,0 +1,6 @@
+category: changed
+title: Use pure-Go Bookinfo images in Sail examples
+description: |
+  Replaces the upstream Bookinfo images with static, standard-library-only
+  service images published to quay.io/sail-dev. The smaller images speed up
+  Bookinfo deployments and reduce CVE exposure.

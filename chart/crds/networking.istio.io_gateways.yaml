@@ -84,6 +84,13 @@ spec:
                       description: Set of TLS related options that govern the server's
                         behavior.
                       properties:
+                        alpnProtocols:
+                          description: 'Optional: If specified, the ALPN protocols
+                            advertised by the proxy during the TLS handshake are overridden
+                            with this list.'
+                          items:
+                            type: string
+                          type: array
                         caCertCredentialName:
                           description: For mutual TLS, the name of the secret or the
                             configmap that holds CA certificates.
@@ -371,6 +378,13 @@ spec:
                       description: Set of TLS related options that govern the server's
                         behavior.
                       properties:
+                        alpnProtocols:
+                          description: 'Optional: If specified, the ALPN protocols
+                            advertised by the proxy during the TLS handshake are overridden
+                            with this list.'
+                          items:
+                            type: string
+                          type: array
                         caCertCredentialName:
                           description: For mutual TLS, the name of the secret or the
                             configmap that holds CA certificates.
@@ -658,6 +672,13 @@ spec:
                       description: Set of TLS related options that govern the server's
                         behavior.
                       properties:
+                        alpnProtocols:
+                          description: 'Optional: If specified, the ALPN protocols
+                            advertised by the proxy during the TLS handshake are overridden
+                            with this list.'
+                          items:
+                            type: string
+                          type: array
                         caCertCredentialName:
                           description: For mutual TLS, the name of the secret or the
                             configmap that holds CA certificates.

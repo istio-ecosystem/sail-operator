@@ -521,6 +521,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -1015,6 +1022,14 @@ spec:
                                     minimum: 0
                                     nullable: true
                                     type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
                                   interval:
                                     description: Time interval between ejection sweep
                                       analysis.
@@ -1063,6 +1078,11 @@ spec:
                                 description: TLS related settings for connections
                                   to the upstream service.
                                 properties:
+                                  caCertCredentialName:
+                                    description: The name of the secret or the configmap
+                                      that holds CA certificates used to verify the
+                                      server's certificate.
+                                    type: string
                                   caCertificates:
                                     description: 'OPTIONAL: The path to the file containing
                                       certificate authority certificates to use in
@@ -1158,6 +1178,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -1667,6 +1692,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -2151,6 +2183,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -2194,6 +2233,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -2287,6 +2331,10 @@ spec:
                     description: TLS related settings for connections to the upstream
                       service.
                     properties:
+                      caCertCredentialName:
+                        description: The name of the secret or the configmap that
+                          holds CA certificates used to verify the server's certificate.
+                        type: string
                       caCertificates:
                         description: 'OPTIONAL: The path to the file containing certificate
                           authority certificates to use in verifying a presented server
@@ -2959,6 +3007,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -3453,6 +3508,14 @@ spec:
                                     minimum: 0
                                     nullable: true
                                     type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
                                   interval:
                                     description: Time interval between ejection sweep
                                       analysis.
@@ -3501,6 +3564,11 @@ spec:
                                 description: TLS related settings for connections
                                   to the upstream service.
                                 properties:
+                                  caCertCredentialName:
+                                    description: The name of the secret or the configmap
+                                      that holds CA certificates used to verify the
+                                      server's certificate.
+                                    type: string
                                   caCertificates:
                                     description: 'OPTIONAL: The path to the file containing
                                       certificate authority certificates to use in
@@ -3596,6 +3664,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -4105,6 +4178,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -4589,6 +4669,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -4632,6 +4719,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -4725,6 +4817,10 @@ spec:
                     description: TLS related settings for connections to the upstream
                       service.
                     properties:
+                      caCertCredentialName:
+                        description: The name of the secret or the configmap that
+                          holds CA certificates used to verify the server's certificate.
+                        type: string
                       caCertificates:
                         description: 'OPTIONAL: The path to the file containing certificate
                           authority certificates to use in verifying a presented server
@@ -5397,6 +5493,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -5891,6 +5994,14 @@ spec:
                                     minimum: 0
                                     nullable: true
                                     type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
                                   interval:
                                     description: Time interval between ejection sweep
                                       analysis.
@@ -5939,6 +6050,11 @@ spec:
                                 description: TLS related settings for connections
                                   to the upstream service.
                                 properties:
+                                  caCertCredentialName:
+                                    description: The name of the secret or the configmap
+                                      that holds CA certificates used to verify the
+                                      server's certificate.
+                                    type: string
                                   caCertificates:
                                     description: 'OPTIONAL: The path to the file containing
                                       certificate authority certificates to use in
@@ -6034,6 +6150,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -6543,6 +6664,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -7027,6 +7155,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -7070,6 +7205,11 @@ spec:
                           description: TLS related settings for connections to the
                             upstream service.
                           properties:
+                            caCertCredentialName:
+                              description: The name of the secret or the configmap
+                                that holds CA certificates used to verify the server's
+                                certificate.
+                              type: string
                             caCertificates:
                               description: 'OPTIONAL: The path to the file containing
                                 certificate authority certificates to use in verifying
@@ -7163,6 +7303,10 @@ spec:
                     description: TLS related settings for connections to the upstream
                       service.
                     properties:
+                      caCertCredentialName:
+                        description: The name of the secret or the configmap that
+                          holds CA certificates used to verify the server's certificate.
+                        type: string
                       caCertificates:
                         description: 'OPTIONAL: The path to the file containing certificate
                           authority certificates to use in verifying a presented server

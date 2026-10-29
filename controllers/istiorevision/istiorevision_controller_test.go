@@ -39,37 +39,118 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
+
+func TestReconcile(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	t.Run("returns error for EOL version", func(t *testing.T) {
+		rev := &v1.IstioRevision{
+			Name: "default",
+			Spec: v1.IstioRevisionSpec{
+				Version:   "v1.28.10",
+				Namespace: "istio-system",
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
+						IstioNamespace: new("istio-system"),
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithObjects(rev).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.Reconcile(context.TODO(), rev)
+		if err == nil {
+			t.Errorf("Expected an error, but got nil")
+		}
+
+		revKey := types.NamespacedName{Name: rev.Name}
+		if err := cl.Get(context.TODO(), revKey, rev); err != nil {
+			t.Fatalf("Failed to get IstioRevision: %v", err)
+		}
+
+		reconciledCond := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+		if reconciledCond.Status != metav1.ConditionFalse {
+			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
+		}
+
+		if !strings.Contains(reconciledCond.Message, "is EOL and cannot be installed") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "is EOL and cannot be installed", reconciledCond.Message)
+		}
+	})
+
+	t.Run("returns error for unknown version", func(t *testing.T) {
+		rev := &v1.IstioRevision{
+			Name: "default",
+			Spec: v1.IstioRevisionSpec{
+				Version:   "my-version",
+				Namespace: "istio-system",
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
+						IstioNamespace: new("istio-system"),
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithObjects(rev).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.Reconcile(context.TODO(), rev)
+		if err == nil {
+			t.Errorf("Expected an error, but got nil")
+		}
+
+		revKey := types.NamespacedName{Name: rev.Name}
+		if err := cl.Get(context.TODO(), revKey, rev); err != nil {
+			t.Fatalf("Failed to get IstioRevision: %v", err)
+		}
+
+		reconciledCond := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+		if reconciledCond.Status != metav1.ConditionFalse {
+			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
+		}
+
+		if !strings.Contains(reconciledCond.Message, "failed to resolve Istio version") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "failed to resolve Istio version", reconciledCond.Message)
+		}
+	})
+}
 
 func TestValidate(t *testing.T) {
 	cfg := newReconcilerTestConfig(t)
 
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-system",
-		},
+		Name: "istio-system",
 	}
 
 	testCases := []struct {
-		name      string
-		rev       *v1.IstioRevision
-		objects   []client.Object
-		expectErr string
+		name         string
+		rev          *v1.IstioRevision
+		objects      []client.Object
+		interceptors interceptor.Funcs
+		expectErr    string
 	}{
 		{
 			name: "success",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("istio-system"),
+							IstioNamespace: new("istio-system"),
 						},
 					},
 				},
@@ -80,9 +161,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no version",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Namespace: "istio-system",
 				},
@@ -93,9 +172,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no namespace",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version: istioversion.Default,
 				},
@@ -106,15 +183,13 @@ func TestValidate(t *testing.T) {
 		{
 			name: "namespace not found",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("istio-system"),
+							IstioNamespace: new("istio-system"),
 						},
 					},
 				},
@@ -125,9 +200,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no values",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
@@ -139,15 +212,13 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid istioNamespace",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("other-namespace"),
+							IstioNamespace: new("other-namespace"),
 						},
 					},
 				},
@@ -158,16 +229,14 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid revision default",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
-						Revision: ptr.Of("my-revision"),
+						Revision: new("my-revision"),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("other-namespace"),
+							IstioNamespace: new("other-namespace"),
 						},
 					},
 				},
@@ -178,16 +247,14 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid revision non-default",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-revision",
-				},
+				Name: "my-revision",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
-						Revision: ptr.Of("other-revision"),
+						Revision: new("other-revision"),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("other-namespace"),
+							IstioNamespace: new("other-namespace"),
 						},
 					},
 				},
@@ -195,11 +262,36 @@ func TestValidate(t *testing.T) {
 			objects:   []client.Object{ns},
 			expectErr: `values.revision does not match revision name`,
 		},
+		{
+			name: "tag conflict check fails with transient error",
+			rev: &v1.IstioRevision{
+				Name: "default",
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: "istio-system",
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: new("istio-system"),
+						},
+					},
+				},
+			},
+			objects: []client.Object{ns},
+			interceptors: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*v1.IstioRevisionTag); ok {
+						return fmt.Errorf("simulated error")
+					}
+					return cl.Get(ctx, key, obj, opts...)
+				},
+			},
+			expectErr: "simulated error",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).WithInterceptorFuncs(tc.interceptors).Build()
 
 			// Create controller reconciler for CRD-specific validations
 			reconciler := &Reconciler{
@@ -240,67 +332,59 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 	}{
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: v1.GroupVersion.String(),
-							Kind:       v1.IstioRevisionKind,
-							Name:       "direct-istiorevision-owner",
-							Controller: ptr.Of(true),
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: v1.GroupVersion.String(),
+						Kind:       v1.IstioRevisionKind,
+						Name:       "direct-istiorevision-owner",
+						Controller: new(true),
 					},
 				},
 			},
 			expected: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: "direct-istiorevision-owner"}},
+				{Name: "direct-istiorevision-owner"},
 			},
 		},
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "istio-system",
-					Name:      "endpointslice-1",
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Endpoints",
-							Name:       "endpoints-owner",
-							Controller: ptr.Of(true),
-						},
+				Namespace: "istio-system",
+				Name:      "endpointslice-1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Endpoints",
+						Name:       "endpoints-owner",
+						Controller: new(true),
 					},
 				},
 			},
 			objs: []client.Object{
 				// nolint:staticcheck
 				&corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "istio-system",
-						Name:      "endpoints-owner",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: v1.GroupVersion.String(),
-								Kind:       v1.IstioRevisionKind,
-								Name:       "indirect-istiorevision-owner",
-								Controller: ptr.Of(true),
-							},
+					Namespace: "istio-system",
+					Name:      "endpoints-owner",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: v1.GroupVersion.String(),
+							Kind:       v1.IstioRevisionKind,
+							Name:       "indirect-istiorevision-owner",
+							Controller: new(true),
 						},
 					},
 				},
 			},
 			expected: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: "indirect-istiorevision-owner"}},
+				{Name: "indirect-istiorevision-owner"},
 			},
 		},
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: v1.GroupVersion.String(),
-							Kind:       "SomeOtherKind",
-							Name:       "not-istiorevision-owner",
-							Controller: ptr.Of(true),
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: v1.GroupVersion.String(),
+						Kind:       "SomeOtherKind",
+						Name:       "not-istiorevision-owner",
+						Controller: new(true),
 					},
 				},
 			},
@@ -308,14 +392,12 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 		},
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: v1.GroupVersion.String(),
-							Kind:       v1.IstioRevisionKind,
-							Name:       "not-controller-owner",
-							Controller: ptr.Of(false),
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: v1.GroupVersion.String(),
+						Kind:       v1.IstioRevisionKind,
+						Name:       "not-controller-owner",
+						Controller: new(false),
 					},
 				},
 			},
@@ -323,32 +405,28 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 		},
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "istio-system",
-					Name:      "endpointslice-1",
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Endpoints",
-							Name:       "endpoints-owner",
-							Controller: ptr.Of(true),
-						},
+				Namespace: "istio-system",
+				Name:      "endpointslice-1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Endpoints",
+						Name:       "endpoints-owner",
+						Controller: new(true),
 					},
 				},
 			},
 			objs: []client.Object{
 				// nolint:staticcheck
 				&corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "istio-system",
-						Name:      "endpoints-owner",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "some-other-group-version",
-								Kind:       "some-other-group-kind",
-								Name:       "indirect-istiorevision-owner",
-								Controller: ptr.Of(true),
-							},
+					Namespace: "istio-system",
+					Name:      "endpoints-owner",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "some-other-group-version",
+							Kind:       "some-other-group-kind",
+							Name:       "indirect-istiorevision-owner",
+							Controller: new(true),
 						},
 					},
 				},
@@ -357,16 +435,14 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 		},
 		{
 			endpointSlice: &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "istio-system",
-					Name:      "endpointslice-1",
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Endpoints",
-							Name:       "endpoints-owner-does-not-exist",
-							Controller: ptr.Of(true),
-						},
+				Namespace: "istio-system",
+				Name:      "endpointslice-1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Endpoints",
+						Name:       "endpoints-owner-does-not-exist",
+						Controller: new(true),
 					},
 				},
 			},
@@ -483,10 +559,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			values: nil,
 			clientObjects: []client.Object{
 				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
+					Name:      "istiod",
+					Namespace: "istio-system",
 					Status: appsv1.DeploymentStatus{
 						Replicas:          2,
 						ReadyReplicas:     2,
@@ -505,10 +579,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			values: nil,
 			clientObjects: []client.Object{
 				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
+					Name:      "istiod",
+					Namespace: "istio-system",
 					Status: appsv1.DeploymentStatus{
 						Replicas:          2,
 						ReadyReplicas:     1,
@@ -528,10 +600,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			values: nil,
 			clientObjects: []client.Object{
 				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
+					Name:      "istiod",
+					Namespace: "istio-system",
 					Status: appsv1.DeploymentStatus{
 						Replicas:          0,
 						ReadyReplicas:     0,
@@ -560,14 +630,12 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name: "Non-default revision",
 			values: &v1.Values{
-				Revision: ptr.Of("my-revision"),
+				Revision: new("my-revision"),
 			},
 			clientObjects: []client.Object{
 				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod-my-revision",
-						Namespace: "istio-system",
-					},
+					Name:      "istiod-my-revision",
+					Namespace: "istio-system",
 					Status: appsv1.DeploymentStatus{
 						Replicas:          2,
 						ReadyReplicas:     2,
@@ -599,14 +667,12 @@ func TestDetermineReadyCondition(t *testing.T) {
 		},
 		{
 			name:   "Istiod-remote ready",
-			values: &v1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: new("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "istio-sidecar-injector",
-						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "true",
-						},
+					Name: "istio-sidecar-injector",
+					Annotations: map[string]string{
+						constants.WebhookReadinessStatusAnnotationKey: "true",
 					},
 				},
 			},
@@ -618,14 +684,12 @@ func TestDetermineReadyCondition(t *testing.T) {
 		},
 		{
 			name:   "Istiod-remote not ready",
-			values: &v1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: new("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "istio-sidecar-injector",
-						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "false",
-						},
+					Name: "istio-sidecar-injector",
+					Annotations: map[string]string{
+						constants.WebhookReadinessStatusAnnotationKey: "false",
 					},
 				},
 			},
@@ -633,30 +697,47 @@ func TestDetermineReadyCondition(t *testing.T) {
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "readiness probe on remote istiod failed",
+				Message: "remote istiod is not ready",
+			},
+		},
+		{
+			name:   "Istiod-remote not ready with reason annotation",
+			values: &v1.Values{Profile: new("remote")},
+			clientObjects: []client.Object{
+				&admissionv1.MutatingWebhookConfiguration{
+					Name: "istio-sidecar-injector",
+					Annotations: map[string]string{
+						constants.WebhookReadinessStatusAnnotationKey: "false",
+						constants.WebhookReadinessReasonAnnotationKey: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
+					},
+				},
+			},
+			expected: v1.StatusCondition{
+				Type:    v1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
+				Message: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
 			},
 		},
 		{
 			name:   "Istiod-remote no readiness probe status annotation",
-			values: &v1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: new("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "istio-sidecar-injector",
-						Annotations: map[string]string{},
-					},
+					Name:        "istio-sidecar-injector",
+					Annotations: map[string]string{},
 				},
 			},
 			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "invalid or missing annotation sailoperator.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
+				Message: "invalid or missing annotation sailoperator.io/readiness.status on MutatingWebhookConfiguration istio-sidecar-injector",
 			},
 		},
 		{
 			name:          "Istiod-remote webhook config not found",
-			values:        &v1.Values{Profile: ptr.Of("remote")},
+			values:        &v1.Values{Profile: new("remote")},
 			clientObjects: []client.Object{},
 			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
@@ -667,7 +748,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		},
 		{
 			name:          "Istiod-remote client error on get",
-			values:        &v1.Values{Profile: ptr.Of("remote")},
+			values:        &v1.Values{Profile: new("remote")},
 			clientObjects: []client.Object{},
 			interceptors: interceptor.Funcs{
 				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
@@ -693,9 +774,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			rev := &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-istio",
-				},
+				Name: "my-istio",
 				Spec: v1.IstioRevisionSpec{
 					Namespace: "istio-system",
 					Values:    tt.values,
@@ -889,9 +968,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				g := NewWithT(t)
 				rev := &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: revName,
-					},
+					Name: revName,
 					Spec: v1.IstioRevisionSpec{
 						Namespace: "istio-system",
 						Version:   "my-version",
@@ -900,26 +977,22 @@ func TestDetermineInUseCondition(t *testing.T) {
 				if tc.enableAllNamespaces {
 					rev.Spec.Values = &v1.Values{
 						SidecarInjectorWebhook: &v1.SidecarInjectorConfig{
-							EnableNamespacesByDefault: ptr.Of(true),
+							EnableNamespacesByDefault: new(true),
 						},
 					}
 				}
 
 				namespace := "bookinfo"
 				ns := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   namespace,
-						Labels: tc.nsLabels,
-					},
+					Name:   namespace,
+					Labels: tc.nsLabels,
 				}
 
 				pod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "some-pod",
-						Namespace:   namespace,
-						Labels:      tc.podLabels,
-						Annotations: tc.podAnnotations,
-					},
+					Name:        "some-pod",
+					Namespace:   namespace,
+					Labels:      tc.podLabels,
+					Annotations: tc.podAnnotations,
 					Status: corev1.PodStatus{
 						Phase: tc.podPhase,
 					},

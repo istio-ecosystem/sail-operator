@@ -34,15 +34,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 // Reconciler reconciles the ZTunnel object
@@ -66,11 +63,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
-// +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -121,8 +114,8 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel,
 		Kind:               v1.ZTunnelKind,
 		Name:               ztunnel.Name,
 		UID:                ztunnel.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	if rev != nil && rev.Spec.Values != nil {
@@ -142,6 +135,7 @@ func (r *Reconciler) newZTunnelReconciler() *sharedreconcile.ZTunnelReconciler {
 	return sharedreconcile.NewZTunnelReconciler(sharedreconcile.Config{
 		ResourceFS:        r.Config.ResourceFS,
 		Platform:          r.Config.Platform,
+		OCPVersion:        r.Config.OCPVersion,
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
@@ -252,7 +246,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	var requests []reconcile.Request
 	for _, ztunnel := range ztunnelList.Items {
 		if ztunnel.Spec.Namespace == ns.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ztunnel.Name}})
+			requests = append(requests, reconcile.Request{Name: ztunnel.Name})
 		}
 	}
 	return requests
@@ -277,7 +271,7 @@ func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, 
 	requests := []reconcile.Request{}
 	for _, ztunnel := range ztunnels.Items {
 		if ztunnel.Status.IstioRevision == revisionName {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ztunnel.Name}})
+			requests = append(requests, reconcile.Request{Name: ztunnel.Name})
 		}
 	}
 	return requests

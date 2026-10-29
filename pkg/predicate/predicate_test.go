@@ -53,10 +53,8 @@ func TestIgnoreUpdateWhenAnnotation(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{},
 		},
 		ObjectNew: &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"sailoperator.io/ignore": "wrongvalue",
-				},
+			Annotations: map[string]string{
+				"sailoperator.io/ignore": "wrongvalue",
 			},
 			Data: map[string]string{
 				"foo": "bar",
@@ -70,10 +68,8 @@ func TestIgnoreUpdateWhenAnnotation(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{},
 		},
 		ObjectNew: &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"sailoperator.io/ignore": "true",
-				},
+			Annotations: map[string]string{
+				"sailoperator.io/ignore": "true",
 			},
 			Data: map[string]string{
 				"foo": "bar",

@@ -38,6 +38,7 @@ This document aims to provide an overview of the project and some information fo
 - [Release process](#release-process)
 - [Versioning and Support Policy](#versioning-and-support-policy)
 - [Community Support and Contributing](#community-support-and-contributing)
+- [AI Agents for Development](#ai-agents-for-development)
 - [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
 
@@ -349,6 +350,22 @@ Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](CONTRIBUTING.md) file for mor
 ## AI Agents for Development
 
 If you're using AI coding assistants like Claude, GitHub Copilot, or Cursor, check out our [AI Agents Guide](docs/ai/ai-agents-guide.adoc) for information on how to configure these tools to understand Sail Operator patterns and best practices.
+
+### Claude Code configuration
+
+The repository ships a `.claude/` directory with project-specific configuration for [Claude Code](https://claude.ai/claude-code):
+
+| Path | Purpose |
+|---|---|
+| `CLAUDE.md` | Entry point — symlink to `AGENTS.md` |
+| `.claude/settings.json` | Allowed Bash and WebFetch permissions for this project |
+| `.claude/rules/` | Pointers to authoritative style, testing, and API convention docs |
+| `.claude/skills/security-review/` | Step-by-step security audit checklist for operator changes |
+| `.claude/agents/code-reviewer.md` | Reviewer persona: reconciliation, status conditions, API, tests |
+| `.claude/agents/security-auditor.md` | Security persona: RBAC, webhooks, secret handling, supply-chain |
+| `.claude/commands/` | Slash commands for common workflows (submit-pr, cherry-pick, etc.) |
+
+The rules files redirect to the existing `.agents/knowledge/` domain knowledge files rather than duplicating content — see `AGENTS.md § Domain Knowledge` for the full list of available deep-dive documents.
 
 ## Sail Enhancement Proposal
 

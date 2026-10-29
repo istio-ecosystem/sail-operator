@@ -21,7 +21,6 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -154,22 +153,16 @@ func TestGetInjectedRevisionFromPod(t *testing.T) {
 
 func TestGetIstioRevisionFromTargetReference(t *testing.T) {
 	rev := &v1.IstioRevision{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-revision",
-		},
+		Name: "my-revision",
 	}
 	istioWithActiveRevision := &v1.Istio{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-istio",
-		},
+		Name: "my-istio",
 		Status: v1.IstioStatus{
 			ActiveRevisionName: "my-revision",
 		},
 	}
 	istioWithoutActiveRevision := &v1.Istio{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "no-active",
-		},
+		Name: "no-active",
 	}
 
 	tests := []struct {

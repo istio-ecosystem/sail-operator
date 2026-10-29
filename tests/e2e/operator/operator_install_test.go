@@ -19,7 +19,6 @@ package operator
 import (
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
@@ -41,10 +41,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
-	crtls "github.com/openshift/controller-runtime-common/pkg/tls"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -69,24 +73,7 @@ var sailCRDs = []string{
 	"workloadgroups.networking.istio.io",
 }
 
-// markerCipher is the OpenSSL name for a cipher that is in the Intermediate (default)
-// profile but intentionally omitted from the custom TLS profile used in tests.
-// Its absence distinguishes Custom from Intermediate on both the metrics endpoint
-// and in the IstioRevision values.
-const markerCipher = "ECDHE-RSA-AES128-GCM-SHA256"
-
-// markerCipherName is the Go TLS cipher name for the marker cipher.
-const markerCipherName = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-
-var (
-	apiServerKey = client.ObjectKey{Name: crtls.APIServerName}
-
-	// customTLSProfileCiphers is the default (Intermediate) cipher list with the
-	// marker cipher removed. Its absence distinguishes Custom from Intermediate in tests.
-	customTLSProfileCiphers = slices.DeleteFunc(slices.Clone(crtls.DefaultTLSCiphers), func(c string) bool {
-		return c == markerCipher
-	})
-)
+var apiServerKey = client.ObjectKey{Name: "cluster"}
 
 var _ = Describe("Operator", Label("smoke", "operator", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
@@ -229,18 +216,114 @@ spec:
 		})
 	})
 
-	// These tests verify the operator's TLS behavior when the APIServer TLS settings change.
-	// Each test verifies both the metrics endpoint TLS configuration (by connecting with
-	// a specific TLS 1.2 cipher) and the TLS settings synced to the IstioRevision resource.
-	// Test 1 runs on all OpenShift clusters. Tests 2 and 3 require OpenShift >= 4.22
-	// because the TLSAdherence field was introduced in 4.22.
-	Describe("TLS profile change", Label("tls-profile"), func() {
-		var ocpMinorVersion int
-		var ocpMajorVersion int
+	Describe("NetworkPolicy defaults", Label("network-policy-defaults", "ocp5"), Ordered, func() {
+		const (
+			istioNamespace   = "network-policy-defaults-istio"
+			cniNamespace     = "network-policy-defaults-cni"
+			ztunnelNamespace = "network-policy-defaults-ztunnel"
+		)
 
 		BeforeAll(func(ctx SpecContext) {
 			if !env.GetBool("OCP", false) {
-				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
+				Skip("Skipping OCP 5 NetworkPolicy defaults test on non-OpenShift cluster")
+			}
+
+			cv := &configv1.ClusterVersion{}
+			Expect(cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)).To(Succeed())
+			var major int
+			_, err := fmt.Sscanf(cv.Status.Desired.Version, "%d.", &major)
+			Expect(err).NotTo(HaveOccurred(), "Failed to parse OpenShift version %q", cv.Status.Desired.Version)
+			if major < 5 {
+				Skip(fmt.Sprintf("Skipping OCP 5 NetworkPolicy defaults test on OpenShift %s", cv.Status.Desired.Version))
+			}
+
+			for _, namespace := range []string{istioNamespace, cniNamespace, ztunnelNamespace} {
+				common.EnsureNamespace(ctx, cl, namespace)
+			}
+		})
+
+		It("enables NetworkPolicies for fresh installs and preserves an existing disabled release", func(ctx SpecContext) {
+			// The IstioCNI and ZTunnel created here are cluster-scoped singletons that must be
+			// named "default", so they have to be removed before any later spec creates its own;
+			// the suite-level cleaner only runs after all specs have finished.
+			DeferCleanup(func(ctx SpecContext) {
+				for _, obj := range []client.Object{
+					&v1.ZTunnel{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+					&v1.IstioCNI{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+					&v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: "network-policy-defaults"}},
+				} {
+					Expect(client.IgnoreNotFound(cl.Delete(ctx, obj))).To(Succeed())
+					Eventually(cl.Get).WithArguments(ctx, client.ObjectKeyFromObject(obj), obj).Should(ReturnNotFoundError())
+				}
+			})
+
+			Expect(cl.Create(ctx, &v1.Istio{
+				Name: "network-policy-defaults",
+				Spec: v1.IstioSpec{Version: istioversion.Default, Namespace: istioNamespace},
+			})).To(Succeed())
+			cni := &v1.IstioCNI{
+				Name: "default",
+				Spec: v1.IstioCNISpec{Version: istioversion.Default, Namespace: cniNamespace},
+			}
+			Expect(cl.Create(ctx, cni)).To(Succeed())
+			Expect(cl.Create(ctx, &v1.ZTunnel{
+				Name: "default",
+				Spec: v1.ZTunnelSpec{Version: istioversion.Default, Namespace: ztunnelNamespace},
+			})).To(Succeed())
+
+			for _, key := range []client.ObjectKey{
+				{Name: "istiod-network-policy-defaults", Namespace: istioNamespace},
+				{Name: "istio-cni", Namespace: cniNamespace},
+				{Name: "ztunnel", Namespace: ztunnelNamespace},
+			} {
+				Eventually(cl.Get).WithArguments(ctx, key, &networkingv1.NetworkPolicy{}).Should(Succeed())
+			}
+
+			updateCNIValues := func(values *v1.CNIValues) {
+				Eventually(func() error {
+					cni := &v1.IstioCNI{}
+					if err := cl.Get(ctx, client.ObjectKey{Name: "default"}, cni); err != nil {
+						return err
+					}
+					cni.Spec.Values = values
+					return cl.Update(ctx, cni)
+				}).Should(Succeed())
+			}
+
+			updateCNIValues(&v1.CNIValues{Global: &v1.CNIGlobalConfig{NetworkPolicy: &v1.NetworkPolicyConfig{
+				Enabled: new(bool),
+			}}})
+			cniPolicyKey := client.ObjectKey{Name: "istio-cni", Namespace: cniNamespace}
+			Eventually(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
+			Consistently(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
+
+			updateCNIValues(&v1.CNIValues{})
+			Consistently(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
+		})
+	})
+
+	// These tests verify the operator's TLS behavior when the APIServer TLS settings change.
+	// The first test runs on all OpenShift clusters; the second requires OpenShift >= 4.22
+	// because the TLSAdherence field was introduced in 4.22.
+	Describe("TLS profile change", Label("tls-profile"), func() {
+		Log("NOTE: Running this test may have IRREVERSIBLE side effects such as setting feature gates on OpenShift.")
+		var ocpVersion *semver.Version
+
+		// Calling Skip() from a BeforeAll makes Ginkgo defer the enclosing Ordered container's
+		// teardown (the cleaner) into the next top-level container, or drop it entirely. The
+		// cleaner then deletes resources belonging to whichever suite is running by then. So the
+		// checks below record why the specs cannot run and return, and each It skips itself.
+		var skipReason string
+		skipIfUnsupported := func() {
+			if skipReason != "" {
+				Skip(skipReason)
+			}
+		}
+
+		BeforeAll(func(ctx SpecContext) {
+			if !env.GetBool("OCP", false) {
+				skipReason = "Skipping OpenShift-specific tests on non-OpenShift cluster"
+				return
 			}
 
 			// On hosted clusters, the APIServer resource is read-only and TLS settings cannot be changed,
@@ -250,70 +333,99 @@ spec:
 			infraErr := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, infra)
 			Expect(infraErr).NotTo(HaveOccurred(), "Failed to get Infrastructure resource")
 			if infra.Status.ControlPlaneTopology == configv1.ExternalTopologyMode {
-				Skip("Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters")
+				skipReason = "Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters"
+				return
+			}
+
+			// The TLS profile tests must update the cluster-scoped APIServer resource. Rather than
+			// enumerate cluster flavors, probe writability directly: perform a no-op server-side
+			// dry-run update and skip if admission rejects it. This covers managed clusters (e.g.
+			// ROSA/OSD, whose Red Hat SRE webhooks forbid the write) and any other case where the
+			// resource is not manageable, without persisting any change.
+			Step("Checking whether the APIServer resource is writable")
+			apiServerProbe := &configv1.APIServer{}
+			Expect(cl.Get(ctx, apiServerKey, apiServerProbe)).To(Succeed(), "Failed to get APIServer")
+			if probeErr := cl.Update(ctx, apiServerProbe, client.DryRunAll); probeErr != nil {
+				if apierrors.IsForbidden(probeErr) {
+					skipReason = "Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error()
+					return
+				}
+				Expect(probeErr).NotTo(HaveOccurred(), "Unexpected error while probing APIServer writability")
 			}
 
 			Step("Determining OpenShift version")
 			cv := &configv1.ClusterVersion{}
 			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get ClusterVersion")
-			_, err = fmt.Sscanf(cv.Status.Desired.Version, "%d.%d", &ocpMajorVersion, &ocpMinorVersion)
+			ocpVersion, err = semver.NewVersion(cv.Status.Desired.Version)
 			Expect(err).NotTo(HaveOccurred(), "Failed to parse ClusterVersion %q", cv.Status.Desired.Version)
+			Log(fmt.Sprintf("Detected OpenShift version: %s", ocpVersion))
 
-			// TLSAdherence is behind a TechPreview feature gate.
-			// Enable it via CustomNoUpgrade so the TLSAdherence field is available on the APIServer CRD.
-			// On OCP < 4.22, the TLSAdherence tests are skipped entirely.
-			if ocpMinorVersion >= 22 {
+			// TLSAdherence is behind a TechPreview feature gate on OCP 4.22+.
+			// Enable it via CustomNoUpgrade only when TLSAdherence is still listed in the
+			// cluster FeatureGate resource. On newer releases (e.g. 5.0) where TLSAdherence
+			// is GA, it is no longer present in FeatureGate status and can be configured
+			// directly on the APIServer resource.
+			if ocpVersion.GreaterThanEqual(semver.MustParse("4.22.0")) {
+				Log(fmt.Sprintf("OpenShift %s is >= 4.22; checking whether TLSAdherence is controlled by a FeatureGate", ocpVersion))
+
 				featureGate := &configv1.FeatureGate{}
 				err = cl.Get(ctx, client.ObjectKey{Name: "cluster"}, featureGate)
 				Expect(err).NotTo(HaveOccurred(), "Failed to get FeatureGate")
+				Log("Retrieved cluster FeatureGate resource")
 
-				tlsAdherenceEnabled := slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
-					return slices.Contains(fg.Enabled, configv1.FeatureGateAttributes{Name: "TLSAdherence"})
-				})
+				// TLSAdherence is GA on OCP 5.0+ and is no longer listed in FeatureGate
+				// status; only attempt to enable the gate when it is still a gated feature.
+				if featureGateHasTLSAdherence(featureGate) {
+					Log("TLSAdherence is listed in the cluster FeatureGate resource")
 
-				if !tlsAdherenceEnabled {
-					Step("Enabling TLSAdherence feature gate")
-					featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
-					featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
-						Enabled: []configv1.FeatureGateName{"TLSAdherence"},
-					}
-					err = cl.Update(ctx, featureGate)
-					Expect(err).NotTo(HaveOccurred(), "Failed to enable TLSAdherence feature gate")
-					Success("TLSAdherence feature gate enabled")
+					if tlsAdherenceFeatureGateEnabled(featureGate) {
+						Log("TLSAdherence feature gate is already enabled; no FeatureGate changes needed")
+					} else {
+						Log("TLSAdherence feature gate is present but not enabled; enabling it")
+						Step("Enabling TLSAdherence feature gate")
+						featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
+						featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
+							Enabled: []configv1.FeatureGateName{"TLSAdherence"},
+						}
+						// The switch to CustomNoUpgrade is irreversible, but the gate itself can be
+						// turned off again, so leave the cluster with TLSAdherence disabled.
+						DeferCleanup(func(ctx SpecContext) {
+							Step("Disabling the TLSAdherence feature gate")
+							fg := &configv1.FeatureGate{}
+							Expect(cl.Get(ctx, apiServerKey, fg)).To(Succeed(), "Failed to get FeatureGate")
+							fg.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{}
+							updateAndWaitForAPIServerRollout(ctx, cl, fg)
+							Success("TLSAdherence feature gate disabled")
+						}, NodeTimeout(35*time.Minute))
 
-					Step("Waiting for TLSAdherence feature gate to become active")
-					Eventually(func(g Gomega) {
-						fg := &configv1.FeatureGate{}
-						g.Expect(cl.Get(ctx, client.ObjectKey{Name: "cluster"}, fg)).To(Succeed())
-						found := false
-						for _, details := range fg.Status.FeatureGates {
-							for _, enabled := range details.Enabled {
-								if enabled.Name == "TLSAdherence" {
-									found = true
-									break
+						updateAndWaitForAPIServerRollout(ctx, cl, featureGate)
+						Success("TLSAdherence feature gate enabled")
+
+						Step("Waiting for TLSAdherence feature gate to become active")
+						Eventually(ctx, func(g Gomega) {
+							fg := &configv1.FeatureGate{}
+							g.Expect(cl.Get(ctx, client.ObjectKey{Name: "cluster"}, fg)).To(Succeed())
+							found := false
+							for _, details := range fg.Status.FeatureGates {
+								for _, enabled := range details.Enabled {
+									if enabled.Name == "TLSAdherence" {
+										found = true
+										break
+									}
 								}
 							}
-						}
-						g.Expect(found).To(BeTrue(),
-							"TLSAdherence not yet listed in FeatureGate status; kube-apiserver may not have rolled out yet")
-					}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
-						"TLSAdherence feature gate should appear in FeatureGate status after rollout")
-					Success("TLSAdherence feature gate is active")
-
-					Step("Waiting for kube-apiserver to finish rolling out after feature gate change")
-					Eventually(func(g Gomega) {
-						co := &configv1.ClusterOperator{}
-						g.Expect(cl.Get(ctx, client.ObjectKey{Name: "kube-apiserver"}, co)).To(Succeed())
-						for _, cond := range co.Status.Conditions {
-							if cond.Type == configv1.OperatorProgressing {
-								g.Expect(cond.Status).To(Equal(configv1.ConditionFalse), "kube-apiserver should not be Progressing")
-							}
-						}
-					}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
-						"kube-apiserver should finish rolling out after enabling feature gate")
-					Success("kube-apiserver is stable after feature gate change")
+							g.Expect(found).To(BeTrue(),
+								"TLSAdherence not yet listed in FeatureGate status; kube-apiserver may not have rolled out yet")
+						}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
+							"TLSAdherence feature gate should appear in FeatureGate status after rollout")
+						Success("TLSAdherence feature gate is active")
+					}
+				} else {
+					Log(fmt.Sprintf("TLSAdherence is not listed in FeatureGate on OpenShift %s; assuming it is a GA feature", ocpVersion))
 				}
+			} else {
+				Log(fmt.Sprintf("OpenShift %s is below 4.22; skipping TLSAdherence FeatureGate setup", ocpVersion))
 			}
 
 			Step("Saving the original APIServer TLS settings")
@@ -328,18 +440,21 @@ spec:
 
 			DeferCleanup(func(ctx SpecContext) {
 				Step("Restoring the original APIServer TLS settings")
-				Eventually(func(g Gomega) {
-					apiServer := &configv1.APIServer{}
-					g.Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
-					apiServer.Spec.TLSSecurityProfile = originalTLSProfile
-					// TLSAdherence cannot be set back to NoOpinion once set,
-					// so only restore it if the original was a non-empty value.
-					if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
-						apiServer.Spec.TLSAdherence = originalTLSAdherence
-					}
-					g.Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLS settings")
-				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
-			})
+				apiServer := &configv1.APIServer{}
+				Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
+				apiServer.Spec.TLSSecurityProfile = originalTLSProfile
+				// TLSAdherence cannot be set back to NoOpinion once set,
+				// so only restore it if the original was a non-empty value.
+				if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
+					apiServer.Spec.TLSAdherence = originalTLSAdherence
+				}
+				updateAndWaitForAPIServerRollout(ctx, cl, apiServer)
+				// This test can take awhile and easily timeout.
+				// Wrapping it in NodeTimeout helps ensure we don't
+				// leave the APIServer in a bad state for other tests.
+				// Even if the overall Ginkgo timeout has expired this
+				// will continue.
+			}, NodeTimeout(35*time.Minute))
 
 			Step("Creating Istio")
 			// The cleaner should delete these.
@@ -361,14 +476,14 @@ spec:
 		// Note: TLSAdherence cannot be set back to NoOpinion once set, so this test
 		// must run first and requires the cluster to have the default NoOpinion state.
 		It("does not sync TLS settings when TLSAdherence is NoOpinion", func(ctx SpecContext) {
+			skipIfUnsupported()
+
 			Step("Verifying TLSAdherence is NoOpinion")
 			apiServer := &configv1.APIServer{}
 			Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
 			if apiServer.Spec.TLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
 				Skip(fmt.Sprintf("TLSAdherence is already set to %q; cannot reset to NoOpinion. Skipping test.", apiServer.Spec.TLSAdherence))
 			}
-
-			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
 
 			Step("Verifying IstioRevision does not have TLS cipher suites")
 			Consistently(func(g Gomega) {
@@ -378,24 +493,28 @@ spec:
 					"IstioRevision should not have cipher suites when TLSAdherence is NoOpinion")
 			}).WithTimeout(30 * time.Second).WithPolling(5 * time.Second).Should(Succeed())
 
-			Step("Verifying metrics endpoint still accepts the marker cipher")
-			Expect(metricsEndpointAcceptsCipher(k, markerCipher, "1.2")).To(BeTrue(),
-				"Metrics endpoint should accept ECDHE-RSA-AES128-GCM-SHA256 when TLSAdherence is NoOpinion (custom profile not applied)")
+			Step("Verifying metrics endpoint accepts a TLS 1.2 cipher")
+			Expect(metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")).To(BeTrue(),
+				"Metrics endpoint should accept TLS 1.2 ciphers when TLSAdherence is NoOpinion")
 			Success("TLS settings were not synced when TLSAdherence is NoOpinion")
 		})
 
 		// When TLSAdherence changes to StrictAllComponents, the operator should
 		// apply the TLS profile to both the metrics endpoint and the Istio resource.
 		It("syncs TLS settings when TLSAdherence is set to StrictAllComponents", func(ctx SpecContext) {
-			if ocpMinorVersion < 22 {
-				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%d.%d'. Skipping test.", ocpMajorVersion, ocpMinorVersion))
+			skipIfUnsupported()
+
+			if !ocpVersion.GreaterThanEqual(semver.MustParse("4.22.0")) {
+				Log(fmt.Sprintf("OpenShift %s is below 4.22; skipping TLSAdherence sync test", ocpVersion))
+				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%s'. Skipping test.", ocpVersion))
 			}
+			Log(fmt.Sprintf("OpenShift %s supports TLSAdherence; running StrictAllComponents sync test", ocpVersion))
 
 			Step("Clearing TLS profile")
 			apiServer := &configv1.APIServer{}
 			Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
 			apiServer.Spec.TLSSecurityProfile = nil
-			Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLS profile")
+			updateAndWaitForAPIServerRollout(ctx, cl, apiServer)
 
 			ensureTLSAdherence(ctx, cl, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly)
 
@@ -405,7 +524,6 @@ spec:
 				ciphers := getIstioRevisionCipherSuites(rev)
 				g.Expect(ciphers).To(BeEmpty(), "IstioRevision should not have cipher suites")
 
-				// assert that pilot.extraContainerArgs does not contain --tls-cipher-suites
 				var pilotExtraArgs []string
 				if rev.Spec.Values != nil && rev.Spec.Values.Pilot != nil {
 					pilotExtraArgs = rev.Spec.Values.Pilot.ExtraContainerArgs
@@ -415,49 +533,83 @@ spec:
 
 			ensureTLSAdherence(ctx, cl, configv1.TLSAdherencePolicyStrictAllComponents)
 
-			Step("Verifying IstioRevision has TLS cipher suites from the custom profile")
+			Step("Verifying IstioRevision has TLS cipher suites from the Intermediate profile")
 			Eventually(func(g Gomega) {
 				rev := &v1.IstioRevision{}
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
 				ciphers := getIstioRevisionCipherSuites(rev)
 				g.Expect(ciphers).NotTo(BeEmpty(), "IstioRevision should have cipher suites")
-				// This is on the intermediate profile, so it should be present
-				g.Expect(ciphers).To(ContainElement(tls.CipherSuiteName(tls.TLS_AES_256_GCM_SHA384)),
-					"IstioRevision should contain TLS_AES_256_GCM_SHA384 from the intermediate profile")
 
 				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(
 					ContainElement(ContainSubstring("--tls-cipher-suites=")),
-					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs")
+					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs",
+				)
 			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
 				"IstioRevision is not syncing TLS settings but should be")
 
-			Step("Verifying metrics endpoint accepts the custom cipher")
-			Eventually(func() bool {
-				return metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")
-			}).Should(BeTrue(),
-				"Metrics endpoint should accept ECDHE-RSA-AES256-GCM-SHA384 when TLS profile includes it")
-			Success("TLS settings were synced after TLSAdherence change to StrictAllComponents")
+			Step("Applying Modern TLS profile (TLS 1.3 only)")
+			applyModernTLSProfile(ctx, cl)
 
-			Step("Applying custom TLS profile without ECDHE-RSA-AES128-GCM-SHA256")
-			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
-
-			Step("Verifying IstioRevision cipher suites no longer include the marker cipher")
+			Step("Verifying IstioRevision has TLS 1.3 settings from the Modern profile")
 			Eventually(func(g Gomega) {
 				rev := &v1.IstioRevision{}
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
-				ciphers := getIstioRevisionCipherSuites(rev)
-				g.Expect(ciphers).NotTo(BeEmpty(), "IstioRevision should have cipher suites")
-				g.Expect(ciphers).NotTo(ContainElement(markerCipherName),
-					"IstioRevision should not contain ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
-			}).WithTimeout(5 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
 
-			Step("Verifying metrics endpoint rejects the marker cipher")
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"tlsDefaults.minProtocolVersion should be TLSV1_3",
+				)
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(BeEmpty(),
+					"tlsDefaults.cipherSuites should be empty for TLS 1.3")
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"meshMTLS.minProtocolVersion should be TLSV1_3",
+				)
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(BeEmpty(),
+					"meshMTLS.cipherSuites should be empty for TLS 1.3")
+
+				proxyMeta := getIstioRevisionProxyMetadata(rev)
+				g.Expect(proxyMeta).To(HaveKey("OPENSSL_TLS1_3_CIPHERSUITES"),
+					"proxyMetadata should contain OPENSSL_TLS1_3_CIPHERSUITES for TLS 1.3")
+				tls13Ciphers := proxyMeta["OPENSSL_TLS1_3_CIPHERSUITES"]
+				g.Expect(tls13Ciphers).NotTo(BeEmpty(),
+					"OPENSSL_TLS1_3_CIPHERSUITES should not be empty")
+				for _, cipher := range configv1.TLSProfiles[configv1.TLSProfileModernType].Ciphers {
+					g.Expect(tls13Ciphers).To(ContainSubstring(cipher),
+						fmt.Sprintf("OPENSSL_TLS1_3_CIPHERSUITES should contain %s from the Modern profile", cipher))
+				}
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision should have TLS 1.3 settings from the Modern profile")
+
+			Step("Verifying metrics endpoint rejects TLS 1.2 connections")
 			Eventually(func() bool {
-				return metricsEndpointAcceptsCipher(k, markerCipher, "1.2")
+				return metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")
 			}).Should(BeFalse(),
-				"Metrics endpoint should reject ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
-			Success("TLS settings were updated after profile change")
+				"Metrics endpoint should reject TLS 1.2 connections when Modern profile is active")
+			Success("TLS settings were synced after switching to Modern profile")
+
+			Step("Deploying a proxy pod to verify synced TLS settings produce a healthy sidecar")
+			const tlsTestNamespace = "tls-test"
+			Expect(k.CreateNamespace(tlsTestNamespace)).To(Succeed(), "Failed to create test namespace")
+			DeferCleanup(func() {
+				_ = k.Delete("namespace", tlsTestNamespace)
+			})
+			Expect(k.Label("namespace", tlsTestNamespace, "istio-injection", "enabled")).To(Succeed(),
+				"Failed to label namespace for sidecar injection")
+			Expect(k.WithNamespace(tlsTestNamespace).ApplyKustomize("sleep")).To(Succeed(),
+				"Failed to deploy sleep workload")
+
+			Eventually(func() error {
+				return common.CheckPodsReady(ctx, cl, tlsTestNamespace)
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"Sleep pod with sidecar should be ready after TLS settings are synced")
+			Success("Proxy pod is healthy with synced TLS settings")
 		})
 	})
 
@@ -486,7 +638,7 @@ func discoverMetricsReaderClusterRole() (string, error) {
 		return "", err
 	}
 	var matches []string
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -567,6 +719,98 @@ type tokenRequest struct {
 	} `json:"status"`
 }
 
+func featureGateHasTLSAdherence(featureGate *configv1.FeatureGate) bool {
+	return slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
+		return featureGateAttributesContains(fg.Enabled, "TLSAdherence") ||
+			featureGateAttributesContains(fg.Disabled, "TLSAdherence")
+	})
+}
+
+func tlsAdherenceFeatureGateEnabled(featureGate *configv1.FeatureGate) bool {
+	return slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
+		return featureGateAttributesContains(fg.Enabled, "TLSAdherence")
+	})
+}
+
+func featureGateAttributesContains(attrs []configv1.FeatureGateAttributes, name string) bool {
+	return slices.ContainsFunc(attrs, func(attr configv1.FeatureGateAttributes) bool {
+		return attr.Name == configv1.FeatureGateName(name)
+	})
+}
+
+// updateAndWaitForAPIServerRollout is used to update an object (FeatureGate, APIServer) and
+// ensure that the APIServer has both seen the update and rolled it out to all the nodes.
+func updateAndWaitForAPIServerRollout(ctx context.Context, cl client.Client, obj client.Object) {
+	GinkgoHelper()
+	server := &operatorv1.KubeAPIServer{}
+	Expect(cl.Get(ctx, apiServerKey, server)).To(Succeed())
+	// The Kube API server can accept an update to the obj
+	// without the controller that manages it having the opportunity
+	// to act on it and see the change. We also need to check the revisions of
+	// the APIServer nodes to ensure they have seen the change before checking
+	// their status. This ensures that the APIServer actually completes the rollout of
+	// a featuregate or tls profile change before proceeding.
+	minimumRevision := server.Status.LatestAvailableRevision
+
+	var changed bool
+	Eventually(ctx, func(g Gomega) {
+		current := obj.DeepCopyObject().(client.Object)
+		g.Expect(cl.Get(ctx, client.ObjectKeyFromObject(obj), current)).To(Succeed())
+		obj.SetResourceVersion(current.GetResourceVersion())
+		g.Expect(cl.Update(ctx, obj)).To(Succeed())
+		// Update populates obj with the server response; unchanged specs do not
+		// advance its generation. APIServer updates can also be effective no-ops
+		// for kube-apiserver (equivalent profiles or adherence-only changes).
+		changed = obj.GetGeneration() != current.GetGeneration()
+		if apiServer, ok := obj.(*configv1.APIServer); ok && changed {
+			before, err := openshifttls.GetTLSProfileSpec(current.(*configv1.APIServer).Spec.TLSSecurityProfile)
+			g.Expect(err).NotTo(HaveOccurred())
+			after, err := openshifttls.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile)
+			g.Expect(err).NotTo(HaveOccurred())
+			changed = !equality.Semantic.DeepEqual(before, after)
+		}
+	}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
+	if changed {
+		minimumRevision++
+	}
+
+	Step("Waiting for kube-apiserver to observe the update and finish rolling out")
+	Eventually(ctx, func(g Gomega) {
+		g.Expect(cl.Get(ctx, apiServerKey, server)).To(Succeed())
+		g.Expect(checkAPIServerRevision(&server.Status, minimumRevision)).To(Succeed())
+		co := &configv1.ClusterOperator{}
+		g.Expect(cl.Get(ctx, client.ObjectKey{Name: "kube-apiserver"}, co)).To(Succeed())
+		for condition, status := range map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
+			configv1.OperatorAvailable:   configv1.ConditionTrue,
+			configv1.OperatorProgressing: configv1.ConditionFalse,
+			configv1.OperatorDegraded:    configv1.ConditionFalse,
+		} {
+			g.Expect(co.Status.Conditions).To(ContainElement(And(
+				HaveField("Type", condition), HaveField("Status", status))), "unexpected kube-apiserver %s condition", condition)
+		}
+	}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
+		"kube-apiserver should finish rolling out")
+}
+
+// Every node must have installed at least the revision acknowledging the change.
+// Newer revisions are allowed; ClusterOperator conditions track rollout health.
+func checkAPIServerRevision(status *operatorv1.KubeAPIServerStatus, minimumRevision int32) error {
+	revision := status.LatestAvailableRevision
+	if revision == 0 || revision < minimumRevision {
+		return fmt.Errorf("waiting for kube-apiserver revision >= %d; latest is %d", minimumRevision, revision)
+	}
+	if len(status.NodeStatuses) == 0 {
+		return fmt.Errorf("kube-apiserver has no node revision status")
+	}
+	for _, node := range status.NodeStatuses {
+		if node.CurrentRevision < minimumRevision {
+			return fmt.Errorf("node %s has current revision %d; waiting for revision >= %d",
+				node.NodeName, node.CurrentRevision, minimumRevision)
+		}
+	}
+	return nil
+}
+
 func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.TLSAdherencePolicy) {
 	GinkgoHelper()
 
@@ -602,12 +846,12 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		oldRestarts[string(pod.UID)] = totalRestarts(pod)
 	}
 
-	Step(fmt.Sprintf("Updating APIServer TLSAdherence to %s", policy))
+	Step(fmt.Sprintf("Updating APIServer TLSAdherence from: %s to %s", apiServer.Spec.TLSAdherence, policy))
 	apiServer.Spec.TLSAdherence = policy
-	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLSAdherence")
+	updateAndWaitForAPIServerRollout(ctx, cl, apiServer)
 
 	Step("Waiting for operator to restart and be ready after TLSAdherence change")
-	Eventually(func(g Gomega) {
+	Eventually(ctx, func(g Gomega) {
 		pods := &corev1.PodList{}
 		g.Expect(cl.List(ctx, pods, client.InNamespace(namespace),
 			client.MatchingLabels{"control-plane": deploymentName})).To(Succeed())
@@ -627,23 +871,19 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		"Operator should restart and be ready after TLSAdherence change")
 }
 
-func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []string) {
+func applyModernTLSProfile(ctx context.Context, cl client.Client) {
 	GinkgoHelper()
-	Step("Applying a Custom TLS profile")
+	Step("Applying Modern TLS profile")
 
 	apiServer := &configv1.APIServer{}
 	Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
 	apiServer.Spec.TLSSecurityProfile = &configv1.TLSSecurityProfile{
-		Type: configv1.TLSProfileCustomType,
-		Custom: &configv1.CustomTLSProfile{
-			TLSProfileSpec: configv1.TLSProfileSpec{
-				Ciphers:       ciphers,
-				MinTLSVersion: configv1.VersionTLS12,
-			},
-		},
+		Type:   configv1.TLSProfileModernType,
+		Modern: &configv1.ModernTLSProfile{},
 	}
-	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer with custom TLS profile")
-	Success("Applied Custom TLS profile to APIServer")
+	updateAndWaitForAPIServerRollout(ctx, cl, apiServer)
+	Success("Applied Modern TLS profile to APIServer")
+	Success("kube-apiserver is stable after TLS profile change")
 }
 
 func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
@@ -651,6 +891,13 @@ func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
 		return nil
 	}
 	return rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites
+}
+
+func getIstioRevisionProxyMetadata(rev *v1.IstioRevision) map[string]string {
+	if rev.Spec.Values == nil || rev.Spec.Values.MeshConfig == nil || rev.Spec.Values.MeshConfig.DefaultConfig == nil {
+		return nil
+	}
+	return rev.Spec.Values.MeshConfig.DefaultConfig.ProxyMetadata
 }
 
 // metricsEndpointAcceptsCipher tests whether the operator's metrics endpoint

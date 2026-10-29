@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -39,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"istio.io/istio/pkg/log"
-	"istio.io/istio/pkg/ptr"
 )
 
 type libraryReconciler struct {
@@ -89,7 +87,7 @@ func (r *libraryReconciler) Reconcile(ctx context.Context, _ ctrlreconcile.Reque
 func (l *Library) setupController(mgr ctrl.Manager) error {
 	fixedKeyHandler := handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []ctrlreconcile.Request {
-			return []ctrlreconcile.Request{{NamespacedName: types.NamespacedName{Name: "sail-library"}}}
+			return []ctrlreconcile.Request{{Name: "sail-library"}}
 		},
 	)
 
@@ -102,7 +100,7 @@ func (l *Library) setupController(mgr ctrl.Manager) error {
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named("sail-library").
-		WithOptions(controller.Options{SkipNameValidation: ptr.Of(true)}).
+		WithOptions(controller.Options{SkipNameValidation: new(true)}).
 		WatchesRawSource(source.Channel(l.triggerCh, fixedKeyHandler))
 
 	watches.RegisterOwnedWatches(b, watches.IstiodWatches, fixedKeyHandler, nil, managedByPred)
@@ -151,7 +149,7 @@ func (l *Library) Start(ctx context.Context) (<-chan struct{}, error) {
 func (l *Library) sendTrigger() {
 	select {
 	case l.triggerCh <- event.GenericEvent{
-		Object: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "sail-library"}},
+		Object: &corev1.ConfigMap{Name: "sail-library"},
 	}:
 	default:
 	}

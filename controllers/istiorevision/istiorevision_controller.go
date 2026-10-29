@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -48,8 +49,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 const (
@@ -77,18 +76,8 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
-// +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -118,8 +107,16 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		return err
 	}
 
+	revVersion, err := istioversion.Resolve(rev.Spec.Version)
+	if err != nil {
+		if istioversion.IsEOLVersion(rev.Spec.Version) {
+			return reconciler.NewValidationError(fmt.Sprintf("IstioRevision version %q is EOL and cannot be installed", rev.Spec.Version))
+		}
+		return fmt.Errorf("failed to resolve Istio version %s: %w", rev.Spec.Version, err)
+	}
+
 	// General validations
-	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values); err != nil {
+	if err := istiodReconciler.Validate(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values); err != nil {
 		return err
 	}
 
@@ -129,10 +126,10 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		Kind:               v1.IstioRevisionKind,
 		Name:               rev.Name,
 		UID:                rev.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
-	return istiodReconciler.Install(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
+	return istiodReconciler.Install(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
@@ -144,6 +141,7 @@ func (r *Reconciler) newIstiodReconciler() *sharedreconcile.IstiodReconciler {
 	return sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
 		ResourceFS:        r.Config.ResourceFS,
 		Platform:          r.Config.Platform,
+		OCPVersion:        r.Config.OCPVersion,
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
@@ -182,6 +180,8 @@ func (r *Reconciler) validateNoTagConflict(ctx context.Context, rev *v1.IstioRev
 		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
 			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
 		}
+	} else if !apierrors.IsNotFound(err) {
+		return err
 	}
 	return nil
 }
@@ -196,7 +196,7 @@ func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, ob
 	}
 	if controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
 		return []reconcile.Request{
-			{NamespacedName: types.NamespacedName{Name: controller.Name}},
+			{Name: controller.Name},
 		}
 	}
 	if controller.APIVersion == corev1.SchemeGroupVersion.String() && controller.Kind == "Endpoints" {
@@ -209,7 +209,7 @@ func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, ob
 		controller := metav1.GetControllerOf(ep)
 		if controller != nil && controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: controller.Name}},
+				{Name: controller.Name},
 			}
 		}
 	}
@@ -270,7 +270,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
 	// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
 	handlerOverrides := map[reflect.Type]handler.EventHandler{
-		reflect.TypeOf(&discoveryv1.EndpointSlice{}): endpointSliceHandler,
+		reflect.TypeFor[*discoveryv1.EndpointSlice](): endpointSliceHandler,
 	}
 	watches.RegisterOwnedWatches(b, watches.IstiodWatches, ownedResourceHandler, handlerOverrides, predicate2.IgnoreUpdateWhenAnnotation())
 
@@ -365,17 +365,17 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
-			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
+			switch webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
 				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			case "false":
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
-				c.Message = "readiness probe on remote istiod failed"
+				c.Message = webhookNotReadyMessage(webhook.Annotations)
 			default:
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = fmt.Sprintf("invalid or missing annotation %s on MutatingWebhookConfiguration %s",
-					constants.WebhookReadinessProbeStatusAnnotationKey, webhookKey.Name)
+					constants.WebhookReadinessStatusAnnotationKey, webhookKey.Name)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
@@ -388,6 +388,15 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		}
 	}
 	return c, nil
+}
+
+// webhookNotReadyMessage derives a human-readable message from the webhook configuration's
+// readiness annotations, falling back to a generic message.
+func webhookNotReadyMessage(annotations map[string]string) string {
+	if reason := annotations[constants.WebhookReadinessReasonAnnotationKey]; reason != "" {
+		return reason
+	}
+	return "remote istiod is not ready"
 }
 
 func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
@@ -584,14 +593,14 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	}
 	for _, rev := range revList.Items {
 		if rev.Spec.Namespace == ns.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			requests = append(requests, reconcile.Request{Name: rev.Name})
 		}
 	}
 
 	// Check if the namespace references an IstioRevision in its labels
 	revisionName := revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
 	if revisionName != "" {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revisionName}})
+		requests = append(requests, reconcile.Request{Name: revisionName})
 	}
 	return requests
 }
@@ -612,7 +621,7 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	if len(revisionNames) > 0 {
 		reqs := []reconcile.Request{}
 		for _, revName := range revisionNames {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: revName}})
+			reqs = append(reqs, reconcile.Request{Name: revName})
 		}
 		return reqs
 	}
@@ -622,7 +631,7 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
 	tag, ok := revisionTag.(*v1.IstioRevisionTag)
 	if ok && tag.Status.IstioRevision != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
+		return []reconcile.Request{{Name: tag.Status.IstioRevision}}
 	}
 	return nil
 }
@@ -636,7 +645,7 @@ func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ clien
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
 		if revision.DependsOnIstioCNI(&rev, r.Config) {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			reqs = append(reqs, reconcile.Request{Name: rev.Name})
 		}
 	}
 	return reqs
@@ -651,7 +660,7 @@ func (r *Reconciler) mapZTunnelToReconcileRequests(ctx context.Context, _ client
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
 		if revision.DependsOnZTunnel(&rev, r.Config) {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			reqs = append(reqs, reconcile.Request{Name: rev.Name})
 		}
 	}
 	return reqs

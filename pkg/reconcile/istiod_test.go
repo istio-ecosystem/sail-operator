@@ -23,17 +23,12 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestIstiodReconciler_Validate(t *testing.T) {
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-system",
-		},
+		Name: "istio-system",
 	}
 
 	tests := []struct {
@@ -78,7 +73,7 @@ func TestIstiodReconciler_Validate(t *testing.T) {
 			namespace: "istio-system",
 			values: &v1.Values{
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("istio-system"),
+					IstioNamespace: new("istio-system"),
 				},
 			},
 			nsExists:    false,
@@ -91,7 +86,7 @@ func TestIstiodReconciler_Validate(t *testing.T) {
 			namespace: "istio-system",
 			values: &v1.Values{
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("istio-system"),
+					IstioNamespace: new("istio-system"),
 				},
 			},
 			nsExists: true,
@@ -123,7 +118,7 @@ func TestIstiodReconciler_Validate(t *testing.T) {
 	}
 }
 
-func Test_getReleaseName(t *testing.T) {
+func TestGetReleaseName(t *testing.T) {
 	tests := []struct {
 		revisionName string
 		chartName    string
@@ -148,7 +143,7 @@ func Test_getReleaseName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.revisionName+"-"+tt.chartName, func(t *testing.T) {
-			result := getReleaseName(tt.revisionName, tt.chartName)
+			result := GetReleaseName(tt.revisionName, tt.chartName)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

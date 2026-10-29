@@ -1,0 +1,6 @@
+category: changed
+title: Fix kube-prometheus-stack install in monitoring e2e on KinD
+description: |
+  KinD setup pre-applies only the ServiceMonitor CRD for OLM metrics. Remove it
+  before installing kube-prometheus-stack when the Prometheus CRD is absent so
+  Helm 4 server-side apply can install the chart CRDs without field-manager conflicts.

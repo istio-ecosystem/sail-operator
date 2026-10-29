@@ -32,15 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 // Reconciler reconciles an IstioCNI object
@@ -63,17 +60,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
-// +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -110,8 +97,8 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1.IstioCNI) error {
 		Kind:               v1.IstioCNIKind,
 		Name:               cni.Name,
 		UID:                cni.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 	return cniReconciler.Install(ctx, cni.Spec.Version, cni.Spec.Namespace, cni.Spec.Values, cni.Spec.Profile, &ownerReference)
 }
@@ -120,6 +107,7 @@ func (r *Reconciler) newCNIReconciler() *sharedreconcile.CNIReconciler {
 	return sharedreconcile.NewCNIReconciler(sharedreconcile.Config{
 		ResourceFS:        r.Config.ResourceFS,
 		Platform:          r.Config.Platform,
+		OCPVersion:        r.Config.OCPVersion,
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
@@ -219,7 +207,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	var requests []reconcile.Request
 	for _, cni := range cniList.Items {
 		if cni.Spec.Namespace == ns.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: cni.Name}})
+			requests = append(requests, reconcile.Request{Name: cni.Name})
 		}
 	}
 	return requests

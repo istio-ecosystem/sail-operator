@@ -20,7 +20,7 @@ type ValidationError struct {
 	message string
 }
 
-func (v ValidationError) Error() string {
+func (v *ValidationError) Error() string {
 	return "validation error: " + v.message
 }
 
@@ -38,7 +38,7 @@ type TransientError struct {
 	message string
 }
 
-func (v TransientError) Error() string {
+func (v *TransientError) Error() string {
 	return "transient error: " + v.message
 }
 

@@ -265,7 +265,7 @@ func targetCRDKinds(includeAll bool, values *v1.Values) map[string]bool {
 	kinds := map[string]bool{}
 
 	if include, ok := values.Pilot.Env["PILOT_INCLUDE_RESOURCES"]; ok {
-		for _, r := range strings.Split(include, ",") {
+		for r := range strings.SplitSeq(include, ",") {
 			r = strings.TrimSpace(r)
 			if r != "" {
 				kinds[strings.ToLower(r)] = true

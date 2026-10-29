@@ -29,6 +29,17 @@ UPDATE_BRANCH=${UPDATE_BRANCH:-"master"}
 PIN_MINOR=${PIN_MINOR:-false}
 # When true, skip Istio module updates (istio.io/istio and istio.io/client-go), do not add new Istio versions and only update tools
 TOOLS_ONLY=${TOOLS_ONLY:-false}
+# When true, mirror the operand images of any newly added Istio version before the manifests
+# that reference them are generated. Off by default because it requires push credentials for
+# the mirror; the update-deps workflow sets it to true.
+MIRROR_IMAGES=${MIRROR_IMAGES:-false}
+# Optional override for the build-tools container image registry/project. Older release
+# branches (release-1.30 and earlier) reference build-tools images that are only published
+# to gcr.io/istio-testing, while upstream common-files points them at registry.istio.io.
+# Setting these lets the update-deps workflow pin the correct registry so no manual fixups
+# are needed after `make update-common` regenerates setup_env.sh / devcontainer.json.
+BUILD_TOOLS_REGISTRY=${BUILD_TOOLS_REGISTRY:-}
+BUILD_TOOLS_PROJECT=${BUILD_TOOLS_PROJECT:-}
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOTDIR=$(dirname "${SCRIPTPATH}")
@@ -115,6 +126,20 @@ function getLatestVersionFromDockerHub() {
 # Update common files
 make update-common
 
+# make update-common overwrites setup_env.sh and devcontainer.json from upstream
+# common-files. If a build-tools registry override is requested, reapply it here so the
+# committed references point at a registry that actually hosts the image.
+if [[ -n "${BUILD_TOOLS_REGISTRY}" && -n "${BUILD_TOOLS_PROJECT}" ]]; then
+  "$SED_CMD" -i \
+    -e "s|^TOOLS_REGISTRY_PROVIDER=.*|TOOLS_REGISTRY_PROVIDER=\${TOOLS_REGISTRY_PROVIDER:-${BUILD_TOOLS_REGISTRY}}|" \
+    -e "s|^PROJECT_ID=.*|PROJECT_ID=\${PROJECT_ID:-${BUILD_TOOLS_PROJECT}}|" \
+    common/scripts/setup_env.sh
+  "$SED_CMD" -i -E \
+    "s|(\"image\": \")[^\"]*/build-tools:|\1${BUILD_TOOLS_REGISTRY}/${BUILD_TOOLS_PROJECT}/build-tools:|" \
+    .devcontainer/devcontainer.json
+  echo "Overrode build-tools registry to ${BUILD_TOOLS_REGISTRY}/${BUILD_TOOLS_PROJECT}"
+fi
+
 # update build container used in github actions
 NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
 if [[ "${UPDATE_BRANCH}" == "master" ]]; then
@@ -124,11 +149,20 @@ else
   echo "Skipping build-tools image update (UPDATE_BRANCH is not master)"
 fi
 
+# Update the pinned Dockerfile base image digest (keeps registry.access.redhat.com/ubi10/ubi:latest pinned by digest)
+if command -v crane >/dev/null 2>&1; then
+  UBI_LATEST_DIGEST=$(crane digest registry.access.redhat.com/ubi10/ubi:latest)
+  "$SED_CMD" -i "s|registry.access.redhat.com/ubi10/ubi@sha256:[a-f0-9]*|registry.access.redhat.com/ubi10/ubi@${UBI_LATEST_DIGEST}|" "${ROOTDIR}/Dockerfile"
+  echo "Updated Dockerfile base image digest to ${UBI_LATEST_DIGEST}"
+else
+  echo "WARNING: crane is not installed. Skipping Dockerfile base image digest update."
+fi
+
 # Update go dependencies
 export GO111MODULE=on
 if [[ "${TOOLS_ONLY}" != "true" ]]; then
-  go get -u "istio.io/istio@${UPDATE_BRANCH}"
-  go get -u "istio.io/client-go@${UPDATE_BRANCH}"
+  go get "istio.io/istio@${UPDATE_BRANCH}"
+  go get "istio.io/client-go@${UPDATE_BRANCH}"
   go mod tidy
 else
   echo "Skipping Istio module updates (TOOLS_ONLY=true)"
@@ -178,10 +212,15 @@ else
   else
     # We're aligned or ahead of Istio, only do patch upgrades to stay aligned
     echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is aligned with Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), only applying patch updates"
-    go get -u=patch sigs.k8s.io/controller-runtime
+    go get sigs.k8s.io/controller-runtime@patch
     # Determine the new version after patch upgrade
     CONTROLLER_RUNTIME_NEW_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
     CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_NEW_VERSION}")
+    if [[ "${CONTROLLER_RUNTIME_NEW_VERSION}" != "${CONTROLLER_RUNTIME_CURRENT_VERSION}" ]]; then
+      echo "Updated controller-runtime to ${CONTROLLER_RUNTIME_NEW_VERSION}"
+    else
+      echo "No patch update for controller-runtime available. Staying at ${CONTROLLER_RUNTIME_NEW_VERSION}"
+    fi
   fi
 fi
 
@@ -244,7 +283,18 @@ fi
 
 # Regenerate files
 if [[ "${TOOLS_ONLY}" != "true" ]]; then
-  make update-istio gen
+  make update-istio
+
+  # Mirror the operand images between adding the new Istio version and generating the
+  # manifests that point at them. Istio stopped publishing to registry.istio.io as of
+  # 1.31 so the generated image references target the mirror.
+  if [[ "${MIRROR_IMAGES}" == "true" ]]; then
+    make mirror-istio-images
+  else
+    echo "Skipping image mirroring (MIRROR_IMAGES=false)"
+  fi
+
+  make gen
 else
   echo "Skipping 'make update-istio' (TOOLS_ONLY=true), running 'make gen' only"
   make gen

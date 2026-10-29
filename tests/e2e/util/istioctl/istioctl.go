@@ -32,7 +32,7 @@ var istioctlBinary = env.Get("ISTIOCTL_PATH", "istioctl")
 // Arguments:
 // - format: format of the command without istioctl
 // - args: arguments of the command
-func istioctl(format string, args ...interface{}) string {
+func istioctl(format string, args ...any) string {
 	binary := "istioctl"
 	if istioctlBinary != "" {
 		binary = istioctlBinary

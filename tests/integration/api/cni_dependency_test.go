@@ -32,8 +32,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var _ = Describe("CNI Dependency", Ordered, func() {
@@ -50,15 +48,11 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 	)
 
 	istioNS := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioNamespace,
-		},
+		Name: istioNamespace,
 	}
 
 	istiocniNS := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioCNINamespace,
-		},
+		Name: istioCNINamespace,
 	}
 
 	SetDefaultEventuallyTimeout(30 * time.Second)
@@ -88,16 +82,14 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 			BeforeAll(func() {
 				Step("Creating Istio resource with CNI enabled")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName,
-					},
+					Name: istioName,
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
 							Pilot: &v1.PilotConfig{
 								Cni: &v1.CNIUsageConfig{
-									Enabled: ptr.Of(true),
+									Enabled: new(true),
 								},
 							},
 						},
@@ -134,9 +126,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 			BeforeAll(func() {
 				Step("Creating Istio resource with CNI disabled")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName + "-no-cni",
-					},
+					Name: istioName + "-no-cni",
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
@@ -187,9 +177,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 			BeforeAll(func() {
 				Step("Creating IstioCNI resource")
 				istiocni = &v1.IstioCNI{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
+					Name: "default",
 					Spec: v1.IstioCNISpec{
 						Version:   istioversion.Default,
 						Namespace: istioCNINamespace,
@@ -205,9 +193,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 				Step("Creating Istio resource with CNI enabled")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName,
-					},
+					Name: istioName,
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
@@ -250,16 +236,14 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 			BeforeAll(func() {
 				Step("Creating Istio resource with CNI explicitly disabled")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName + "-ocp-no-cni",
-					},
+					Name: istioName + "-ocp-no-cni",
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
 							Pilot: &v1.PilotConfig{
 								Cni: &v1.CNIUsageConfig{
-									Enabled: ptr.Of(false),
+									Enabled: new(false),
 								},
 							},
 						},
@@ -303,9 +287,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 				Step("Creating Istio resource with CNI not configured")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName + "-ocp-default",
-					},
+					Name: istioName + "-ocp-default",
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
@@ -318,9 +300,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 				Step("Creating IstioCNI resource")
 				istiocni = &v1.IstioCNI{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
+					Name: "default",
 					Spec: v1.IstioCNISpec{
 						Version:   istioversion.Default,
 						Namespace: istioCNINamespace,
@@ -370,9 +350,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 				Step("Creating Istio resource with CNI not configured")
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioName + "-ocp-default",
-					},
+					Name: istioName + "-ocp-default",
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,

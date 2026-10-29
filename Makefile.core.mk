@@ -47,7 +47,7 @@ ISTIO_PROXY_IMAGE_NAME ?= proxyv2
 
 # GitHub creds
 GITHUB_USER ?= openshift-service-mesh-bot
-GITHUB_TOKEN ?= 
+GITHUB_TOKEN ?=
 
 SOURCE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
@@ -62,6 +62,9 @@ ifndef GIT_STATUS
 GIT_STATUS := $(shell git diff-index --quiet HEAD -- 2> /dev/null; if [ "$$?" = "0" ]; then echo Clean; else echo Modified; fi)
 endif
 
+# metric name prefix
+METRIC_PREFIX := $(shell yq eval '.name' chart/values.yaml)
+
 # Linker flags for the go builds
 GO_MODULE = github.com/istio-ecosystem/sail-operator
 LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
@@ -69,6 +72,7 @@ LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YAML_FILE}
+LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/analyze.metricPrefix=${METRIC_PREFIX}
 
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
@@ -572,6 +576,17 @@ update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.
 update-istio-samples: ## Update the Istio samples files located in the samples folder to match the latest Istio upstream version of the charts.
 	@hack/update-istio-samples.sh
 
+# Istio minor releases component images are only published to Docker Hub. We mirror these
+# to quay.io/sail-dev. This is the single source of
+# truth: hack/istio-hub.sh reads it to decide both which images to mirror and which hub
+# to write into the downloaded charts. Add a minor here when Istio ships a new one.
+# TODO: Remove this once 1.30 drops out of support.
+MIRROR_ISTIO_MINORS ?= 1.31
+
+.PHONY: mirror-istio-images
+mirror-istio-images: crane ## Mirror the Istio operand images that upstream only publishes to Docker Hub into quay.io/sail-dev.
+	@CRANE=$(CRANE) hack/mirror-istio-images.sh $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) $(MIRROR_ISTIO_MINORS)
+
 .PHONY: update-deps
 update-deps: ## Update all dependencies including tools, Go modules, and operator components.
 	@echo "Running dependency update script..."
@@ -603,19 +618,21 @@ ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
 CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
+CRANE ?= $(LOCALBIN)/crane
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.3
-HELM_VERSION ?= v4.2.4
-CONTROLLER_TOOLS_VERSION ?= v0.21.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.24
-OPM_VERSION ?= v1.73.0
+HELM_VERSION ?= v4.3.1
+CONTROLLER_TOOLS_VERSION ?= v0.23.0
+CONTROLLER_RUNTIME_BRANCH ?= release-0.25
+OPM_VERSION ?= v2.0.0-alpha-3
 OLM_VERSION ?= v0.46.0
 GITLEAKS_VERSION ?= v8.30.1
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.17.4
+RUNME_VERSION ?= 3.17.6
 MISSPELL_VERSION ?= v0.3.4
 CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
+CRANE_VERSION ?= v0.22.1
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -640,7 +657,7 @@ $(OPERATOR_SDK): $(LOCALBIN)
 
 # ISTIOCTL_DOWNLOAD_URL defines the url where istioctl will be downloaded
 # By default, it is not set and it uses the istio/istio release download artifact
-ISTIOCTL_DOWNLOAD_URL ?= 
+ISTIOCTL_DOWNLOAD_URL ?=
 
 # ISTIOCTL_FROM_CONTAINER_IMAGE defines whether istioctl should be downloaded by extracting it from a container image.
 # If set to true, the istioctl binary will be pulled from a specified container image instead of the default release artifact.
@@ -691,6 +708,12 @@ $(ENVTEST): $(LOCALBIN)
 gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
+
+.PHONY: crane
+crane: $(CRANE) ## Download crane to bin directory. If wrong version is installed, it will be overwritten.
+$(CRANE): $(LOCALBIN)
+	@test -s $(LOCALBIN)/crane && $(LOCALBIN)/crane version | grep -q $(patsubst v%,%,$(CRANE_VERSION)) || \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-containerregistry/cmd/crane@$(CRANE_VERSION)
 
 OCP ?= false
 
@@ -856,3 +879,8 @@ COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scri
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@
+
+##@ Generate the metrics documentation
+.PHONY: generate-metricsdocs
+generate-metricsdocs:
+	go run -ldflags="$(LD_FLAGS)" ./pkg/analyze/metricsdocs > docs/common/analytics-metrics.md

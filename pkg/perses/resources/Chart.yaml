@@ -1,0 +1,5 @@
+apiVersion: v2
+name: sail-perses-dashboards
+description: Bundled Istio Perses dashboards vendored from perses/community-mixins
+type: application
+version: 0.0.0

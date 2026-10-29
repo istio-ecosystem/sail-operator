@@ -21,6 +21,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,9 +77,16 @@ func (r *IstiodReconciler) Install(
 
 	// Install istiod chart
 	istiodChartPath := GetChartPath(version, constants.IstiodChartName)
-	istiodReleaseName := getReleaseName(revisionName, constants.IstiodChartName)
+	istiodReleaseName := GetReleaseName(revisionName, constants.IstiodChartName)
+	existingReleaseValues, err := helm.GetReleaseValues(ctx, r.cfg.ChartManager, namespace, istiodReleaseName)
+	if err != nil {
+		return fmt.Errorf("failed to get existing Helm chart %q: %w", constants.IstiodChartName, err)
+	}
+	if err := istiovalues.ApplyNetworkPolicyDefaults(r.cfg.OCPVersion, &helmValues, existingReleaseValues); err != nil {
+		return fmt.Errorf("failed to apply network policy defaults: %w", err)
+	}
 
-	_, err := r.cfg.ChartManager.UpgradeOrInstallChart(
+	_, err = r.cfg.ChartManager.UpgradeOrInstallChart(
 		ctx,
 		r.cfg.ResourceFS,
 		istiodChartPath,
@@ -94,7 +102,7 @@ func (r *IstiodReconciler) Install(
 	// Install base chart for default revision
 	if revisionName == v1.DefaultRevision {
 		baseChartPath := GetChartPath(version, constants.BaseChartName)
-		baseReleaseName := getReleaseName(revisionName, constants.BaseChartName)
+		baseReleaseName := GetReleaseName(revisionName, constants.BaseChartName)
 
 		_, err := r.cfg.ChartManager.UpgradeOrInstallChart(
 			ctx,
@@ -116,14 +124,14 @@ func (r *IstiodReconciler) Install(
 // Uninstall removes the istiod Helm charts.
 func (r *IstiodReconciler) Uninstall(ctx context.Context, namespace, revisionName string) error {
 	// Uninstall istiod chart
-	istiodReleaseName := getReleaseName(revisionName, constants.IstiodChartName)
+	istiodReleaseName := GetReleaseName(revisionName, constants.IstiodChartName)
 	if _, err := r.cfg.ChartManager.UninstallChart(ctx, istiodReleaseName, namespace); err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 
 	// Uninstall base chart for default revision
 	if revisionName == v1.DefaultRevision {
-		baseReleaseName := getReleaseName(revisionName, constants.BaseChartName)
+		baseReleaseName := GetReleaseName(revisionName, constants.BaseChartName)
 		if _, err := r.cfg.ChartManager.UninstallChart(ctx, baseReleaseName, r.cfg.OperatorNamespace); err != nil {
 			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
 		}
@@ -132,7 +140,7 @@ func (r *IstiodReconciler) Uninstall(ctx context.Context, namespace, revisionNam
 	return nil
 }
 
-// getReleaseName returns the Helm release name for a given revision and chart.
-func getReleaseName(revisionName, chartName string) string {
+// GetReleaseName returns the Helm release name for a given revision and chart.
+func GetReleaseName(revisionName, chartName string) string {
 	return fmt.Sprintf("%s-%s", revisionName, chartName)
 }

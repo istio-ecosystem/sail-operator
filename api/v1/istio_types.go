@@ -35,10 +35,10 @@ const (
 type IstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.31-latest, v1.31.0-beta.1, v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.32.0-alpha.aed8285f.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.31-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.31.0-beta.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.30-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.29-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.0", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.32.0-alpha.aed8285f"}
-	// +kubebuilder:validation:Enum=v1.31-latest;v1.31.0-beta.1;v1.30-latest;v1.30.3;v1.30.2;v1.30.1;v1.30.0;v1.29-latest;v1.29.6;v1.29.5;v1.29.4;v1.29.3;v1.29.2;v1.29.1;v1.29.0;v1.28-latest;v1.28.10;v1.28.9;v1.28.8;v1.28.7;v1.28.6;v1.28.5;v1.28.4;v1.28.3;v1.28.2;v1.28.1;v1.28.0;v1.27-latest;v1.27.9;v1.27.8;v1.27.7;v1.27.6;v1.27.5;v1.27.4;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.8;v1.26.7;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.25.5;v1.25.4;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;v1.23-latest;v1.23.6;v1.23.5;v1.23.4;v1.23.3;v1.23.2;v1.22-latest;v1.22.8;v1.22.7;v1.22.6;v1.22.5;v1.21.6;master;v1.32.0-alpha.aed8285f
-	// +kubebuilder:default=v1.31.0-beta.1
+	// Must be one of: v1.31-latest, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.10, v1.29.9, master, v1.33.0-alpha.3b615dde.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.31-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.31.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.31.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.31.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.31.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.30-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.7", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.30.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.10", "urn:alm:descriptor:com.tectonic.ui:select:v1.29.9", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.33.0-alpha.3b615dde"}
+	// +kubebuilder:validation:Enum=v1.31-latest;v1.31.3;v1.31.2;v1.31.1;v1.31.0;v1.30-latest;v1.30.7;v1.30.6;v1.30.5;v1.30.4;v1.30.3;v1.30.2;v1.30.1;v1.30.0;v1.29-latest;v1.29.10;v1.29.9;v1.29.8;v1.29.7;v1.29.6;v1.29.5;v1.29.4;v1.29.3;v1.29.2;v1.29.1;v1.29.0;v1.28-latest;v1.28.10;v1.28.9;v1.28.8;v1.28.7;v1.28.6;v1.28.5;v1.28.4;v1.28.3;v1.28.2;v1.28.1;v1.28.0;v1.27-latest;v1.27.9;v1.27.8;v1.27.7;v1.27.6;v1.27.5;v1.27.4;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.8;v1.26.7;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.25.5;v1.25.4;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;v1.23-latest;v1.23.6;v1.23.5;v1.23.4;v1.23.3;v1.23.2;v1.22-latest;v1.22.8;v1.22.7;v1.22.6;v1.22.5;v1.21.6;master;v1.33.0-alpha.3b615dde
+	// +kubebuilder:default=v1.31.3
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the Istio CR is updated.
@@ -88,13 +88,9 @@ type IstioUpdateStrategy struct {
 	// +kubebuilder:validation:Minimum=0
 	InactiveRevisionDeletionGracePeriodSeconds *int64 `json:"inactiveRevisionDeletionGracePeriodSeconds,omitempty"`
 
-	// Defines whether the workloads should be moved from one control plane instance to another
-	// automatically. If updateWorkloads is true, the operator moves the workloads from the old
-	// control plane instance to the new one after the new control plane is ready.
-	// If updateWorkloads is false, the user must move the workloads manually by updating the
-	// istio.io/rev labels on the namespace and/or the pods.
-	// Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=3,displayName="Update Workloads Automatically",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	// Deprecated: This field has never been implemented and will be removed in a future release.
+	// Use IstioRevisionTag with targetRef pointing to the Istio resource for automatic workload migration.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=3,displayName="Update Workloads Automatically (Deprecated)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	UpdateWorkloads bool `json:"updateWorkloads,omitempty"`
 }
 
@@ -228,7 +224,7 @@ type Istio struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:default={version: "v1.31.0-beta.1", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +kubebuilder:default={version: "v1.31.3", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
 	// +optional
 	Spec IstioSpec `json:"spec"`
 
