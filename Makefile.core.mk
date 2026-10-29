@@ -34,7 +34,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 #   make bundle-publish -e PREVIOUS_VERSION=X.Y.Z
 #
 # Default: empty (will be auto-detected by publish-bundle.sh)
-PREVIOUS_VERSION ?= 1.31.0
+PREVIOUS_VERSION ?= 1.31.1
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
