@@ -139,7 +139,6 @@ jobs:
           ARTIFACTS_ROOT: ${{ github.workspace }}/artifacts
         run: |
           set -euo pipefail
-          chmod +x tests/e2e/crc-e2e-ci.sh
           if ! tests/e2e/crc-e2e-ci.sh "${TEST_TIER}"; then
             echo "::error::CRC E2E tier ${TEST_TIER} failed; capturing cluster snapshot"
             {
