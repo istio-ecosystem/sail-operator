@@ -126,7 +126,7 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 			GinkgoWriter.Printf("  inuseBytes=%d   (threshold=%d)\n", prof.InuseBytes, thresholds.MaxInuseBytes)
 			GinkgoWriter.Printf("  inuseObjects=%d (threshold=%d)\n", prof.InuseObjects, thresholds.MaxInuseObjects)
 			GinkgoWriter.Printf("  cpuSeconds=%.3f (threshold=%.3f)\n", prof.CPUSeconds, thresholds.MaxCPUSeconds)
-			GinkgoWriter.Printf("  apiCallsPatch=%d (threshold=%d)\n", prof.APICallsPatch, thresholds.MaxAPICallsPatch)
+			GinkgoWriter.Printf("  apiServerThrottled=%d (threshold=0)\n", prof.APIServerThrottled)
 
 			Expect(prof.AllocBytes).To(BeNumerically("<=", thresholds.MaxAllocBytes),
 				"suite %q: heap allocations exceeded baseline×%.2f", suite, degradationFactor)
@@ -142,10 +142,11 @@ var _ = Describe("Performance", Label("performance", "slow"), Ordered, ContinueO
 				Expect(prof.InuseObjects).To(BeNumerically("<=", thresholds.MaxInuseObjects),
 					"suite %q: live objects (inuse) exceeded baseline×%.2f", suite, degradationFactor)
 			}
-			if thresholds.MaxAPICallsPatch > 0 {
-				Expect(prof.APICallsPatch).To(BeNumerically("<=", thresholds.MaxAPICallsPatch),
-					"suite %q: PATCH API calls exceeded baseline×%.2f", suite, degradationFactor)
-			}
+			// API-server throttling (HTTP 429) is a binary signal for runaway
+			// reconcile loops — any non-zero count fails, no baseline needed.
+			Expect(prof.APIServerThrottled).To(BeNumerically("==", 0),
+				"suite %q: operator received %d HTTP 429 responses from the API server (expected 0)",
+				suite, prof.APIServerThrottled)
 		})
 	}
 })

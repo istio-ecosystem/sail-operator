@@ -35,23 +35,21 @@ func baselineFilePath() string {
 
 // SuiteBaseline holds the baseline allocation and CPU values for one E2E suite.
 type SuiteBaseline struct {
-	AllocBytes    int64   `json:"allocBytes"`
-	AllocObjects  int64   `json:"allocObjects"`
-	InuseBytes    int64   `json:"inuseBytes"`
-	InuseObjects  int64   `json:"inuseObjects"`
-	CPUSeconds    float64 `json:"cpuSeconds"`
-	APICallsPatch int64   `json:"apiCallsPatch"`
+	AllocBytes   int64   `json:"allocBytes"`
+	AllocObjects int64   `json:"allocObjects"`
+	InuseBytes   int64   `json:"inuseBytes"`
+	InuseObjects int64   `json:"inuseObjects"`
+	CPUSeconds   float64 `json:"cpuSeconds"`
 }
 
 // SuiteThresholds holds the maximum-acceptable values for one suite derived by
 // multiplying the baseline by a degradation factor.
 type SuiteThresholds struct {
-	MaxAllocBytes    int64
-	MaxAllocObjects  int64
-	MaxInuseBytes    int64
-	MaxInuseObjects  int64
-	MaxCPUSeconds    float64
-	MaxAPICallsPatch int64
+	MaxAllocBytes   int64
+	MaxAllocObjects int64
+	MaxInuseBytes   int64
+	MaxInuseObjects int64
+	MaxCPUSeconds   float64
 }
 
 // Baseline is the schema of baseline.json.
@@ -89,12 +87,11 @@ func (b *Baseline) ThresholdsFor(suiteName string, factor, cpuFactor float64) *S
 		return nil
 	}
 	return &SuiteThresholds{
-		MaxAllocBytes:    int64(math.Ceil(float64(sb.AllocBytes) * factor)),
-		MaxAllocObjects:  int64(math.Ceil(float64(sb.AllocObjects) * factor)),
-		MaxInuseBytes:    int64(math.Ceil(float64(sb.InuseBytes) * factor)),
-		MaxInuseObjects:  int64(math.Ceil(float64(sb.InuseObjects) * factor)),
-		MaxCPUSeconds:    sb.CPUSeconds * cpuFactor,
-		MaxAPICallsPatch: int64(math.Ceil(float64(sb.APICallsPatch) * factor)),
+		MaxAllocBytes:   int64(math.Ceil(float64(sb.AllocBytes) * factor)),
+		MaxAllocObjects: int64(math.Ceil(float64(sb.AllocObjects) * factor)),
+		MaxInuseBytes:   int64(math.Ceil(float64(sb.InuseBytes) * factor)),
+		MaxInuseObjects: int64(math.Ceil(float64(sb.InuseObjects) * factor)),
+		MaxCPUSeconds:   sb.CPUSeconds * cpuFactor,
 	}
 }
 

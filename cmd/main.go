@@ -94,15 +94,6 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	if pprofAddr != "" {
-		go func() {
-			setupLog.Info("starting pprof server", "address", pprofAddr)
-			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
-				setupLog.Error(err, "pprof server stopped")
-			}
-		}()
-	}
-
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
@@ -166,6 +157,27 @@ func main() {
 	}
 
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
+
+	if pprofAddr != "" {
+		pprofServer := &http.Server{
+			Addr:              pprofAddr,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		go func() {
+			setupLog.Info("starting pprof server", "address", pprofAddr)
+			if err := pprofServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				setupLog.Error(err, "pprof server stopped")
+			}
+		}()
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := pprofServer.Shutdown(shutdownCtx); err != nil {
+				setupLog.Error(err, "pprof server shutdown failed")
+			}
+		}()
+	}
 
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		// Create a temporary client for OpenShift-specific startup queries.

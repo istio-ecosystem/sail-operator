@@ -545,7 +545,7 @@ When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU bef
 | `inuseBytes` | pprof `inuse_space` (after-snapshot with `?gc=1`) | Net live-heap change after a forced GC — proxy for memory growth |
 | `inuseObjects` | pprof `inuse_objects` (after-snapshot with `?gc=1`) | Net live-object count change after a forced GC |
 | `cpuSeconds` | `process_cpu_seconds_total` (Prometheus) | CPU time consumed by the operator process (user + system) |
-| `apiCallsPatch` | `rest_client_requests_total{method="PATCH"}` (Prometheus) | Number of PATCH calls made to the API server |
+| `apiServerThrottled` | `rest_client_requests_total{code="429"}` (Prometheus) | HTTP 429 responses from the API server (binary: must be 0) |
 
 **`allocBytes` is not resident memory.** The operator can allocate tens of gigabytes during a long suite while keeping only a few hundred megabytes alive; the GC reclaims the rest. A large `allocBytes` value means the reconciliation path is doing significant work, not that the operator is leaking memory.
 
@@ -553,9 +553,9 @@ When `PPROF_ENABLED=true`, `WrapSuite` snapshots the operator's heap and CPU bef
 
 **`inuseBytes` is the best leak proxy available.** The after-snapshot forces a full GC (`?gc=1`) before reading live-heap counters, so any retained objects were intentionally kept alive. A positive `inuseBytes` delta that grows run-over-run is a signal worth investigating.
 
-**`apiCallsPatch` reflects API efficiency.** PATCH calls are the dominant write traffic from the operator. A large increase suggests the operator is re-applying resources on every reconcile even when nothing changed, or that a new code path is issuing redundant updates.
+**`apiServerThrottled` detects runaway reconcile loops.** Any HTTP 429 from the API server fails the suite (threshold is always 0; no baseline entry). Absolute PATCH-call counts are not baselined because they churn whenever suites gain or lose scenarios.
 
-New fields (`inuseBytes`, `inuseObjects`, `apiCallsPatch`) start with baseline value `0` and are only asserted when the baseline entry is non-zero, so the first CI run collects data without failing.
+New fields (`inuseBytes`, `inuseObjects`) start with baseline value `0` and are only asserted when the baseline entry is non-zero, so the first CI run collects data without failing.
 
 ### Enabling profiling
 
@@ -579,7 +579,7 @@ To update after an intentional change:
 | Variable | Default | Purpose |
 |---|---|---|
 | `PPROF_ENABLED` | `""` | Set to `true` to enable profiling and run baseline comparison |
-| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier for heap and API-call metrics |
+| `PERF_DEGRADATION_FACTOR` | `1.2` | Threshold multiplier for heap metrics |
 | `PERF_CPU_DEGRADATION_FACTOR` | `2.0` | Separate threshold multiplier for `cpuSeconds` only |
 | `PERF_BASELINE_FILE` | `tests/e2e/performance/baseline.json` | Path to an alternative baseline file |
 
