@@ -44,8 +44,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.31.3
-    createdAt: "2026-10-26T15:42:40Z"
+    containerImage: quay.io/sail-dev/sail-operator:1.31.2
+    createdAt: "2026-10-29T11:50:11Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -67,7 +67,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: sailoperator.v1.31.3
+  name: sailoperator.v1.31.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -182,17 +182,19 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.31-latest, v1.31.3, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
+              Must be one of: v1.31-latest, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.9, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.31.2
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.30.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.3
@@ -201,6 +203,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.10
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.29.9
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.8
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.7
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.6
@@ -247,15 +250,17 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.31.3, v1.31.1, v1.31.0, v1.30.7, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.10, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
+              Must be one of: v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.10, v1.29.9, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.31.2
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.30.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.3
@@ -263,6 +268,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.10
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.29.9
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.8
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.7
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.6
@@ -306,17 +312,19 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.31-latest, v1.31.3, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
+              Must be one of: v1.31-latest, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.9, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.31.2
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.30.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.3
@@ -325,6 +333,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.10
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.29.9
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.8
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.7
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.6
@@ -389,17 +398,19 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.31-latest, v1.31.3, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
+              Must be one of: v1.31-latest, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30-latest, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.10, v1.29.9, v1.29.8, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.31.2
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.31.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.30.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.3
@@ -408,6 +419,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.30.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.10
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.29.9
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.8
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.7
               - urn:alm:descriptor:com.tectonic.ui:select:v1.29.6
@@ -433,10 +445,12 @@ spec:
 
     - v1.31-latest
     - v1.31.3
+    - v1.31.2
     - v1.31.1
     - v1.31.0
     - v1.30-latest
     - v1.30.7
+    - v1.30.6
     - v1.30.5
     - v1.30.4
     - v1.30.3
@@ -445,6 +459,7 @@ spec:
     - v1.30.0
     - v1.29-latest
     - v1.29.10
+    - v1.29.9
     - v1.29.8
     - v1.29.7
     - v1.29.6
@@ -866,6 +881,10 @@ spec:
                   images.v1_29_8.istiod: registry.istio.io/release/pilot:1.29.8
                   images.v1_29_8.proxy: registry.istio.io/release/proxyv2:1.29.8
                   images.v1_29_8.ztunnel: registry.istio.io/release/ztunnel:1.29.8
+                  images.v1_29_9.cni: registry.istio.io/release/install-cni:1.29.9
+                  images.v1_29_9.istiod: registry.istio.io/release/pilot:1.29.9
+                  images.v1_29_9.proxy: registry.istio.io/release/proxyv2:1.29.9
+                  images.v1_29_9.ztunnel: registry.istio.io/release/ztunnel:1.29.9
                   images.v1_29_10.cni: registry.istio.io/release/install-cni:1.29.10
                   images.v1_29_10.istiod: registry.istio.io/release/pilot:1.29.10
                   images.v1_29_10.proxy: registry.istio.io/release/proxyv2:1.29.10
@@ -894,6 +913,10 @@ spec:
                   images.v1_30_5.istiod: registry.istio.io/release/pilot:1.30.5
                   images.v1_30_5.proxy: registry.istio.io/release/proxyv2:1.30.5
                   images.v1_30_5.ztunnel: registry.istio.io/release/ztunnel:1.30.5
+                  images.v1_30_6.cni: registry.istio.io/release/install-cni:1.30.6
+                  images.v1_30_6.istiod: registry.istio.io/release/pilot:1.30.6
+                  images.v1_30_6.proxy: registry.istio.io/release/proxyv2:1.30.6
+                  images.v1_30_6.ztunnel: registry.istio.io/release/ztunnel:1.30.6
                   images.v1_30_7.cni: registry.istio.io/release/install-cni:1.30.7
                   images.v1_30_7.istiod: registry.istio.io/release/pilot:1.30.7
                   images.v1_30_7.proxy: registry.istio.io/release/proxyv2:1.30.7
@@ -906,6 +929,10 @@ spec:
                   images.v1_31_1.istiod: quay.io/sail-dev/pilot:1.31.1
                   images.v1_31_1.proxy: quay.io/sail-dev/proxyv2:1.31.1
                   images.v1_31_1.ztunnel: quay.io/sail-dev/ztunnel:1.31.1
+                  images.v1_31_2.cni: quay.io/sail-dev/install-cni:1.31.2
+                  images.v1_31_2.istiod: quay.io/sail-dev/pilot:1.31.2
+                  images.v1_31_2.proxy: quay.io/sail-dev/proxyv2:1.31.2
+                  images.v1_31_2.ztunnel: quay.io/sail-dev/ztunnel:1.31.2
                   images.v1_31_3.cni: quay.io/sail-dev/install-cni:1.31.3
                   images.v1_31_3.istiod: quay.io/sail-dev/pilot:1.31.3
                   images.v1_31_3.proxy: quay.io/sail-dev/proxyv2:1.31.3
@@ -939,7 +966,7 @@ spec:
                       - --zap-log-level=info
                     command:
                       - /sail-operator
-                    image: quay.io/sail-dev/sail-operator:1.31.3
+                    image: quay.io/sail-dev/sail-operator:1.31.2
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -1046,4 +1073,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  version: 1.31.3
+  version: 1.31.2
