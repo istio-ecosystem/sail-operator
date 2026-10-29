@@ -86,7 +86,9 @@ jobs:
   e2e:
     name: e2e smoke openshift local
     needs: [preflight, build-push]
-    runs-on: ubuntu-latest
+    # ubuntu-latest is Ubuntu 26.04, where qemu-kvm is only a virtual package.
+    # crc-org/crc-github-action@v1 installs qemu-kvm and fails before the cluster starts.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
