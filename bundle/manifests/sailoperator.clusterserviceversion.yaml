@@ -912,6 +912,8 @@ spec:
                         name: serving-cert
                 securityContext:
                   runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
                 serviceAccountName: sail-operator
                 terminationGracePeriodSeconds: 10
                 volumes:
