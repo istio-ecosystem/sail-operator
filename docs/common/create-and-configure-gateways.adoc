@@ -2,8 +2,8 @@
 :istio_latest_version: 1.31.3
 :istio_latest_version_revision_format: 1-31-3
 :istio_latest_tag: v1.31-latest
-:istio_latest_minus_one_version: 1.31.1
-:istio_latest_minus_one_version_revision_format: 1-31-1
+:istio_latest_minus_one_version: 1.31.2
+:istio_latest_minus_one_version_revision_format: 1-31-2
 
 link:../README.adoc[Return to Project Root]
 
