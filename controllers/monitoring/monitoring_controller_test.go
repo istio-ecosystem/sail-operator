@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -85,6 +86,17 @@ func expectOwnedByIstio(g Gomega, ownerRefs []metav1.OwnerReference, name string
 	g.Expect(*ownerRefs[0].BlockOwnerDeletion).To(BeTrue())
 }
 
+func expectOwnedByMetricsIntegration(g Gomega, ownerRefs []metav1.OwnerReference, name string) {
+	g.Expect(ownerRefs).To(HaveLen(1))
+	g.Expect(ownerRefs[0].APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+	g.Expect(ownerRefs[0].Kind).To(Equal(v1alpha1.MetricsIntegrationKind))
+	g.Expect(ownerRefs[0].Name).To(Equal(name))
+	g.Expect(ownerRefs[0].Controller).ToNot(BeNil())
+	g.Expect(*ownerRefs[0].Controller).To(BeTrue())
+	g.Expect(ownerRefs[0].BlockOwnerDeletion).ToNot(BeNil())
+	g.Expect(*ownerRefs[0].BlockOwnerDeletion).To(BeTrue())
+}
+
 // newNamespaceWithInjection creates a namespace with the istio-injection=enabled label
 func newNamespaceWithInjection(name string) *corev1.Namespace {
 	return &corev1.Namespace{
@@ -129,6 +141,37 @@ func testIstio() *v1.Istio {
 	return newIstioWithMonitoringEnabled(istioName, istioNamespace)
 }
 
+func testIstioWithoutMonitoring() *v1.Istio {
+	return &v1.Istio{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: istioName,
+			UID:  istioUID,
+		},
+		Spec: v1.IstioSpec{
+			Version:   "v1.29.2",
+			Namespace: istioNamespace,
+		},
+	}
+}
+
+func newUserWorkloadMetricsIntegration(name, istioName string) *v1alpha1.MetricsIntegration {
+	return &v1alpha1.MetricsIntegration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			UID:  types.UID(name + "-uid"),
+		},
+		Spec: v1alpha1.MetricsIntegrationSpec{
+			TargetRefs: []v1alpha1.TargetReference{
+				{Kind: v1.IstioKind, Name: istioName},
+			},
+			MetricsConfig: v1alpha1.MetricsConfig{
+				Type:                   v1alpha1.MetricsTypeUserWorkloadMonitoring,
+				UserWorkloadMonitoring: &v1alpha1.UserWorkloadMonitoringConfig{},
+			},
+		},
+	}
+}
+
 func TestReconcile(t *testing.T) {
 	cfg := newReconcilerTestConfig()
 
@@ -140,6 +183,7 @@ func TestReconcile(t *testing.T) {
 		expectErr         bool
 		expectSM          bool   // whether a ServiceMonitor should exist
 		expectPMNamespace string // namespace where PodMonitor should be created (empty = none)
+		expectMIOwner     string // if set, monitors are owned by this MetricsIntegration; otherwise by Istio
 	}{
 		{
 			name:  "creates ServiceMonitor and PodMonitor for owned IstioRevision",
@@ -250,6 +294,26 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:  "creates monitors when UserWorkloadMonitoring MetricsIntegration references Istio",
+			istio: testIstioWithoutMonitoring(),
+			revisions: []*v1.IstioRevision{
+				{
+					ObjectMeta: revisionMeta,
+					Spec: v1.IstioRevisionSpec{
+						Version:   "v1.24.0",
+						Namespace: istioNamespace,
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				newNamespaceWithRevLabel(appNamespace, revisionName),
+				newUserWorkloadMetricsIntegration("uwm", istioName),
+			},
+			expectSM:          true,
+			expectPMNamespace: appNamespace,
+			expectMIOwner:     "uwm",
+		},
+		{
 			name: "skips reconciliation when Istio is being deleted",
 			istio: &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
@@ -308,7 +372,11 @@ func TestReconcile(t *testing.T) {
 				g.Expect(cl.Get(ctx, smKey, sm)).To(Succeed())
 				g.Expect(sm.Name).To(Equal(istioName + serviceMonitorNameSuffix))
 				expectMonitoringLabels(g, sm.Labels, serviceMonitorMonitoring)
-				expectOwnedByIstio(g, sm.OwnerReferences, istioName)
+				if tt.expectMIOwner != "" {
+					expectOwnedByMetricsIntegration(g, sm.OwnerReferences, tt.expectMIOwner)
+				} else {
+					expectOwnedByIstio(g, sm.OwnerReferences, istioName)
+				}
 			} else {
 				g.Expect(cl.Get(ctx, smKey, sm)).To(ReturnNotFoundError())
 			}
@@ -321,7 +389,11 @@ func TestReconcile(t *testing.T) {
 				g.Expect(pm.Name).To(Equal(istioName + podMonitorNameSuffix))
 				g.Expect(pm.Namespace).To(Equal(tt.expectPMNamespace))
 				expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
-				expectOwnedByIstio(g, pm.OwnerReferences, istioName)
+				if tt.expectMIOwner != "" {
+					expectOwnedByMetricsIntegration(g, pm.OwnerReferences, tt.expectMIOwner)
+				} else {
+					expectOwnedByIstio(g, pm.OwnerReferences, istioName)
+				}
 			} else {
 				g.Expect(cl.Get(ctx, pmKey, pm)).To(ReturnNotFoundError())
 			}
@@ -505,7 +577,8 @@ func TestReconcileServiceMonitor(t *testing.T) {
 
 			cl := builder.Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			err := reconciler.reconcileServiceMonitor(ctx, testIstio())
+			istio := testIstio()
+			err := reconciler.reconcileServiceMonitor(ctx, istio, istioOwnerReference(istio))
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
@@ -620,7 +693,8 @@ func TestReconcilePodMonitors(t *testing.T) {
 
 			cl := builder.Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			err := reconciler.reconcilePodMonitors(ctx, testIstio(), tt.rev)
+			istio := testIstio()
+			err := reconciler.reconcilePodMonitors(ctx, istio, tt.rev, istioOwnerReference(istio))
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
@@ -692,7 +766,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			result := reconciler.buildServiceMonitor(tt.istio)
+			result := reconciler.buildServiceMonitor(tt.istio, istioOwnerReference(tt.istio))
 
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
 			g.Expect(result.GetNamespace()).To(Equal(tt.expectedNS))
@@ -767,7 +841,7 @@ func TestBuildPodMonitor(t *testing.T) {
 			if istio == nil {
 				istio = testIstio()
 			}
-			result := reconciler.buildPodMonitor(istio, tt.namespace)
+			result := reconciler.buildPodMonitor(istio, tt.namespace, istioOwnerReference(istio))
 
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
 			g.Expect(result.GetNamespace()).To(Equal(tt.namespace))
@@ -1023,6 +1097,36 @@ func TestMonitoringEnabled(t *testing.T) {
 	g.Expect(monitoringEnabled(&v1.Istio{
 		ObjectMeta: metav1.ObjectMeta{Name: istioName},
 	})).To(BeFalse())
+}
+
+func TestIsMonitoringEnabled(t *testing.T) {
+	cfg := newReconcilerTestConfig()
+
+	t.Run("true when UserWorkloadMonitoring MetricsIntegration references Istio", func(t *testing.T) {
+		g := NewWithT(t)
+		istio := testIstioWithoutMonitoring()
+		cl := newFakeClientBuilder().WithObjects(
+			istio,
+			newUserWorkloadMetricsIntegration("uwm", istioName),
+		).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme)
+		enabled, err := r.isMonitoringEnabled(ctx, istio)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(enabled).To(BeTrue())
+	})
+
+	t.Run("false when MetricsIntegration references a different Istio", func(t *testing.T) {
+		g := NewWithT(t)
+		istio := testIstioWithoutMonitoring()
+		cl := newFakeClientBuilder().WithObjects(
+			istio,
+			newUserWorkloadMetricsIntegration("uwm", "other-istio"),
+		).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme)
+		enabled, err := r.isMonitoringEnabled(ctx, istio)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(enabled).To(BeFalse())
+	})
 }
 
 func TestNamespacesForRevision(t *testing.T) {

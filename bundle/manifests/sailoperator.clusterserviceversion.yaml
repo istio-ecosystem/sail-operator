@@ -743,6 +743,32 @@ spec:
                 - patch
                 - update
             - apiGroups:
+                - sailoperator.io
+              resources:
+                - metricsintegrations
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - metricsintegrations/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - metricsintegrations/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
                 - monitoring.coreos.com
               resources:
                 - servicemonitors
