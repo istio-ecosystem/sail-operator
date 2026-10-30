@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -56,6 +57,7 @@ var setupLog = ctrl.Log.WithName("setup")
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var pprofAddr string
 	var configFile string
 	var resourceDirectory string
 	var logAPIRequests bool
@@ -77,6 +79,7 @@ func main() {
 		"Wait for PersesDashboard CRD and install or upgrade bundled Istio dashboards in the operator namespace. Disabled by default.")
 
 	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
+	flag.StringVar(&pprofAddr, "pprof-bind-address", "", "Address for the pprof HTTP server (e.g. :6060). Empty disables it.")
 
 	opts := zap.Options{
 		Development: true,
@@ -154,6 +157,27 @@ func main() {
 	}
 
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
+
+	if pprofAddr != "" {
+		pprofServer := &http.Server{
+			Addr:              pprofAddr,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		go func() {
+			setupLog.Info("starting pprof server", "address", pprofAddr)
+			if err := pprofServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				setupLog.Error(err, "pprof server stopped")
+			}
+		}()
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := pprofServer.Shutdown(shutdownCtx); err != nil {
+				setupLog.Error(err, "pprof server shutdown failed")
+			}
+		}()
+	}
 
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		// Create a temporary client for OpenShift-specific startup queries.
