@@ -104,11 +104,11 @@ func init() {
 			CNIImage:     "registry.istio.io/release/install-cni:1.29.9",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.9",
 		},
-		"v1.33.0-alpha.5d6e72d7": {
-			IstiodImage:  "registry.istio.io/testing/pilot:1.33.0-alpha.5d6e72d799871777a1dedc5022c35e65217ae6bf",
-			ProxyImage:   "registry.istio.io/testing/proxyv2:1.33.0-alpha.5d6e72d799871777a1dedc5022c35e65217ae6bf",
-			CNIImage:     "registry.istio.io/testing/install-cni:1.33.0-alpha.5d6e72d799871777a1dedc5022c35e65217ae6bf",
-			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.33.0-alpha.5d6e72d799871777a1dedc5022c35e65217ae6bf",
+		"v1.33.0-alpha.fc82f624": {
+			IstiodImage:  "registry.istio.io/testing/pilot:1.33.0-alpha.fc82f6248463b77232bba053d9ec05461958802e",
+			ProxyImage:   "registry.istio.io/testing/proxyv2:1.33.0-alpha.fc82f6248463b77232bba053d9ec05461958802e",
+			CNIImage:     "registry.istio.io/testing/install-cni:1.33.0-alpha.fc82f6248463b77232bba053d9ec05461958802e",
+			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.33.0-alpha.fc82f6248463b77232bba053d9ec05461958802e",
 		},
 	}
 }
