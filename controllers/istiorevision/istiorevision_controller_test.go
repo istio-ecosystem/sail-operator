@@ -828,6 +828,13 @@ func TestDetermineInUseCondition(t *testing.T) {
 			matchesRevision: "",
 		},
 
+		// pod failed: a terminal pod must not keep the revision in use
+		{
+			podAnnotations:  map[string]string{"istio.io/rev": "default"},
+			podPhase:        corev1.PodFailed,
+			matchesRevision: "",
+		},
+
 		// namespace labels only
 		{
 			nsLabels:        map[string]string{"istio-injection": "enabled"},
