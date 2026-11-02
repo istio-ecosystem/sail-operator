@@ -1,0 +1,7 @@
+category: fixed
+title: Set RuntimeDefault seccomp profile on the operator pod
+description: |
+  The operator Deployment met the other restricted Pod Security checks but
+  did not set a seccomp profile, so namespaces that enforce the restricted
+  standard rejected the pod. The pod securityContext now uses RuntimeDefault.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2113

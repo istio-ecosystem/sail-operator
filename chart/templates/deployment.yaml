@@ -122,6 +122,8 @@ spec:
           name: serving-cert
       securityContext:
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: {{ .Values.serviceAccountName }}
       terminationGracePeriodSeconds: 10
       volumes:
