@@ -153,3 +153,5 @@ bundleGeneration: false
 metrics:
   helm:
     releaseName: prometheus
+# setting this platform-specific kubernetes or cloud providers. The "default" value specifies vanilla Kubernetes with no vendor extensions
+platform: default

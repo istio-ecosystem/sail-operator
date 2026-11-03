@@ -1,4 +1,4 @@
-{{ if .Values.bundleGeneration }}
+{{ if eq .Values.platform "openshift" }}
 {{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor" }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
