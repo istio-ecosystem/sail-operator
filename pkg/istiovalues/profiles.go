@@ -125,15 +125,24 @@ func parseProfileYAML(fileContents []byte, filename string) (helm.Values, error)
 	return m, nil
 }
 
+// MergeOverwrite merges overrides on top of base and returns a new map.
+// Nested maps are merged key by key. Any other override value replaces the base value.
+// The input maps are not modified, and the result does not share nested maps or slices with them.
 func MergeOverwrite(base map[string]any, overrides map[string]any) map[string]any {
-	if base == nil {
-		base = make(map[string]any, 1)
+	merged := cloneMap(base)
+	if merged == nil {
+		merged = make(map[string]any, len(overrides))
 	}
+	mergeInto(merged, overrides)
+	return merged
+}
 
+// mergeInto writes overrides into base. base is owned by the caller.
+func mergeInto(base map[string]any, overrides map[string]any) {
 	for key, value := range overrides {
-		// if the key doesn't already exist, add it
+		// if the key doesn't already exist, add a copy of it
 		if _, exists := base[key]; !exists {
-			base[key] = value
+			base[key] = cloneValue(value)
 			continue
 		}
 
@@ -144,10 +153,35 @@ func MergeOverwrite(base map[string]any, overrides map[string]any) map[string]an
 		childOverrides, overrideValueIsMap := value.(map[string]any)
 		childBase, baseValueIsMap := base[key].(map[string]any)
 		if baseValueIsMap && overrideValueIsMap {
-			base[key] = MergeOverwrite(childBase, childOverrides)
-		} else {
-			base[key] = value
+			mergeInto(childBase, childOverrides)
+			continue
 		}
+		base[key] = cloneValue(value)
 	}
-	return base
+}
+
+func cloneMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = cloneValue(value)
+	}
+	return out
+}
+
+func cloneValue(value any) any {
+	switch v := value.(type) {
+	case map[string]any:
+		return cloneMap(v)
+	case []any:
+		out := make([]any, len(v))
+		for i := range v {
+			out[i] = cloneValue(v[i])
+		}
+		return out
+	default:
+		return v
+	}
 }
