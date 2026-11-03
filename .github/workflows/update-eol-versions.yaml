@@ -2,7 +2,7 @@ name: Update EOL Versions
 
 on:
   schedule:
-    - cron: "0 2 * * *" # Nightly
+    - cron: "0 14 * * *" # Daily
   workflow_dispatch: # Allow manual trigger
 
 run-name: update-eol-versions
