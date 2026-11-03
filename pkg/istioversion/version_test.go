@@ -25,20 +25,20 @@ import (
 
 func TestInit(t *testing.T) {
 	// no need to call init(), since it's called automatically
-	assert.True(t, len(List) > 0, "istioversions.List should not be empty")
-	assert.True(t, len(Map) > 0, "istioversions.Map should not be empty")
+	assert.True(t, len(supportedVersions) > 0, "istioversions.supportedVersions should not be empty")
+	assert.True(t, len(versionsByName) > 0, "istioversions.versionsByName should not be empty")
 	assert.True(t, Default != "", "istioversions.Default should not be empty")
 	assert.True(t, Base != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List)+len(aliasList), len(Map), "Map should have at least as many entries as List + Aliases")
-	for _, vi := range List {
-		assert.Equal(t, vi, Map[vi.Name])
+	assert.Equal(t, len(supportedVersions)+len(aliasList), len(versionsByName))
+	for _, vi := range supportedVersions {
+		assert.Equal(t, vi, versionsByName[vi.Name])
 	}
 	for _, ai := range aliasList {
 		assert.Equal(t,
-			List[slices.IndexFunc(List, func(v VersionInfo) bool { return v.Name == ai.Ref })],
-			Map[ai.Name])
+			supportedVersions[slices.IndexFunc(supportedVersions, func(v VersionInfo) bool { return v.Name == ai.Ref })],
+			versionsByName[ai.Name])
 	}
 }
 
@@ -81,8 +81,8 @@ versions:
 	assert.Len(t, eolVersions, 1)
 	assert.Equal(t, "v0.1", eolVersions[0])
 
-	Map = versionMap
-	EOL = eolVersions
+	versionsByName = versionMap
+	eolVersionNames = eolVersions
 	resolved, err := Resolve("latest")
 	assert.NoError(t, err)
 	assert.Equal(t, "v2.0.0", resolved)
@@ -164,14 +164,14 @@ func TestDefaultVersion(t *testing.T) {
 }
 
 func TestValidateVersion(t *testing.T) {
-	savedMap := Map
-	savedEOL := EOL
-	defer func() { Map = savedMap; EOL = savedEOL }()
+	savedMap := versionsByName
+	savedEOL := eolVersionNames
+	defer func() { versionsByName = savedMap; eolVersionNames = savedEOL }()
 
-	Map = map[string]VersionInfo{
+	versionsByName = map[string]VersionInfo{
 		"v1.0.0": {Name: "v1.0.0"},
 	}
-	EOL = []string{"v0.9.0"}
+	eolVersionNames = []string{"v0.9.0"}
 
 	assert.NoError(t, ValidateVersion("v1.0.0"))
 	assert.Error(t, ValidateVersion(""))
@@ -184,7 +184,7 @@ func TestValidateVersion(t *testing.T) {
 
 func TestGetLatestPatchVersions_Valid(t *testing.T) {
 	t.Run("valid versions", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "master", Version: semver.MustParse("v1.25-alpha.c2ac935c")},
 			{Name: "v1.24-latest", Version: semver.MustParse("1.24.2")},
 			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
@@ -209,7 +209,7 @@ func TestGetLatestPatchVersions_Valid(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		List = []VersionInfo{}
+		supportedVersions = []VersionInfo{}
 
 		versions := GetLatestPatchVersions()
 
@@ -219,7 +219,7 @@ func TestGetLatestPatchVersions_Valid(t *testing.T) {
 
 func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 	t.Run("valid consecutive versions", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
 			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
@@ -236,7 +236,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 
 	t.Run("ambient mode filters out versions below 1.24", func(t *testing.T) {
 		t.Setenv("FIPS_CLUSTER", "false")
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
 			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
 			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
@@ -253,7 +253,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 	})
 
 	t.Run("ambient mode on a FIPS cluster filters out versions below 1.28", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.28.0", Version: semver.MustParse("1.28.0")},
 			{Name: "v1.27.0", Version: semver.MustParse("1.27.0")},
 			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
@@ -272,7 +272,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 	})
 
 	t.Run("empty list returns error", func(t *testing.T) {
-		List = []VersionInfo{}
+		supportedVersions = []VersionInfo{}
 
 		_, _, err := GetTwoConsecutiveMinorVersions(Sidecar)
 
@@ -281,7 +281,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 	})
 
 	t.Run("only one version returns error", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.25.1", Version: semver.MustParse("1.25.1")},
 		}
@@ -295,7 +295,7 @@ func TestGetTwoConsecutiveMinorVersions(t *testing.T) {
 
 func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 	t.Run("skips over the minors in between", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
 			{Name: "v1.24.1", Version: semver.MustParse("1.24.1")},
@@ -312,7 +312,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 
 	t.Run("ambient mode raises the oldest version to 1.24", func(t *testing.T) {
 		t.Setenv("FIPS_CLUSTER", "false")
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
 			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
@@ -328,7 +328,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 
 	t.Run("ambient mode on a FIPS cluster raises the oldest version to 1.28", func(t *testing.T) {
 		t.Setenv("FIPS_CLUSTER", "true")
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.29.0", Version: semver.MustParse("1.29.0")},
 			{Name: "v1.28.0", Version: semver.MustParse("1.28.0")},
 			{Name: "v1.27.0", Version: semver.MustParse("1.27.0")},
@@ -343,7 +343,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 	})
 
 	t.Run("two minors are returned even though they are consecutive", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
 		}
@@ -356,7 +356,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 	})
 
 	t.Run("single minor returns error", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.1", Version: semver.MustParse("1.25.1")},
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 		}
@@ -368,7 +368,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 	})
 
 	t.Run("empty list returns error", func(t *testing.T) {
-		List = []VersionInfo{}
+		supportedVersions = []VersionInfo{}
 
 		_, _, err := GetOldestAndNewestMinorVersions(Sidecar)
 
@@ -379,7 +379,7 @@ func TestGetOldestAndNewestMinorVersions(t *testing.T) {
 
 func TestGetLatestAmbientVersion(t *testing.T) {
 	t.Run("returns latest version >= 1.24", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.24.2", Version: semver.MustParse("1.24.2")},
@@ -393,7 +393,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("skips versions < 1.24", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
 			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
 			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
@@ -406,7 +406,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("FIPS cluster requires >= 1.28", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.29.0", Version: semver.MustParse("1.29.0")},
 			{Name: "v1.28.2", Version: semver.MustParse("1.28.2")},
 			{Name: "v1.27.5", Version: semver.MustParse("1.27.5")},
@@ -420,7 +420,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("FIPS cluster skips versions < 1.28", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.28.0", Version: semver.MustParse("1.28.0")},
 			{Name: "v1.27.5", Version: semver.MustParse("1.27.5")},
 			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
@@ -433,7 +433,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("returns last version when all < 1.24", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.23.5", Version: semver.MustParse("1.23.5")},
 			{Name: "v1.22.0", Version: semver.MustParse("1.22.0")},
 			{Name: "v1.21.0", Version: semver.MustParse("1.21.0")},
@@ -446,7 +446,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("FIPS returns last version when all < 1.28", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.27.5", Version: semver.MustParse("1.27.5")},
 			{Name: "v1.26.0", Version: semver.MustParse("1.26.0")},
 			{Name: "v1.25.0", Version: semver.MustParse("1.25.0")},
@@ -459,7 +459,7 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 	})
 
 	t.Run("handles multiple patch versions", func(t *testing.T) {
-		List = []VersionInfo{
+		supportedVersions = []VersionInfo{
 			{Name: "v1.25.3", Version: semver.MustParse("1.25.3")},
 			{Name: "v1.25.2", Version: semver.MustParse("1.25.2")},
 			{Name: "v1.24.5", Version: semver.MustParse("1.24.5")},
@@ -472,4 +472,52 @@ func TestGetLatestAmbientVersion(t *testing.T) {
 		// Should return latest patch of latest minor version
 		assert.Equal(t, "v1.25.3", version.Name)
 	})
+}
+
+func TestVersionAccessorsReturnCopies(t *testing.T) {
+	savedList := supportedVersions
+	savedMap := versionsByName
+	savedEOL := eolVersionNames
+	t.Cleanup(func() {
+		supportedVersions = savedList
+		versionsByName = savedMap
+		eolVersionNames = savedEOL
+	})
+
+	supportedVersions = []VersionInfo{{Name: "v1.2.3", Charts: []string{"chart-a"}}}
+	versionsByName = map[string]VersionInfo{
+		"v1.2.3": {Name: "v1.2.3", Charts: []string{"chart-a"}},
+	}
+	eolVersionNames = []string{"v0.1.0"}
+
+	versions := SupportedVersions()
+	versions[0].Name = "changed"
+	versions[0].Charts[0] = "changed"
+	appended := append(versions, VersionInfo{Name: "extra"})
+
+	gotVersions := SupportedVersions()
+	assert.Len(t, appended, 2)
+	assert.Equal(t, []VersionInfo{{Name: "v1.2.3", Charts: []string{"chart-a"}}}, gotVersions)
+
+	byName := VersionsByName()
+	info := byName["v1.2.3"]
+	info.Name = "changed"
+	info.Charts[0] = "changed"
+	byName["v1.2.3"] = info
+	byName["extra"] = VersionInfo{Name: "extra"}
+
+	got := VersionsByName()["v1.2.3"]
+	assert.Equal(t, "v1.2.3", got.Name)
+	assert.Equal(t, []string{"chart-a"}, got.Charts)
+	_, exists := VersionsByName()["extra"]
+	assert.False(t, exists)
+
+	eol := EOLVersions()
+	eol[0] = "changed"
+	appendedEOL := append(eol, "extra")
+	assert.Len(t, appendedEOL, 2)
+	assert.Equal(t, []string{"v0.1.0"}, EOLVersions())
+	assert.True(t, IsEOLVersion("v0.1.0"))
+	assert.False(t, IsEOLVersion("changed"))
+	assert.False(t, IsEOLVersion("extra"))
 }

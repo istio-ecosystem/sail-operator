@@ -513,7 +513,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 	Describe("eol versions", func() {
 		BeforeAll(func() {
-			if len(istioversion.EOL) < 1 {
+			if len(istioversion.EOLVersions()) < 1 {
 				Skip("No versions marked as EOL, skipping EOL test")
 			}
 		})
@@ -522,7 +522,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 				istio = &v1.Istio{
 					Name: istioName,
 					Spec: v1.IstioSpec{
-						Version:   istioversion.EOL[0],
+						Version:   istioversion.EOLVersions()[0],
 						Namespace: istioNamespace,
 					},
 				}
@@ -841,7 +841,7 @@ func getRevisionName(istio *v1.Istio, version string) string {
 // findAliasFor returns a version alias name (e.g. "v1.30-latest") that currently resolves to
 // target, or "" if none exists.
 func findAliasFor(target string) string {
-	for name, info := range istioversion.Map {
+	for name, info := range istioversion.VersionsByName() {
 		if name != target && info.Name == target {
 			return name
 		}

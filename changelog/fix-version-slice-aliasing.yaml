@@ -1,0 +1,7 @@
+category: fixed
+title: Return copies of the supported Istio version lists
+description: |
+  The supported version list, the lookup map, and the end-of-life names were
+  exported package variables. A caller that appended to one of them changed
+  the list seen by every other caller. Readers now get copies.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2101
