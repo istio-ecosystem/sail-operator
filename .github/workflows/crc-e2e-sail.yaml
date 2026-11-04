@@ -138,6 +138,7 @@ jobs:
       - name: Run CRC E2E tests
         id: crc-e2e
         env:
+          TEST_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }}
           BUILD_IMAGE: ${{ needs.preflight.outputs.image }}
           OPERATOR_TAG: ${{ needs.build-push.outputs.tag }}
           WORKSPACE: ${{ github.workspace }}
