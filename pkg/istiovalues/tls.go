@@ -201,9 +201,19 @@ func addExtraContainerArg(pilot *v1.PilotConfig, argName, argValue string) {
 // preferred; the remaining entries mirror what the predefined OpenShift profiles yield, so
 // that interop with peers lacking ML-KEM is preserved.
 //
-// NOTE: this asserts that the proxy image supports X25519MLKEM768. Envoy applies the list
-// with SSL_CTX_set1_curves_list, which fails atomically if any entry is unknown, taking the
-// whole TLS context down with it.
+// NOTE: X25519MLKEM768 and X25519 do not work on a FIPS OpenShift cluster. Verified on FIPS
+// OCP 5.0 with the OSSM 3.5 proxy image (Envoy 1.39.2-dev/OpenSSL on OpenSSL 3.5.8 with the
+// RHEL 9 FIPS provider 3.0.7): the group parser rejects both names, while SecP256r1MLKEM768,
+// SecP384r1MLKEM1024, P-256 and P-384 resolve — the 3.0.7 FIPS module predates ML-KEM and
+// X25519 is not FIPS-approved. Because SSL_CTX_set1_curves_list is atomic (see above), one
+// bad entry discards the whole list: a gateway with SIMPLE TLS then lands in error_state with
+// "Failed to initialize ECDH curves X25519MLKEM768:X25519:P-256:P-384" and never serves.
+//
+// Today this is masked on OpenShift by fips-140-3-redhat nilling TlsParams.EcdhCurves, so the
+// list never reaches Envoy. It is not masked under fips-140-3, nor when COMPLIANCE_POLICY is
+// empty or unrecognized. Only meshConfig.tlsDefaults is affected, i.e. SIMPLE/MUTUAL gateway
+// servers; in-mesh mTLS contexts never consult it. If the post-quantum hybrid group is wanted
+// on FIPS OpenShift, SecP256r1MLKEM768 is the name that resolves there.
 var defaultECDHCurves = []string{"X25519MLKEM768", "X25519", "P-256", "P-384"}
 
 // applyECDHCurves sets meshConfig.tlsDefaults.ecdhCurves from the OpenShift TLS profile when
