@@ -484,31 +484,43 @@ func TestVersionAccessorsReturnCopies(t *testing.T) {
 		eolVersionNames = savedEOL
 	})
 
-	supportedVersions = []VersionInfo{{Name: "v1.2.3", Charts: []string{"chart-a"}}}
+	storedVersion := semver.MustParse("1.2.3")
+	supportedVersions = []VersionInfo{{Name: "v1.2.3", Version: storedVersion, Charts: []string{"chart-a"}}}
 	versionsByName = map[string]VersionInfo{
-		"v1.2.3": {Name: "v1.2.3", Charts: []string{"chart-a"}},
+		"v1.2.3": {Name: "v1.2.3", Version: storedVersion, Charts: []string{"chart-a"}},
 	}
 	eolVersionNames = []string{"v0.1.0"}
 
 	versions := SupportedVersions()
+	assert.NotSame(t, storedVersion, versions[0].Version)
 	versions[0].Name = "changed"
 	versions[0].Charts[0] = "changed"
+	mutatedVersion, err := versions[0].Version.SetPrerelease("alpha")
+	assert.NoError(t, err)
+	*versions[0].Version = mutatedVersion
 	appended := append(versions, VersionInfo{Name: "extra"})
 
 	gotVersions := SupportedVersions()
 	assert.Len(t, appended, 2)
-	assert.Equal(t, []VersionInfo{{Name: "v1.2.3", Charts: []string{"chart-a"}}}, gotVersions)
+	assert.Equal(t, "1.2.3", storedVersion.String())
+	assert.Equal(t, []VersionInfo{{Name: "v1.2.3", Version: semver.MustParse("1.2.3"), Charts: []string{"chart-a"}}}, gotVersions)
 
 	byName := VersionsByName()
 	info := byName["v1.2.3"]
+	assert.NotSame(t, storedVersion, info.Version)
 	info.Name = "changed"
 	info.Charts[0] = "changed"
+	mutatedInfoVersion, err := info.Version.SetMetadata("changed")
+	assert.NoError(t, err)
+	*info.Version = mutatedInfoVersion
 	byName["v1.2.3"] = info
 	byName["extra"] = VersionInfo{Name: "extra"}
 
 	got := VersionsByName()["v1.2.3"]
 	assert.Equal(t, "v1.2.3", got.Name)
+	assert.Equal(t, "1.2.3", got.Version.String())
 	assert.Equal(t, []string{"chart-a"}, got.Charts)
+	assert.Equal(t, "1.2.3", storedVersion.String())
 	_, exists := VersionsByName()["extra"]
 	assert.False(t, exists)
 
@@ -520,4 +532,60 @@ func TestVersionAccessorsReturnCopies(t *testing.T) {
 	assert.True(t, IsEOLVersion("v0.1.0"))
 	assert.False(t, IsEOLVersion("changed"))
 	assert.False(t, IsEOLVersion("extra"))
+}
+
+func TestLatestVersionHelpersReturnCopies(t *testing.T) {
+	savedList := supportedVersions
+	t.Cleanup(func() { supportedVersions = savedList })
+	t.Setenv("FIPS_CLUSTER", "false")
+	t.Setenv("E2E_VERSIONS_LIMIT", "")
+
+	supportedVersions = []VersionInfo{
+		{Name: "v1.25.1", Version: semver.MustParse("1.25.1"), Charts: []string{"chart-new"}},
+		{Name: "v1.24.2", Version: semver.MustParse("1.24.2"), Charts: []string{"chart-old"}},
+	}
+
+	latest := GetLatestPatchVersions()
+	assert.Len(t, latest, 2)
+	assertVersionCopyIsolated(t, latest[0])
+	assertVersionCopyIsolated(t, latest[1])
+
+	baseVer, newVer, err := GetTwoConsecutiveMinorVersions(Sidecar)
+	assert.NoError(t, err)
+	assertVersionCopyIsolated(t, baseVer)
+	assertVersionCopyIsolated(t, newVer)
+
+	oldest, newest, err := GetOldestAndNewestMinorVersions(Sidecar)
+	assert.NoError(t, err)
+	assertVersionCopyIsolated(t, oldest)
+	assertVersionCopyIsolated(t, newest)
+
+	assertVersionCopyIsolated(t, GetLatestAmbientVersion())
+}
+
+func assertVersionCopyIsolated(t *testing.T, got VersionInfo) {
+	t.Helper()
+
+	var original *VersionInfo
+	for i := range supportedVersions {
+		if supportedVersions[i].Name == got.Name {
+			original = &supportedVersions[i]
+			break
+		}
+	}
+	if original == nil {
+		t.Fatalf("returned version %s is not in supportedVersions", got.Name)
+	}
+
+	originalChart := original.Charts[0]
+	originalNumber := original.Version.String()
+	assert.NotSame(t, original.Version, got.Version)
+
+	got.Charts[0] = "changed"
+	mutated, err := got.Version.SetPrerelease("alpha")
+	assert.NoError(t, err)
+	*got.Version = mutated
+
+	assert.Equal(t, originalChart, original.Charts[0])
+	assert.Equal(t, originalNumber, original.Version.String())
 }

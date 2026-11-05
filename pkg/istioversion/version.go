@@ -93,9 +93,15 @@ func EOLVersions() []string {
 	return slices.Clone(eolVersionNames)
 }
 
+// copyVersionInfo returns a VersionInfo that does not share its Charts slice
+// or its semver value with in. Editing either on the result leaves in unchanged.
 func copyVersionInfo(in VersionInfo) VersionInfo {
 	out := in
 	out.Charts = slices.Clone(in.Charts)
+	if in.Version != nil {
+		cloned := *in.Version
+		out.Version = &cloned
+	}
 	return out
 }
 
@@ -232,7 +238,9 @@ func allLatestPatchVersions() []VersionInfo {
 		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
 		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
 		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
-			latestPatchVersions[majorMinorVersion] = version
+			// Copy here so every helper built on this list hands out values
+			// whose Charts slice and semver value are independent of supportedVersions.
+			latestPatchVersions[majorMinorVersion] = copyVersionInfo(version)
 		}
 	}
 	latestSlice := slices.Collect(maps.Values(latestPatchVersions))
