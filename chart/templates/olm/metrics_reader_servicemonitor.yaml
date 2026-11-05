@@ -4,6 +4,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ .Values.name }}-metrics-monitor
+  namespace: {{ .Release.Namespace }}
   labels:
     release: {{ .Values.metrics.helm.releaseName }}  # match Prometheus serviceMonitorSelector
     app.kubernetes.io/component: {{ .Values.name }}
