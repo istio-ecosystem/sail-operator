@@ -26,8 +26,10 @@ const (
 // TargetReference identifies a resource that the integration configures.
 type TargetReference struct {
 	// Kind is the kind of the target resource.
+	// Currently only Istio is supported; additional kinds may be added as more
+	// integration types are implemented.
 	//
-	// +kubebuilder:validation:Enum=Istio;Kiali;Perses
+	// +kubebuilder:validation:Enum=Istio
 	// +kubebuilder:validation:Required
 	Kind string `json:"kind"`
 
@@ -39,7 +41,7 @@ type TargetReference struct {
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the target resource.
-	// Only required for namespace-scoped resources like Kiali.
+	// Only required for namespace-scoped resources.
 	//
 	// +kubebuilder:validation:MaxLength=63
 	Namespace string `json:"namespace,omitempty"`
@@ -103,12 +105,13 @@ type ClusterObservabilityOperatorConfig struct {
 	MonitoringStackRef NamespacedReference `json:"monitoringStackRef"`
 }
 
-// MetricsIntegrationSpec defines the desired state of MetricsIntegration
+// MetricsIntegrationSpec defines the desired state of MetricsIntegration.
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'UserWorkloadMonitoring' ? has(self.userWorkloadMonitoring) : true",message="userWorkloadMonitoring is required when type is UserWorkloadMonitoring"
-// +kubebuilder:validation:XValidation:rule="self.type == 'ClusterObservabilityOperator' ? has(self.clusterObservabilityOperator) : true",message="clusterObservabilityOperator is required when type is ClusterObservabilityOperator"
-// +kubebuilder:validation:XValidation:rule="self.type != 'UserWorkloadMonitoring' || !has(self.clusterObservabilityOperator)",message="clusterObservabilityOperator must not be set when type is UserWorkloadMonitoring"
-// +kubebuilder:validation:XValidation:rule="self.type != 'ClusterObservabilityOperator' || !has(self.userWorkloadMonitoring)",message="userWorkloadMonitoring must not be set when type is ClusterObservabilityOperator"
+// Discriminated union: one rule per type/field pair
+// (has(<field>) == (self.type == '<Type>')).
+//
+// +kubebuilder:validation:XValidation:rule="has(self.userWorkloadMonitoring) == (self.type == 'UserWorkloadMonitoring')",message="userWorkloadMonitoring must be set if and only if type is UserWorkloadMonitoring"
+// +kubebuilder:validation:XValidation:rule="has(self.clusterObservabilityOperator) == (self.type == 'ClusterObservabilityOperator')",message="clusterObservabilityOperator must be set if and only if type is ClusterObservabilityOperator"
 type MetricsIntegrationSpec struct {
 	// TargetRefs specifies the resources that this integration configures.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=2,displayName="Target References"

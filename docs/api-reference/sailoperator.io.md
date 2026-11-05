@@ -4040,7 +4040,11 @@ MetricsIntegrationList contains a list of MetricsIntegrations
 
 
 
-MetricsIntegrationSpec defines the desired state of MetricsIntegration
+MetricsIntegrationSpec defines the desired state of MetricsIntegration.
+
+
+Discriminated union: one rule per type/field pair
+(has(<field>) == (self.type == '<Type>')).
 
 
 
@@ -4122,9 +4126,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `kind` _string_ | Kind is the kind of the target resource. |  | Enum: [Istio Kiali Perses]  Required: \{\}   |
+| `kind` _string_ | Kind is the kind of the target resource. Currently only Istio is supported; additional kinds may be added as more integration types are implemented. |  | Enum: [Istio]  Required: \{\}   |
 | `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
-| `namespace` _string_ | Namespace is the namespace of the target resource. Only required for namespace-scoped resources like Kiali. |  | MaxLength: 63   |
+| `namespace` _string_ | Namespace is the namespace of the target resource. Only required for namespace-scoped resources. |  | MaxLength: 63   |
 
 
 #### UserWorkloadMonitoringConfig
