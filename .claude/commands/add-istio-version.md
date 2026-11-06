@@ -318,10 +318,10 @@ make gen
 When this branch is the **active OLM release branch** or the user confirmed in Step 7 that they plan to ship a new Sail Operator version from it (`PREVIOUS_VERSION` was updated):
 
 1. Read the new `VERSION` from `Makefile.core.mk` on the working branch.
-2. Dedupe — search for an open issue with that exact title:
+2. Dedupe — search for an existing issue (any state) with that exact title:
    ```bash
    TITLE="Release Sail Operator <VERSION>"
-   gh issue list --repo istio-ecosystem/sail-operator --state open \
+   gh issue list --repo istio-ecosystem/sail-operator --state all \
      --search "in:title \"${TITLE}\"" --json number,title,url \
      --jq ".[] | select(.title == \"${TITLE}\")"
    ```
