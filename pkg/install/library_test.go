@@ -68,14 +68,10 @@ func TestCRDOwnershipLabelEmptyValidation(t *testing.T) {
 }
 
 func TestValidateOptions(t *testing.T) {
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-
-	istioversion.Map = map[string]istioversion.VersionInfo{
-		"v1.0.0": {Name: "v1.0.0"},
+	eol := istioversion.EOLVersions()
+	if len(eol) == 0 {
+		t.Fatal("expected at least one end-of-life version")
 	}
-	istioversion.EOL = []string{"v0.9.0"}
 
 	tests := []struct {
 		name    string
@@ -84,12 +80,12 @@ func TestValidateOptions(t *testing.T) {
 	}{
 		{
 			name:    "valid options",
-			opts:    Options{Namespace: "istio-system", Version: "v1.0.0"},
+			opts:    Options{Namespace: "istio-system", Version: istioversion.Default},
 			wantErr: false,
 		},
 		{
 			name:    "empty namespace",
-			opts:    Options{Namespace: "", Version: "v1.0.0"},
+			opts:    Options{Namespace: "", Version: istioversion.Default},
 			wantErr: true,
 		},
 		{
@@ -104,7 +100,7 @@ func TestValidateOptions(t *testing.T) {
 		},
 		{
 			name:    "EOL version",
-			opts:    Options{Namespace: "istio-system", Version: "v0.9.0"},
+			opts:    Options{Namespace: "istio-system", Version: eol[0]},
 			wantErr: true,
 		},
 	}
@@ -148,18 +144,12 @@ func TestStop_noop(t *testing.T) {
 func TestUninstall_clearsStateAndAllowsReinstall(t *testing.T) {
 	g := NewWithT(t)
 
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-	istioversion.Map = map[string]istioversion.VersionInfo{"v1.0.0": {Name: "v1.0.0"}}
-	istioversion.EOL = nil
-
 	l := &Library{
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
 
 	// Simulate a successful install cycle: set desiredOpts and status.
-	opts := Options{Namespace: "istio-system", Version: "v1.0.0"}
+	opts := Options{Namespace: "istio-system", Version: istioversion.Default}
 	err := l.Apply(opts)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(l.generation).To(Equal(uint64(1)))
@@ -196,20 +186,11 @@ func TestUninstall_clearsStateAndAllowsReinstall(t *testing.T) {
 func TestApply_validationError(t *testing.T) {
 	g := NewWithT(t)
 
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-
-	istioversion.Map = map[string]istioversion.VersionInfo{
-		"v1.0.0": {Name: "v1.0.0"},
-	}
-	istioversion.EOL = nil
-
 	l := &Library{
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
 
-	err := l.Apply(Options{Namespace: "", Version: "v1.0.0"})
+	err := l.Apply(Options{Namespace: "", Version: istioversion.Default})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("namespace"))
 }
@@ -232,17 +213,11 @@ func TestEnqueue(t *testing.T) {
 func TestApply_skipsWhenOptionsUnchanged(t *testing.T) {
 	g := NewWithT(t)
 
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-	istioversion.Map = map[string]istioversion.VersionInfo{"v1.0.0": {Name: "v1.0.0"}}
-	istioversion.EOL = nil
-
 	l := &Library{
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
 
-	opts := Options{Namespace: "istio-system", Version: "v1.0.0"}
+	opts := Options{Namespace: "istio-system", Version: istioversion.Default}
 
 	err := l.Apply(opts)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -262,12 +237,6 @@ func TestApply_skipsWhenOptionsUnchanged(t *testing.T) {
 func TestApply_isolatesFromCallerMutation(t *testing.T) {
 	g := NewWithT(t)
 
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-	istioversion.Map = map[string]istioversion.VersionInfo{"v1.0.0": {Name: "v1.0.0"}}
-	istioversion.EOL = nil
-
 	l := &Library{
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
@@ -275,7 +244,7 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 	values := &v1.Values{Pilot: &v1.PilotConfig{Hub: new("original")}}
 	opts := Options{
 		Namespace: "istio-system",
-		Version:   "v1.0.0",
+		Version:   istioversion.Default,
 		Values:    values,
 	}
 
@@ -293,7 +262,7 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 	// caller's mutation above.
 	freshOpts := Options{
 		Namespace: "istio-system",
-		Version:   "v1.0.0",
+		Version:   istioversion.Default,
 		Values:    &v1.Values{Pilot: &v1.PilotConfig{Hub: new("original")}},
 	}
 	err = l.Apply(freshOpts)
@@ -305,20 +274,11 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 func TestApply_triggersWhenOptionsChange(t *testing.T) {
 	g := NewWithT(t)
 
-	savedMap := istioversion.Map
-	savedEOL := istioversion.EOL
-	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
-	istioversion.Map = map[string]istioversion.VersionInfo{
-		"v1.0.0": {Name: "v1.0.0"},
-		"v1.1.0": {Name: "v1.1.0"},
-	}
-	istioversion.EOL = nil
-
 	l := &Library{
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
 
-	err := l.Apply(Options{Namespace: "istio-system", Version: "v1.0.0"})
+	err := l.Apply(Options{Namespace: "istio-system", Version: istioversion.Default})
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(l.generation).To(Equal(uint64(1)))
 
@@ -326,7 +286,7 @@ func TestApply_triggersWhenOptionsChange(t *testing.T) {
 	<-l.triggerCh
 
 	// Apply different options — should trigger
-	err = l.Apply(Options{Namespace: "istio-system", Version: "v1.1.0"})
+	err = l.Apply(Options{Namespace: "istio-system", Version: istioversion.Base})
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(l.generation).To(Equal(uint64(2)))
 	g.Expect(l.triggerCh).To(HaveLen(1))

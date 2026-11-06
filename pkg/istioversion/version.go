@@ -60,10 +60,10 @@ type VersionInfo struct {
 }
 
 var (
-	// List contains all supported versions. Does not include aliases
-	List []VersionInfo
-	// Map contains version info mapped by version name. Includes mappings for aliases
-	Map map[string]VersionInfo
+	// supportedVersions contains all supported versions. Does not include aliases.
+	supportedVersions []VersionInfo
+	// versionsByName contains version info mapped by version name. Includes mappings for aliases.
+	versionsByName map[string]VersionInfo
 	// Default is the default version
 	Default string
 	// Base is the previous supported version
@@ -72,12 +72,63 @@ var (
 	New string
 	// aliasList is the alias for the version
 	aliasList []AliasInfo
-	// EOL is a list of version names that have gone out of support
-	EOL []string
+	// eolVersionNames is a list of version names that have gone out of support.
+	eolVersionNames []string
 )
 
+// SupportedVersions returns a copy of the installable Istio versions.
+// Aliases and end-of-life versions are omitted.
+func SupportedVersions() []VersionInfo {
+	return copyVersionList(supportedVersions)
+}
+
+// VersionsByName returns a copy of the version lookup map.
+// Alias names are included and point at the version they resolve to.
+func VersionsByName() map[string]VersionInfo {
+	return copyVersionMap(versionsByName)
+}
+
+// EOLVersions returns a copy of the version names that are past end of life.
+func EOLVersions() []string {
+	return slices.Clone(eolVersionNames)
+}
+
+// copyVersionInfo returns a VersionInfo that does not share its Charts slice
+// or its semver value with in. Editing either on the result leaves in unchanged.
+func copyVersionInfo(in VersionInfo) VersionInfo {
+	out := in
+	out.Charts = slices.Clone(in.Charts)
+	if in.Version != nil {
+		cloned := *in.Version
+		out.Version = &cloned
+	}
+	return out
+}
+
+func copyVersionList(in []VersionInfo) []VersionInfo {
+	if in == nil {
+		return nil
+	}
+	out := make([]VersionInfo, len(in))
+	for i := range in {
+		out[i] = copyVersionInfo(in[i])
+	}
+	return out
+}
+
+func copyVersionMap(in map[string]VersionInfo) map[string]VersionInfo {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]VersionInfo, len(in))
+	for key, value := range in {
+		out[key] = copyVersionInfo(value)
+	}
+	return out
+}
+
 func Resolve(version string) (string, error) {
-	info, ok := Map[version]
+	info, ok := versionsByName[version]
 	if !ok {
 		return "", fmt.Errorf("version %q not found", version)
 	}
@@ -92,7 +143,7 @@ func ValidateVersion(version string) error {
 	if version == "" {
 		return fmt.Errorf("version must not be empty")
 	}
-	if _, ok := Map[version]; !ok {
+	if _, ok := versionsByName[version]; !ok {
 		if IsEOLVersion(version) {
 			return fmt.Errorf("version %q is end-of-life and cannot be installed", version)
 		}
@@ -103,7 +154,7 @@ func ValidateVersion(version string) error {
 
 // IsEOLVersion returns true if the version is known but has been marked end-of-life.
 func IsEOLVersion(version string) bool {
-	return slices.Contains(EOL, version)
+	return slices.Contains(eolVersionNames, version)
 }
 
 func init() {
@@ -119,7 +170,7 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Base, New, Map, aliasList, EOL = mustParseVersionsYaml(data)
+	supportedVersions, Default, Base, New, versionsByName, aliasList, eolVersionNames = mustParseVersionsYaml(data)
 }
 
 func mustParseVersionsYaml(yamlBytes []byte) (
@@ -183,11 +234,13 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 // that need the full list (e.g. GetTwoConsecutiveMinorVersions).
 func allLatestPatchVersions() []VersionInfo {
 	latestPatchVersions := make(map[string]VersionInfo)
-	for _, version := range List {
+	for _, version := range supportedVersions {
 		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
 		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
 		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
-			latestPatchVersions[majorMinorVersion] = version
+			// Copy here so every helper built on this list hands out values
+			// whose Charts slice and semver value are independent of supportedVersions.
+			latestPatchVersions[majorMinorVersion] = copyVersionInfo(version)
 		}
 	}
 	latestSlice := slices.Collect(maps.Values(latestPatchVersions))
@@ -211,7 +264,7 @@ func GetLatestPatchVersions() []VersionInfo {
 
 // latestPatchVersionsFrom returns the latest patch version for every Major.Minor that is greater
 // than or equal to minVersion, sorted descending. EOL versions are never included, because they
-// are not part of List.
+// are not part of supportedVersions.
 func latestPatchVersionsFrom(minVersion *semver.Version) []VersionInfo {
 	var filtered []VersionInfo
 	for _, v := range allLatestPatchVersions() {
