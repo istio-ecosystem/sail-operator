@@ -4,12 +4,18 @@ name: Create release checklist issue
 # line), open a "Release Sail Operator <VERSION>" checklist (deduped by title).
 # Merges to older release-* branches are ignored.
 #
+# Uses pull_request_target (not pull_request) so GITHUB_TOKEN retains issues:write
+# for PRs from forks — every real Add Istio PR is opened from a fork.
+# Safe here because we only run after merge and never check out PR head code:
+# checkout is the base branch (workflow + script + template); VERSION is read
+# via the API from merge_commit_sha.
+#
 # Backport this workflow to the current latest release-* branch after it lands
 # on main (and again when a new minor release branch becomes latest).
 # Use workflow_dispatch for a dry-run test from any branch that has this file.
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches:
       - 'release-*'
@@ -42,16 +48,17 @@ jobs:
     name: Create release checklist
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.merged == true
+      (github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.title, 'Add Istio'))
     runs-on: ubuntu-latest
     permissions:
       issues: write
       contents: read
       pull-requests: read
     steps:
-      # Always checkout the ref that contains this workflow (script + template).
-      # VERSION is resolved from the Add Istio PR ref separately below so
-      # workflow_dispatch from main can dry-run against a release-* PR.
+      # Checkout the base branch only (pull_request_target default). Never check
+      # out the PR head. VERSION is resolved from the merge commit via the API
+      # below so workflow_dispatch from main can dry-run against a release-* PR.
       - name: Check out workflow ref
         uses: actions/checkout@v4
         with:

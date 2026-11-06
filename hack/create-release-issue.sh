@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+
+# Copyright Istio Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Create (or dry-run) a "Release Sail Operator <VERSION>" checklist issue.
 #
 # Used by .github/workflows/create-release-issue.yaml and /add-istio-version.
@@ -150,9 +165,11 @@ fi
 echo "Parsed VERSION=${VERSION}"
 
 TITLE="Release Sail Operator ${VERSION}"
+# Dedupe across all states so a closed checklist for the same VERSION is not
+# recreated on re-runs; reopen the existing issue if a redo is needed.
 EXISTING=$(gh issue list \
   --repo "${REPO}" \
-  --state open \
+  --state all \
   --search "in:title \"${TITLE}\"" \
   --json number,title,url \
   --jq ".[] | select(.title == \"${TITLE}\") | \"\(.number)\t\(.url)\"" \
@@ -160,7 +177,7 @@ EXISTING=$(gh issue list \
 if [[ -n "${EXISTING}" ]]; then
   EXISTING_NUM="${EXISTING%%$'\t'*}"
   EXISTING_URL="${EXISTING#*$'\t'}"
-  echo "Open issue #${EXISTING_NUM} already exists with title \"${TITLE}\"; skipping."
+  echo "Issue #${EXISTING_NUM} already exists with title \"${TITLE}\"; skipping."
   echo "Existing: ${EXISTING_URL}"
   exit 0
 fi
@@ -180,18 +197,34 @@ awk '
   { print }
 ' "${TEMPLATE}" | sed "s|ADD_ISTIO_PR_URL|${PR_URL}|g" > "${BODY_FILE}"
 
+LABELS=("automated" "release")
+
 if [[ "${DRY_RUN}" == true ]]; then
   echo "DRY_RUN=true — would create issue:"
-  echo "  repo:  ${REPO}"
-  echo "  title: ${TITLE}"
-  echo "  pr:    ${PR_URL}"
+  echo "  repo:   ${REPO}"
+  echo "  title:  ${TITLE}"
+  echo "  pr:     ${PR_URL}"
+  echo "  labels: ${LABELS[*]}"
   echo "  body:"
   sed 's/^/    /' "${BODY_FILE}"
   exit 0
 fi
 
+# Ensure the release label exists (automated already does). Matches
+# validate_ztunnel_values / brokenlinks, which attach workflow-specific labels.
+gh label create release \
+  --repo "${REPO}" \
+  --description "Release checklist / process" \
+  --color "0E8A16" >/dev/null 2>&1 || true
+
+label_args=()
+for label in "${LABELS[@]}"; do
+  label_args+=(--label "${label}")
+done
+
 ISSUE_URL=$(gh issue create \
   --repo "${REPO}" \
   --title "${TITLE}" \
-  --body-file "${BODY_FILE}")
+  --body-file "${BODY_FILE}" \
+  "${label_args[@]}")
 echo "Created ${ISSUE_URL} for PR: ${PR_TITLE:-${PR_URL}}"
