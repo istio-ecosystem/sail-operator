@@ -313,6 +313,31 @@ make gen
 - `FORK_OWNER` was determined in Step 1 from the fork remote URL
 - Save the PR URL for the final summary
 
+### 16b. Create release checklist issue (OLM / planned-release branches only)
+
+When this branch is the **active OLM release branch** or the user confirmed in Step 7 that they plan to ship a new Sail Operator version from it (`PREVIOUS_VERSION` was updated):
+
+1. Read the new `VERSION` from `Makefile.core.mk` on the working branch.
+2. Dedupe — search for an existing issue (any state) with that exact title:
+   ```bash
+   TITLE="Release Sail Operator <VERSION>"
+   gh issue list --repo istio-ecosystem/sail-operator --state all \
+     --search "in:title \"${TITLE}\"" --json number,title,url \
+     --jq ".[] | select(.title == \"${TITLE}\")"
+   ```
+3. If none exists, create one via the shared helper (same path as the GitHub Action):
+   ```bash
+   ./hack/create-release-issue.sh \
+     --pr-url <PR_URL> \
+     --base-branch release-X.YY \
+     --version <VERSION> \
+     --repo istio-ecosystem/sail-operator
+   ```
+   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). The helper skips unless that branch is the latest `release-X.Y` (active OLM line), unless the user is intentionally releasing from an older line — then pass `--force`.
+4. Save the issue URL (or note that it already existed) for the Phase 3 summary.
+
+Skip this step for branches that are only receiving Istio version support without an OLM release. The merge workflow also creates a checklist **only** for the latest `release-X.Y` branch (see `.github/workflows/create-release-issue.yaml`).
+
 ---
 
 ### Phase 3: Summary
@@ -325,7 +350,7 @@ make gen
   ```bash
   git checkout <original-branch>
   ```
-- Show a per-branch summary including PR links, e.g.:
+- Show a per-branch summary including PR links and any release checklist issue, e.g.:
   ```
   === Cross-Branch Summary ===
 
@@ -336,6 +361,7 @@ make gen
     PREVIOUS_VERSION: 1.29.2 → 1.30.0
     go.mod: istio.io/client-go v1.30.3, istio.io/istio@1.30.3
     PR: https://github.com/istio-ecosystem/sail-operator/pull/XXXX
+    Release issue: https://github.com/istio-ecosystem/sail-operator/issues/YYYY
 
   release-1.29:
     Branch: release-1.29_add_istio_1.29.6
@@ -343,7 +369,8 @@ make gen
     VERSION: 1.29.2 → 1.29.6
     PREVIOUS_VERSION: unchanged
     go.mod: istio.io/client-go v1.29.6, istio.io/istio@1.29.6
-    PR: https://github.com/istio-ecosystem/sail-operator/pull/YYYY
+    PR: https://github.com/istio-ecosystem/sail-operator/pull/ZZZZ
+    Release issue: (skipped — not the latest release branch)
   ```
 - If any branches were skipped due to failures, list them with the reason
 
@@ -361,3 +388,4 @@ make gen
 - **Upstream releases are fetched once**: The list of upstream Istio releases from GitHub is fetched once in Step 3 and reused across all branches to avoid redundant API calls
 - **Remote names are detected dynamically**: The upstream remote is identified by matching the URL `istio-ecosystem/sail-operator`, not by assuming the name `upstream`. The fork remote is similarly auto-detected. This ensures the skill works regardless of how users name their remotes.
 - **Temporary branches are created from the upstream remote**: Each working branch (e.g., `release-1.30_add_istio_1.30.3`) is created directly from `<UPSTREAM_REMOTE>/release-X.YY`, not from a local branch, to ensure it's based on the latest upstream code
+- **Release checklist issues**: For the OLM / planned-release branch, Step 16b opens `Release Sail Operator <VERSION>` early (deduped). On merge, `.github/workflows/create-release-issue.yaml` creates the same checklist **only** when the PR base is the latest `release-X.Y` branch. Template: `.github/ISSUE_TEMPLATE/release-checklist.md`

@@ -1,0 +1,129 @@
+name: Create release checklist issue
+
+# When an "Add Istio" PR merges to the latest release-X.Y branch (active OLM
+# line), open a "Release Sail Operator <VERSION>" checklist (deduped by title).
+# Merges to older release-* branches are ignored.
+#
+# Uses pull_request_target (not pull_request) so GITHUB_TOKEN retains issues:write
+# for PRs from forks — every real Add Istio PR is opened from a fork.
+# Safe here because we only run after merge and never check out PR head code:
+# checkout is the base branch (workflow + script + template); VERSION is read
+# via the API from merge_commit_sha.
+#
+# Backport this workflow to the current latest release-* branch after it lands
+# on main (and again when a new minor release branch becomes latest).
+# Use workflow_dispatch for a dry-run test from any branch that has this file.
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches:
+      - 'release-*'
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Add Istio PR number or URL to link in the checklist"
+        required: true
+        type: string
+      version:
+        description: "Optional VERSION override (default: Makefile.core.mk on the PR merge/base ref)"
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: "Print what would be created; do not open an issue"
+        type: boolean
+        required: false
+        default: true
+      force:
+        description: "Create even if the PR base is not the latest release-* branch"
+        type: boolean
+        required: false
+        default: false
+
+permissions: {}
+
+jobs:
+  create-release-issue:
+    name: Create release checklist
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.title, 'Add Istio'))
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      pull-requests: read
+    steps:
+      # Checkout the base branch only (pull_request_target default). Never check
+      # out the PR head. VERSION is resolved from the merge commit via the API
+      # below so workflow_dispatch from main can dry-run against a release-* PR.
+      - name: Check out workflow ref
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create release checklist issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR_INPUT: ${{ inputs.pr }}
+          VERSION_OVERRIDE: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+          PR_URL_EVENT: ${{ github.event.pull_request.html_url }}
+          PR_TITLE_EVENT: ${{ github.event.pull_request.title }}
+          PR_BASE_EVENT: ${{ github.event.pull_request.base.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            PR_JSON=$(gh pr view "${PR_INPUT}" --repo "${REPO}" \
+              --json url,title,mergeCommit,baseRefName)
+            PR_URL=$(jq -r '.url' <<< "${PR_JSON}")
+            PR_TITLE=$(jq -r '.title' <<< "${PR_JSON}")
+            MERGE_COMMIT=$(jq -r '.mergeCommit.oid // empty' <<< "${PR_JSON}")
+            BASE_REF=$(jq -r '.baseRefName' <<< "${PR_JSON}")
+            VERSION_REF="${MERGE_COMMIT:-${BASE_REF}}"
+          else
+            PR_URL="${PR_URL_EVENT}"
+            PR_TITLE="${PR_TITLE_EVENT}"
+            BASE_REF="${PR_BASE_EVENT}"
+            VERSION_REF="${MERGE_SHA}"
+          fi
+
+          args=(
+            --pr-url "${PR_URL}"
+            --pr-title "${PR_TITLE}"
+            --base-branch "${BASE_REF}"
+            --repo "${REPO}"
+          )
+
+          if [[ -n "${VERSION_OVERRIDE:-}" ]]; then
+            args+=(--version "${VERSION_OVERRIDE}")
+          else
+            # Read VERSION from the PR's merge commit (or base branch if unmerged).
+            VERSION=$(gh api "repos/${REPO}/contents/Makefile.core.mk?ref=${VERSION_REF}" \
+              --jq '.content' | base64 -d | grep -E '^VERSION \?=' | head -1 \
+              | sed -E 's/^VERSION \?=[[:space:]]*//')
+            if [[ -z "${VERSION}" ]]; then
+              echo "Could not parse VERSION from Makefile.core.mk at ref ${VERSION_REF}"
+              exit 1
+            fi
+            echo "VERSION ${VERSION} from ref ${VERSION_REF}"
+            args+=(--version "${VERSION}")
+          fi
+
+          # workflow_dispatch defaults dry_run=true; merged PRs always create
+          # (when base is the latest release-* branch).
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DRY_RUN}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${FORCE}" == "true" ]]; then
+            args+=(--force)
+          fi
+
+          ./hack/create-release-issue.sh "${args[@]}"
