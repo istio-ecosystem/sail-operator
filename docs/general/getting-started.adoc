@@ -13,6 +13,7 @@ link:../README.adoc[Return to Project Root]
 == Table of Contents
 
 * <<getting-started,Getting Started>>
+** <<rbac-and-trust-model,RBAC and Trust Model>>
 ** <<installation-on-openshift,Installation on OpenShift>>
 *** <<installing-through-the-web-console,Installing through the web console>>
 *** <<installing-using-the-cli,Installing using the CLI>>
@@ -30,6 +31,15 @@ link:../README.adoc[Return to Project Root]
 *** <<decide-whether-you-want-to-delete-the-crds-as-well,Decide whether you want to delete the CRDs as well>>
 
 [[getting-started]]
+
+[[rbac-and-trust-model]]
+== RBAC and Trust Model
+
+The `Istio`, `IstioRevision`, `IstioCNI`, and `ZTunnel` resources are cluster-scoped, and the operator's own `ServiceAccount` is granted broad, cluster-wide permissions (including the ability to create and bind `RoleBinding`/`ClusterRoleBinding` objects, deploy privileged workloads, and manage `Secret`/`ServiceAccount` objects in any namespace) so that it can reconcile the control plane into whatever namespace `spec.namespace` names.
+
+Because of this, granting a user permission to create or update these resources is equivalent to granting that user `cluster-admin`: they can direct the operator's elevated privileges at any namespace in the cluster, including namespaces they otherwise have no access to. Do not delegate `create`/`update` permissions on `Istio`, `IstioRevision`, `IstioCNI`, or `ZTunnel` to any user that is not already fully trusted at the cluster-admin level.
+
+NOTE: `IstioRevision` resources are normally created and managed by the `Istio` controller rather than directly by users, but the same trust model applies since nothing prevents a user with sufficient RBAC from creating one directly.
 
 [[installation-on-openshift]]
 == Installation on OpenShift
