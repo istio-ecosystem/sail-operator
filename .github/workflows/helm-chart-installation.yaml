@@ -1,0 +1,296 @@
+name: Validate Helm chart installation
+
+on:
+  # The PRs target gh-pages, which does not contain workflow files. GitHub loads
+  # pull_request_target workflows from the default branch. This job only consumes
+  # PR metadata and a published chart artifact; it never checks out PR contents.
+  pull_request_target:
+    branches:
+      - gh-pages
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  install-chart:
+    # Any same-repo PR to gh-pages is considered; whether there is actually a new
+    # chart to test is decided from the index.yaml diff, not from the branch name.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    name: Install chart and run smoke e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    env:
+      # Repository that owns the release assets and the release-x.y branch under
+      # test. Defaults to the repository running the workflow. A fork without its
+      # own release pipeline can set the CHART_SOURCE_REPOSITORY variable (repo
+      # Settings -> Secrets and variables -> Actions -> Variables) to e.g.
+      # istio-ecosystem/sail-operator to exercise the gate against upstream
+      # artifacts while keeping index.yaml in the fork.
+      CHART_SOURCE_REPOSITORY: ${{ vars.CHART_SOURCE_REPOSITORY || github.repository }}
+
+    steps:
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v4.3.1
+
+      - name: Read chart from the proposed index
+        id: chart
+        shell: bash
+        env:
+          # index.yaml always comes from the PR itself; the chart assets may come
+          # from another repository when CHART_SOURCE_REPOSITORY is set.
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PROPOSED_INDEX: ${{ runner.temp }}/proposed-index.yaml
+          CURRENT_INDEX: ${{ runner.temp }}/current-index.yaml
+        run: |
+          set -euo pipefail
+
+          fetch_index() {
+            curl --fail --location --retry 3 --retry-delay 5 --retry-connrefused \
+              "https://raw.githubusercontent.com/${REPOSITORY}/$1/index.yaml" \
+              --output "$2"
+          }
+
+          fetch_index "${HEAD_SHA}" "${PROPOSED_INDEX}"
+          # Compare against the current tip of the base branch rather than the base
+          # sha recorded in the webhook payload: that sha goes stale as soon as the
+          # base branch moves, which would hide or invent an added version.
+          # A brand new gh-pages branch may not have an index.yaml yet; treat that
+          # as "nothing published so far" rather than failing the gate.
+          fetch_index "${BASE_REF}" "${CURRENT_INDEX}" || : > "${CURRENT_INDEX}"
+
+          ruby -r yaml - <<'RUBY'
+          # A hand-edited entry that loses its "- " list marker merges into its
+          # neighbour: YAML keeps the last of each duplicated key, so one chart
+          # silently disappears and the file still parses. Reject that explicitly.
+          def reject_duplicate_keys!(path)
+            Psych.parse_stream(File.read(path), filename: path).each do |doc|
+              doc.each do |node|
+                next unless node.is_a?(Psych::Nodes::Mapping)
+                keys = node.children.each_slice(2).map { |k, _| k.respond_to?(:value) ? k.value : nil }.compact
+                dupes = keys.tally.select { |_, count| count > 1 }.keys
+                next if dupes.empty?
+                abort "::error file=index.yaml,line=#{node.start_line + 1}::index.yaml has an entry with " \
+                      "duplicate keys (#{dupes.join(', ')}) starting at line #{node.start_line + 1}. " \
+                      "This usually means a chart entry is missing its leading \"- \", merging two entries into one."
+              end
+            end
+          end
+
+          def chart_entries(path)
+            return [] if !File.exist?(path) || File.size(path).zero?
+            index = YAML.safe_load_file(path, aliases: false)
+            entries = index.is_a?(Hash) ? index.dig("entries", "sail-operator") : nil
+            entries.is_a?(Array) ? entries : []
+          end
+
+          proposed_raw = File.exist?(ENV.fetch("PROPOSED_INDEX")) ? File.read(ENV.fetch("PROPOSED_INDEX")) : ""
+          current_raw = File.exist?(ENV.fetch("CURRENT_INDEX")) ? File.read(ENV.fetch("CURRENT_INDEX")) : ""
+
+          if proposed_raw == current_raw
+            # The PR leaves index.yaml untouched (docs, CNAME, ...): nothing to install.
+            puts "::notice::This PR does not modify index.yaml; skipping the chart install gate."
+            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") { |o| o.puts "should_test=false" }
+            exit 0
+          end
+
+          reject_duplicate_keys!(ENV.fetch("PROPOSED_INDEX"))
+          proposed = chart_entries(ENV.fetch("PROPOSED_INDEX"))
+          abort "::error::index.yaml has no sail-operator entries" if proposed.empty?
+          current = chart_entries(ENV.fetch("CURRENT_INDEX"))
+
+          # The chart under test is whatever this PR adds to index.yaml. The diff
+          # against the base branch is the source of truth: not the branch name
+          # (a convention a human can deviate from) and not the entry ordering
+          # (an implementation detail of `helm repo index`).
+          published = current.map { |e| e["version"].to_s }
+          added = proposed.reject { |e| published.include?(e["version"].to_s) }
+
+          if added.empty?
+            # index.yaml changed but adds no version: an edited digest or URL on an
+            # already published chart. Installing it proves nothing about the edit,
+            # and silently passing would be worse than saying so.
+            abort "::error::index.yaml was modified but adds no new sail-operator version " \
+                  "(#{published.length} already published, newest: #{published.max_by { |v| Gem::Version.new(v) rescue Gem::Version.new('0') }}). " \
+                  "This gate can only validate a newly added chart."
+          elsif added.length > 1
+            versions = added.map { |e| e["version"].to_s }.join(", ")
+            abort "::error::This PR adds #{added.length} chart versions (#{versions}); expected exactly one."
+          end
+
+          entry = added.first
+          version = entry["version"].to_s
+          version_match = version.match(/\Av?([0-9]+)\.([0-9]+)\.([0-9]+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/)
+          unless version_match
+            abort "::error::Added chart version #{version.inspect} is not a semver x.y.z version, " \
+                  "so the matching release-x.y branch cannot be determined."
+          end
+
+          urls = Array(entry["urls"])
+          abort "::error::Expected exactly one chart URL, found #{urls.length}" unless urls.length == 1
+
+          url = urls.first
+          # Only ever download from the chart source repository's own releases.
+          source_repo = ENV.fetch("CHART_SOURCE_REPOSITORY")
+          release_prefix = "#{ENV.fetch('SERVER_URL').chomp('/')}/#{source_repo}/releases/download"
+          match = url.match(%r{\A#{Regexp.escape(release_prefix)}/([^/]+)/sail-operator-([^/]+)\.tgz\z})
+          normalized_version = version.delete_prefix("v")
+
+          # Report the three failure causes separately: they need different fixes.
+          unless match
+            abort "::error::Chart URL #{url} is not a release asset of #{source_repo}. " \
+                  "Set the CHART_SOURCE_REPOSITORY variable if the assets live in another repository."
+          end
+          unless match[1] == match[2]
+            abort "::error::Chart URL #{url} is inconsistent: release tag #{match[1]} " \
+                  "but asset file for version #{match[2]}."
+          end
+          unless match[1] == normalized_version
+            abort "::error::index.yaml entry declares version #{version.inspect} but its URL " \
+                  "points at version #{match[1]}: #{url}"
+          end
+
+          digest = entry.fetch("digest", "").to_s
+          abort "::error::Missing or invalid chart digest in index.yaml" unless digest.match?(/\A[0-9a-fA-F]{64}\z/)
+
+          File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |output|
+            output.puts "url=#{url}"
+            output.puts "digest=#{digest.downcase}"
+            output.puts "version=#{version}"
+            output.puts "release_branch=release-#{version_match[1]}.#{version_match[2]}"
+            output.puts "should_test=true"
+          end
+          RUBY
+
+      - name: Download chart from proposed index
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        env:
+          CHART_URL: ${{ steps.chart.outputs.url }}
+          CHART_DIGEST: ${{ steps.chart.outputs.digest }}
+        run: |
+          set -euo pipefail
+          chart_file="${RUNNER_TEMP}/sail-operator-chart.tgz"
+          curl --fail --location --retry 3 --retry-delay 5 --retry-connrefused \
+            "${CHART_URL}" \
+            --output "${chart_file}"
+
+          actual_digest="$(sha256sum "${chart_file}" | cut -d ' ' -f1)"
+          if [[ "${actual_digest}" != "${CHART_DIGEST}" ]]; then
+            echo "::error::Chart digest does not match the proposed index.yaml"
+            exit 1
+          fi
+
+      - name: Check out release branch for chart ${{ steps.chart.outputs.version }}
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: ${{ env.CHART_SOURCE_REPOSITORY }}
+          ref: ${{ steps.chart.outputs.release_branch }}
+          persist-credentials: false
+
+      - name: Set up Go
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install kind
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        run: |
+          set -euo pipefail
+          # The e2e scripts assume kind is already on PATH (true for Prow images,
+          # not for GitHub-hosted runners). Install the latest release rather than
+          # a pinned one: the release branch pins a very recent kindest/node image
+          # (see KIND_IMAGE in Makefile.core.mk) that older kind binaries reject.
+          GOBIN="${RUNNER_TEMP}/bin" go install sigs.k8s.io/kind@latest
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Verify release branch supports the e2e knobs used by this job
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        env:
+          RELEASE_BRANCH: ${{ steps.chart.outputs.release_branch }}
+        run: |
+          set -euo pipefail
+
+          # Only the newest release-x.y branch publishes a chart, so it is always
+          # expected to carry these knobs. Fail loudly if it does not: without
+          # HELM_CHART_PATH the suite would silently install the branch's source
+          # chart with a local image that was never built (SKIP_BUILD=true), and
+          # the job would fail with an opaque ImagePullBackOff instead.
+          script="tests/e2e/common-operator-integ-suite.sh"
+          missing=()
+          for knob in HELM_CHART_PATH GINKGO_LABEL_FILTER GINKGO_TIMEOUT OPERATOR_DEPLOY_TIMEOUT E2E_VERSIONS_LIMIT; do
+            grep -rq "${knob}" "${script}" tests/e2e pkg/istioversion || missing+=("${knob}")
+          done
+
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Branch ${RELEASE_BRANCH} does not support: ${missing[*]}. Backport the e2e changes to ${RELEASE_BRANCH} before this chart can be gated."
+            exit 1
+          fi
+
+      - name: Run KinD smoke e2e tests
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        id: e2e
+        env:
+          ARTIFACTS: ${{ github.workspace }}/out/helm-chart-e2e-artifacts
+          BUILD_WITH_CONTAINER: "0"
+          CI: "true"
+          E2E_VERSIONS_LIMIT: "1"
+          GINKGO_LABEL_FILTER: 'smoke && (operator || sidecar || ambient) && !tls-profile'
+          GINKGO_TIMEOUT: 45m
+          HELM_CHART_PATH: ${{ runner.temp }}/sail-operator-chart.tgz
+          OPERATOR_DEPLOY_TIMEOUT: 10m
+          SKIP_BUILD: "true"
+        run: |
+          mkdir -p "${ARTIFACTS}"
+          make test.e2e.kind
+
+      - name: Publish KinD smoke test results
+        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2.25.0
+        # Only report when the suite actually ran. If an earlier step failed (bad
+        # index, unsupported release branch), there is no report and a neutral check
+        # plus an empty artifact only hide the real error.
+        if: ${{ !cancelled() && steps.e2e.conclusion != 'skipped' }}
+        with:
+          files: out/helm-chart-e2e-artifacts/report.xml
+          commit: ${{ github.event.pull_request.head.sha }}
+          check_name: Helm chart smoke e2e
+          # Must be quoted: unquoted `off` is YAML boolean false, which the action rejects.
+          comment_mode: "off"
+          pull_request_build: commit
+          check_run: true
+          job_summary: true
+
+      - name: Capture KinD state on failure
+        if: ${{ failure() && steps.e2e.conclusion == 'failure' }}
+        env:
+          KUBECONFIG: ${{ github.workspace }}/out/helm-chart-e2e-artifacts/config
+        run: |
+          kubectl get nodes -o wide || true
+          kubectl get pods -A -o wide || true
+          kubectl get events -A --sort-by=.lastTimestamp | tail -100 || true
+          kubectl logs -n sail-operator deployment/sail-operator --all-containers=true --tail=200 || true
+
+      - name: Upload KinD smoke artifacts
+        if: ${{ !cancelled() && steps.e2e.conclusion != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helm-chart-kind-smoke
+          # Upload the whole artifacts dir (kind logs, operator logs), not just the
+          # JUnit report — the extra files are what you need when the gate fails.
+          path: |
+            out/helm-chart-e2e-artifacts
+            !out/helm-chart-e2e-artifacts/config
+          if-no-files-found: warn
