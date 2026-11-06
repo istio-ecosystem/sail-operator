@@ -1,0 +1,7 @@
+category: fixed
+title: Keep Helm value merges from changing the input maps
+description: |
+  MergeOverwrite wrote into the base map and reused nested maps from the
+  overrides. A caller that still held either map could see those values
+  change. The merge now returns a copy and leaves both inputs unchanged.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2099
