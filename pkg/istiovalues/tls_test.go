@@ -265,6 +265,9 @@ func TestApplyTLSConfig(t *testing.T) {
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				MinVersion:   tls.VersionTLS13,
 				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
+					// Matches the group list of every predefined OpenShift profile
+					// (Old, Intermediate and Modern all specify these four).
 					TLSProfileSpec: configv1.TLSProfileSpec{
 						Groups: []configv1.TLSGroup{
 							configv1.TLSGroupX25519MLKEM768,
@@ -329,6 +332,7 @@ func TestApplyTLSConfig(t *testing.T) {
 					TlsDefaults: &v1.MeshConfigTLSConfig{
 						CipherSuites:       nil,
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+						EcdhCurves:         defaultECDHCurves,
 					},
 					DefaultConfig: &v1.MeshConfigProxyConfig{
 						ProxyMetadata: map[string]string{
@@ -370,6 +374,7 @@ func TestApplyTLSConfig(t *testing.T) {
 					TlsDefaults: &v1.MeshConfigTLSConfig{
 						CipherSuites:       nil,
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+						EcdhCurves:         defaultECDHCurves,
 					},
 					DefaultConfig: &v1.MeshConfigProxyConfig{
 						ProxyMetadata: map[string]string{
@@ -410,6 +415,7 @@ func TestApplyTLSConfig(t *testing.T) {
 					TlsDefaults: &v1.MeshConfigTLSConfig{
 						CipherSuites:       nil,
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+						EcdhCurves:         defaultECDHCurves,
 					},
 					DefaultConfig: &v1.MeshConfigProxyConfig{
 						DiscoveryAddress: new("istiod.custom-ns.svc:15012"),
@@ -444,6 +450,7 @@ func TestApplyTLSConfig(t *testing.T) {
 					TlsDefaults: &v1.MeshConfigTLSConfig{
 						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+						EcdhCurves:         defaultECDHCurves,
 					},
 					DefaultConfig: &v1.MeshConfigProxyConfig{
 						ProxyMetadata: map[string]string{
@@ -456,6 +463,142 @@ func TestApplyTLSConfig(t *testing.T) {
 						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 						"--tls-min-version=1.2",
 					},
+				},
+			},
+		},
+		{
+			// tlsAdherence NoOpinion leaves CipherSuites empty, so the cipher-driven
+			// configuration is skipped, but the hybrid group must still be offered.
+			name: "applies default ECDH curves on OpenShift when the TLS profile is not honored",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: defaultECDHCurves,
+					},
+				},
+			},
+		},
+		{
+			// tlsAdherence must be honored: under NoOpinion the profile's groups are ignored
+			// just like its ciphers, and the defaults apply instead.
+			name: "ignores profile groups when tlsAdherence is NoOpinion",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyNoOpinion,
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Groups: []configv1.TLSGroup{configv1.TLSGroupSecP256r1},
+					},
+				},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: defaultECDHCurves,
+					},
+				},
+			},
+		},
+		{
+			name: "ignores profile groups when tlsAdherence is LegacyAdheringComponentsOnly",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Groups: []configv1.TLSGroup{configv1.TLSGroupSecP256r1},
+					},
+				},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: defaultECDHCurves,
+					},
+				},
+			},
+		},
+		{
+			name: "uses profile groups when tlsAdherence is StrictAllComponents",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Groups: []configv1.TLSGroup{configv1.TLSGroupSecP256r1, configv1.TLSGroupX25519},
+					},
+				},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: []string{"P-256", "X25519"},
+					},
+				},
+			},
+		},
+		{
+			name: "applies default ECDH curves when tlsAdherence is honored but the profile has no groups",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
+				},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: defaultECDHCurves,
+					},
+				},
+			},
+		},
+		{
+			name: "does not override user-specified ecdhCurves on OpenShift",
+			tlsConfig: &config.TLSConfig{
+				OpenShift: &config.OpenShiftTLS{
+					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Groups: []configv1.TLSGroup{configv1.TLSGroupSecP256r1},
+					},
+				},
+			},
+			inputValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: []string{"P-384"},
+					},
+				},
+			},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						EcdhCurves: []string{"P-384"},
+					},
+				},
+			},
+		},
+		{
+			name: "does not apply default ECDH curves off OpenShift",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 				},
 			},
 		},
