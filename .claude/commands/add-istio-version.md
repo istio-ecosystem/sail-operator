@@ -123,10 +123,10 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 - List all missing stable versions for each supported minor series
 - **If no versions are missing on this branch**, inform the user and skip to the next branch
 
-### 7. Determine if the operator version needs incrementing
+### 7. Determine the new operator version
 
-- If the latest upstream Istio version for the primary minor series (e.g., 1.30.x) is newer than the current `VERSION` in `Makefile.core.mk`, the operator version needs to be updated
-- The new `VERSION` should match the latest Istio patch version for the primary minor series (e.g., if latest is 1.30.3, set VERSION=1.30.3)
+- Since this command adds new Istio versions, a new Sail Operator release is needed, so `VERSION` must always be incremented
+- The new `VERSION` is the current `VERSION` with the patch incremented by one (x.y.z → x.y.z+1). Do NOT set VERSION to the newly added Istio patch version — the Sail Operator version number is independent of the Istio patch version it ships. For example, if the current VERSION is 1.31.1 and Istio 1.31.3 (and 1.31.2) are being added, the new VERSION is 1.31.2, and that release ships both Istio 1.31.2 and 1.31.3
 - **PREVIOUS_VERSION** should only be updated on the **active release branch** (the branch matching the highest minor version among all release branches, e.g., `release-1.30` when 1.30 is the latest). On older branches (e.g., `release-1.28`), PREVIOUS_VERSION should NOT be changed because those branches are not used for new OLM releases.
   - The active branch was already determined in Step 2 (highest minor version)
   - If the current branch is NOT the active release branch, ask the user: "This is not the active release branch. Do you also plan to release this change in upstream as new Sail Operator version? If yes, PREVIOUS_VERSION will be updated; if no, only VERSION will be updated."
@@ -138,24 +138,24 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 
 - Update the `VERSION ?=` line in `Makefile.core.mk` to the new version
 - Only update `PREVIOUS_VERSION ?=` if this is the active release branch or the user confirmed they plan to release (see Step 7)
-- Example (active release branch):
+- Example (active release branch, adding Istio 1.30.3):
   ```
   # Before:
   VERSION ?= 1.30.0
   PREVIOUS_VERSION ?= 1.29.2
 
-  # After (if 1.30.3 is the latest):
-  VERSION ?= 1.30.3
+  # After:
+  VERSION ?= 1.30.1
   PREVIOUS_VERSION ?= 1.30.0
   ```
-- Example (older branch, no release planned):
+- Example (older branch, no release planned, adding Istio 1.28.10):
   ```
   # Before:
   VERSION ?= 1.28.8
   PREVIOUS_VERSION ?= 1.28.5
 
-  # After (if 1.28.10 is the latest):
-  VERSION ?= 1.28.10
+  # After:
+  VERSION ?= 1.28.9
   PREVIOUS_VERSION ?= 1.28.5  (unchanged)
   ```
 
@@ -303,7 +303,7 @@ make gen
     --body "$(cat <<'EOF'
   ## Summary
   - Add missing Istio versions: <list all versions added>
-  - Update VERSION to <new version>
+  - Bump VERSION to <new version> (x.y.z+1, independent of the Istio patch versions)
   - Update go.mod dependencies to match latest Istio version
 
   Co-Authored-By: <current model name> <noreply@anthropic.com>
@@ -357,7 +357,7 @@ Skip this step for branches that are only receiving Istio version support withou
   release-1.30:
     Branch: release-1.30_add_istio_1.30.3
     Versions added: 1.30.3, 1.29.6
-    VERSION: 1.30.0 → 1.30.3
+    VERSION: 1.30.0 → 1.30.1
     PREVIOUS_VERSION: 1.29.2 → 1.30.0
     go.mod: istio.io/client-go v1.30.3, istio.io/istio@1.30.3
     PR: https://github.com/istio-ecosystem/sail-operator/pull/XXXX
@@ -366,7 +366,7 @@ Skip this step for branches that are only receiving Istio version support withou
   release-1.29:
     Branch: release-1.29_add_istio_1.29.6
     Versions added: 1.29.3, 1.29.4, 1.29.5, 1.29.6, 1.28.7, 1.28.8, 1.28.9, 1.28.10
-    VERSION: 1.29.2 → 1.29.6
+    VERSION: 1.29.2 → 1.29.3
     PREVIOUS_VERSION: unchanged
     go.mod: istio.io/client-go v1.29.6, istio.io/istio@1.29.6
     PR: https://github.com/istio-ecosystem/sail-operator/pull/ZZZZ
@@ -376,6 +376,7 @@ Skip this step for branches that are only receiving Istio version support withou
 
 ## Important Notes
 
+- **Sail Operator VERSION is independent of the Istio patch version**: The new `VERSION` in `Makefile.core.mk` is always the current VERSION with the patch incremented by one (x.y.z+1), never equal to the newly added Istio patch version. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
 - **Version ordering in versions.yaml**: The first entry is the default version. Within each minor series, versions are ordered from newest to oldest. Minor series are ordered from newest to oldest. EOL versions come last.
 - **Chart URLs follow a strict pattern**: `https://istio-release.storage.googleapis.com/charts/<chart>-<version>.tgz` with charts: base, istiod, gateway, cni, ztunnel
 - **The go.mod comment in versions.yaml** (lines 8-12) explains that istio.io/istio and istio.io/api dependencies must match the most recent version - this is critical for correct CRD generation
