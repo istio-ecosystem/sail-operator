@@ -196,6 +196,27 @@ func TestMergeOverwrite(t *testing.T) {
 			},
 		},
 		{
+			name: "empty override values replace base values",
+			base: map[string]any{
+				"count":   2,
+				"enabled": true,
+				"name":    "base",
+				"items":   []any{"base"},
+			},
+			overrides: map[string]any{
+				"count":   0,
+				"enabled": false,
+				"name":    "",
+				"items":   []any{},
+			},
+			expect: map[string]any{
+				"count":   0,
+				"enabled": false,
+				"name":    "",
+				"items":   []any{},
+			},
+		},
+		{
 			name: "mismatched types",
 			base: map[string]any{
 				"key1": map[string]any{

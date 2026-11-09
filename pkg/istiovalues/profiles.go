@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"path"
 
+	"dario.cat/mergo"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -128,36 +129,21 @@ func parseProfileYAML(fileContents []byte, filename string) (helm.Values, error)
 // MergeOverwrite merges overrides on top of base and returns a new map.
 // Nested maps are merged key by key. Any other override value replaces the base value.
 // The input maps are not modified, and the result does not share nested maps or slices with them.
+//
+// mergo writes into the destination and stores nested maps and slices from the
+// source by reference, so both inputs are copied before the merge.
 func MergeOverwrite(base map[string]any, overrides map[string]any) map[string]any {
 	merged := cloneMap(base)
 	if merged == nil {
 		merged = make(map[string]any, len(overrides))
 	}
-	mergeInto(merged, overrides)
-	return merged
-}
-
-// mergeInto writes overrides into base. base is owned by the caller.
-func mergeInto(base map[string]any, overrides map[string]any) {
-	for key, value := range overrides {
-		// if the key doesn't already exist, add a copy of it
-		if _, exists := base[key]; !exists {
-			base[key] = cloneValue(value)
-			continue
-		}
-
-		// At this point, key exists in both base and overrides.
-		// If both are maps, recurse so that we override only specific values in the map.
-		// If only override value is a map, overwrite base value completely.
-		// If both are values, overwrite base.
-		childOverrides, overrideValueIsMap := value.(map[string]any)
-		childBase, baseValueIsMap := base[key].(map[string]any)
-		if baseValueIsMap && overrideValueIsMap {
-			mergeInto(childBase, childOverrides)
-			continue
-		}
-		base[key] = cloneValue(value)
+	if overrides == nil {
+		return merged
 	}
+	if err := mergo.Merge(&merged, cloneMap(overrides), mergo.WithOverride); err != nil {
+		return merged
+	}
+	return merged
 }
 
 func cloneMap(in map[string]any) map[string]any {
