@@ -143,25 +143,9 @@ versions:
     ref: v1.29.10
     eol: true
   - name: v1.29.10
-    version: 1.29.10
-    repo: https://github.com/istio/istio
-    commit: 1.29.10
-    charts:
-      - https://blob.istio.io/istio-release/charts/base-1.29.10.tgz
-      - https://blob.istio.io/istio-release/charts/istiod-1.29.10.tgz
-      - https://blob.istio.io/istio-release/charts/gateway-1.29.10.tgz
-      - https://blob.istio.io/istio-release/charts/cni-1.29.10.tgz
-      - https://blob.istio.io/istio-release/charts/ztunnel-1.29.10.tgz
+    eol: true
   - name: v1.29.9
-    version: 1.29.9
-    repo: https://github.com/istio/istio
-    commit: 1.29.9
-    charts:
-      - https://blob.istio.io/istio-release/charts/base-1.29.9.tgz
-      - https://blob.istio.io/istio-release/charts/istiod-1.29.9.tgz
-      - https://blob.istio.io/istio-release/charts/gateway-1.29.9.tgz
-      - https://blob.istio.io/istio-release/charts/cni-1.29.9.tgz
-      - https://blob.istio.io/istio-release/charts/ztunnel-1.29.9.tgz
+    eol: true
   - name: v1.29.8
     eol: true
   - name: v1.29.7
@@ -306,15 +290,15 @@ versions:
   - name: v1.21.6
     eol: true
   - name: master
-    ref: v1.33.0-alpha.1b4a5fa3
-  - name: v1.33.0-alpha.1b4a5fa3
-    version: 1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33
+    ref: v1.33.0-alpha.c533e83a
+  - name: v1.33.0-alpha.c533e83a
+    version: 1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71
     repo: https://github.com/istio/istio
     branch: master
-    commit: 1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33
+    commit: c533e83a50a37fcb47a535c4fb66679fcd963b71
     charts:
-      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33/helm/base-1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33.tgz
-      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33/helm/cni-1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33.tgz
-      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33/helm/gateway-1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33.tgz
-      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33/helm/istiod-1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33.tgz
-      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33/helm/ztunnel-1.33.0-alpha.1b4a5fa3a106464e6d1a0f2fd9f0f66192c38f33.tgz
+      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71/helm/base-1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71.tgz
+      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71/helm/cni-1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71.tgz
+      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71/helm/gateway-1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71.tgz
+      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71/helm/istiod-1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71.tgz
+      - https://blob.istio.io/istio-build/dev/1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71/helm/ztunnel-1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71.tgz

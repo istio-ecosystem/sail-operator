@@ -123,10 +123,10 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 - List all missing stable versions for each supported minor series
 - **If no versions are missing on this branch**, inform the user and skip to the next branch
 
-### 7. Determine if the operator version needs incrementing
+### 7. Determine the new operator version
 
-- If the latest upstream Istio version for the primary minor series (e.g., 1.30.x) is newer than the current `VERSION` in `Makefile.core.mk`, the operator version needs to be updated
-- The new `VERSION` should match the latest Istio patch version for the primary minor series (e.g., if latest is 1.30.3, set VERSION=1.30.3)
+- Since this command adds new Istio versions, a new Sail Operator release is needed, so `VERSION` must always be incremented
+- The new `VERSION` is the current `VERSION` with the patch incremented by one (x.y.z → x.y.z+1). Do NOT set VERSION to the newly added Istio patch version — the Sail Operator version number is independent of the Istio patch version it ships. For example, if the current VERSION is 1.31.1 and Istio 1.31.3 (and 1.31.2) are being added, the new VERSION is 1.31.2, and that release ships both Istio 1.31.2 and 1.31.3
 - **PREVIOUS_VERSION** should only be updated on the **active release branch** (the branch matching the highest minor version among all release branches, e.g., `release-1.30` when 1.30 is the latest). On older branches (e.g., `release-1.28`), PREVIOUS_VERSION should NOT be changed because those branches are not used for new OLM releases.
   - The active branch was already determined in Step 2 (highest minor version)
   - If the current branch is NOT the active release branch, ask the user: "This is not the active release branch. Do you also plan to release this change in upstream as new Sail Operator version? If yes, PREVIOUS_VERSION will be updated; if no, only VERSION will be updated."
@@ -138,24 +138,24 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 
 - Update the `VERSION ?=` line in `Makefile.core.mk` to the new version
 - Only update `PREVIOUS_VERSION ?=` if this is the active release branch or the user confirmed they plan to release (see Step 7)
-- Example (active release branch):
+- Example (active release branch, adding Istio 1.30.3):
   ```
   # Before:
   VERSION ?= 1.30.0
   PREVIOUS_VERSION ?= 1.29.2
 
-  # After (if 1.30.3 is the latest):
-  VERSION ?= 1.30.3
+  # After:
+  VERSION ?= 1.30.1
   PREVIOUS_VERSION ?= 1.30.0
   ```
-- Example (older branch, no release planned):
+- Example (older branch, no release planned, adding Istio 1.28.10):
   ```
   # Before:
   VERSION ?= 1.28.8
   PREVIOUS_VERSION ?= 1.28.5
 
-  # After (if 1.28.10 is the latest):
-  VERSION ?= 1.28.10
+  # After:
+  VERSION ?= 1.28.9
   PREVIOUS_VERSION ?= 1.28.5  (unchanged)
   ```
 
@@ -303,7 +303,7 @@ make gen
     --body "$(cat <<'EOF'
   ## Summary
   - Add missing Istio versions: <list all versions added>
-  - Update VERSION to <new version>
+  - Bump VERSION to <new version> (x.y.z+1, independent of the Istio patch versions)
   - Update go.mod dependencies to match latest Istio version
 
   Co-Authored-By: <current model name> <noreply@anthropic.com>
@@ -312,6 +312,31 @@ make gen
   ```
 - `FORK_OWNER` was determined in Step 1 from the fork remote URL
 - Save the PR URL for the final summary
+
+### 16b. Create release checklist issue (OLM / planned-release branches only)
+
+When this branch is the **active OLM release branch** or the user confirmed in Step 7 that they plan to ship a new Sail Operator version from it (`PREVIOUS_VERSION` was updated):
+
+1. Read the new `VERSION` from `Makefile.core.mk` on the working branch.
+2. Dedupe — search for an existing issue (any state) with that exact title:
+   ```bash
+   TITLE="Release Sail Operator <VERSION>"
+   gh issue list --repo istio-ecosystem/sail-operator --state all \
+     --search "in:title \"${TITLE}\"" --json number,title,url \
+     --jq ".[] | select(.title == \"${TITLE}\")"
+   ```
+3. If none exists, create one via the shared helper (same path as the GitHub Action):
+   ```bash
+   ./hack/create-release-issue.sh \
+     --pr-url <PR_URL> \
+     --base-branch release-X.YY \
+     --version <VERSION> \
+     --repo istio-ecosystem/sail-operator
+   ```
+   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). The helper skips unless that branch is the latest `release-X.Y` (active OLM line), unless the user is intentionally releasing from an older line — then pass `--force`.
+4. Save the issue URL (or note that it already existed) for the Phase 3 summary.
+
+Skip this step for branches that are only receiving Istio version support without an OLM release. The merge workflow also creates a checklist **only** for the latest `release-X.Y` branch (see `.github/workflows/create-release-issue.yaml`).
 
 ---
 
@@ -325,30 +350,33 @@ make gen
   ```bash
   git checkout <original-branch>
   ```
-- Show a per-branch summary including PR links, e.g.:
+- Show a per-branch summary including PR links and any release checklist issue, e.g.:
   ```
   === Cross-Branch Summary ===
 
   release-1.30:
     Branch: release-1.30_add_istio_1.30.3
     Versions added: 1.30.3, 1.29.6
-    VERSION: 1.30.0 → 1.30.3
+    VERSION: 1.30.0 → 1.30.1
     PREVIOUS_VERSION: 1.29.2 → 1.30.0
     go.mod: istio.io/client-go v1.30.3, istio.io/istio@1.30.3
     PR: https://github.com/istio-ecosystem/sail-operator/pull/XXXX
+    Release issue: https://github.com/istio-ecosystem/sail-operator/issues/YYYY
 
   release-1.29:
     Branch: release-1.29_add_istio_1.29.6
     Versions added: 1.29.3, 1.29.4, 1.29.5, 1.29.6, 1.28.7, 1.28.8, 1.28.9, 1.28.10
-    VERSION: 1.29.2 → 1.29.6
+    VERSION: 1.29.2 → 1.29.3
     PREVIOUS_VERSION: unchanged
     go.mod: istio.io/client-go v1.29.6, istio.io/istio@1.29.6
-    PR: https://github.com/istio-ecosystem/sail-operator/pull/YYYY
+    PR: https://github.com/istio-ecosystem/sail-operator/pull/ZZZZ
+    Release issue: (skipped — not the latest release branch)
   ```
 - If any branches were skipped due to failures, list them with the reason
 
 ## Important Notes
 
+- **Sail Operator VERSION is independent of the Istio patch version**: The new `VERSION` in `Makefile.core.mk` is always the current VERSION with the patch incremented by one (x.y.z+1), does not have to be equal to the newly added Istio patch version. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
 - **Version ordering in versions.yaml**: The first entry is the default version. Within each minor series, versions are ordered from newest to oldest. Minor series are ordered from newest to oldest. EOL versions come last.
 - **Chart URLs follow a strict pattern**: `https://istio-release.storage.googleapis.com/charts/<chart>-<version>.tgz` with charts: base, istiod, gateway, cni, ztunnel
 - **The go.mod comment in versions.yaml** (lines 8-12) explains that istio.io/istio and istio.io/api dependencies must match the most recent version - this is critical for correct CRD generation
@@ -361,3 +389,4 @@ make gen
 - **Upstream releases are fetched once**: The list of upstream Istio releases from GitHub is fetched once in Step 3 and reused across all branches to avoid redundant API calls
 - **Remote names are detected dynamically**: The upstream remote is identified by matching the URL `istio-ecosystem/sail-operator`, not by assuming the name `upstream`. The fork remote is similarly auto-detected. This ensures the skill works regardless of how users name their remotes.
 - **Temporary branches are created from the upstream remote**: Each working branch (e.g., `release-1.30_add_istio_1.30.3`) is created directly from `<UPSTREAM_REMOTE>/release-X.YY`, not from a local branch, to ensure it's based on the latest upstream code
+- **Release checklist issues**: For the OLM / planned-release branch, Step 16b opens `Release Sail Operator <VERSION>` early (deduped). On merge, `.github/workflows/create-release-issue.yaml` creates the same checklist **only** when the PR base is the latest `release-X.Y` branch. Template: `.github/ISSUE_TEMPLATE/release-checklist.md`
