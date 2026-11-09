@@ -376,7 +376,7 @@ Skip this step for branches that are only receiving Istio version support withou
 
 ## Important Notes
 
-- **Sail Operator VERSION is independent of the Istio patch version**: The new `VERSION` in `Makefile.core.mk` is always the current VERSION with the patch incremented by one (x.y.z+1), never equal to the newly added Istio patch version. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
+- **Sail Operator VERSION is independent of the Istio patch version**: The new `VERSION` in `Makefile.core.mk` is always the current VERSION with the patch incremented by one (x.y.z+1), does not have to be equal to the newly added Istio patch version. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
 - **Version ordering in versions.yaml**: The first entry is the default version. Within each minor series, versions are ordered from newest to oldest. Minor series are ordered from newest to oldest. EOL versions come last.
 - **Chart URLs follow a strict pattern**: `https://istio-release.storage.googleapis.com/charts/<chart>-<version>.tgz` with charts: base, istiod, gateway, cni, ztunnel
 - **The go.mod comment in versions.yaml** (lines 8-12) explains that istio.io/istio and istio.io/api dependencies must match the most recent version - this is critical for correct CRD generation
