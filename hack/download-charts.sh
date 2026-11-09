@@ -32,7 +32,14 @@ MANIFEST_DIR="${REPO_ROOT}/resources/${ISTIO_VERSION_NAME}"
 CHARTS_DIR="${MANIFEST_DIR}/charts"
 PROFILES_DIR="${MANIFEST_DIR}/profiles"
 
-ISTIO_URL="${ISTIO_REPO}/archive/${ISTIO_COMMIT}.tar.gz"
+if [[ "${ISTIO_COMMIT}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+  # release tags can be ambiguous with identically named branches in istio/istio
+  # (e.g. tag 1.31.4 vs branch 1.31.4), which makes GitHub return HTTP 300 for the
+  # short archive URL, so use the unambiguous refs/tags URL
+  ISTIO_URL="${ISTIO_REPO}/archive/refs/tags/${ISTIO_COMMIT}.tar.gz"
+else
+  ISTIO_URL="${ISTIO_REPO}/archive/${ISTIO_COMMIT}.tar.gz"
+fi
 WORK_DIR=$(mktemp -d)
 FORCE_DOWNLOADS=${FORCE_DOWNLOADS:=false}
 trap 'rm -rf "${WORK_DIR}"' EXIT
