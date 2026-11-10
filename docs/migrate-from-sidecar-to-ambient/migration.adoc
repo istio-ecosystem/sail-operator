@@ -597,7 +597,7 @@ Check that sidecars now support HBONE protocol:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for HBONE is enabled in sidecar
-kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | grep -A 2 'name: PROXY_CONFIG'
+kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | grep -A 2 'name: PROXY_CONFIG'
 ----
 
 The output should be similar to:
@@ -616,7 +616,7 @@ Send requests to ensure connectivity remains intact:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test service connectivity through sidecars
-kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
+kubectl exec $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
 ----
 
 The output result should be similar to:
@@ -1126,7 +1126,7 @@ Test that services are still accessible (policies not yet enforced):
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 NAMESPACE="bookinfo" # Replace with your namespace
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
+TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
 HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
 if [[ "$HTTP_STATUS" == "200" ]]; then
   echo "PASS: Service connectivity still working"
@@ -1180,7 +1180,7 @@ bookinfo                                         waypoint-58cdc7f494-98h79      
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test connectivity after enabling each namespace, e.g., bookinfo
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
 ----
 
 **Important**: at this point sidecars are still present and handling traffic. Do NOT remove sidecars yet.
@@ -1298,6 +1298,7 @@ kubectl rollout restart deployment -n bookinfo
 Verify sidecars are removed and ambient mode is working:
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
+with_retries wait_for_rollout_success "bookinfo"
 with_retries wait_pods_ready_by_ns "bookinfo"
 endif::[]
 
@@ -1317,7 +1318,7 @@ Test that L7 policies are now enforced through waypoints (L7 policies should wor
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test authorization policies work through waypoint
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl -s http://reviews.bookinfo:9080/reviews/1
 
 ----
 
@@ -1331,7 +1332,7 @@ Test the traffic routing through waypoint with header (if HTTPRoute configured):
 
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl -s -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
 ----
 
 Output should be similar to:
