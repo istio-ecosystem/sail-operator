@@ -152,8 +152,20 @@ jobs:
             --namespace sail-operator --timeout=10m
 
           # Run only the tests; the operator was installed above.
-          ISTIOCTL="${GITHUB_WORKSPACE}/bin/istioctl" \
-            tests/e2e/common-operator-integ-suite.sh --kind
+          # setup-kind.sh installs an EXIT trap that exports the kind logs and
+          # deletes the cluster when this step's shell exits, so cluster
+          # diagnostics must be collected here, while the cluster still exists;
+          # a separate workflow step would run after the trap has already torn
+          # the cluster down and would capture nothing.
+          if ! ISTIOCTL="${GITHUB_WORKSPACE}/bin/istioctl" \
+            tests/e2e/common-operator-integ-suite.sh --kind; then
+            kubectl get nodes -o wide || true
+            kubectl get pods -A -o wide || true
+            kubectl get events -A --sort-by=.lastTimestamp | tail -100 || true
+            kubectl logs -n sail-operator deployment/sail-operator \
+              --all-containers=true --tail=200 || true
+            exit 1
+          fi
 
       # A label rename on the release branch would leave the filter matching
       # nothing, and a suite that runs no specs exits 0 — the gate would go green
@@ -163,21 +175,19 @@ jobs:
         env:
           REPORT: out/helm-chart-e2e-artifacts/report.xml
         run: |
+          set -o pipefail
           test -f "${REPORT}"
-          grep -Eq 'tests="[1-9]' "${REPORT}" || {
-            echo "::error::${REPORT} contains no executed specs: the label filter matched nothing, so this gate would have passed without installing the chart."
+          # Do NOT trust the testsuite tests="N" attribute: Ginkgo counts
+          # label-filter-skipped specs in it, so it is non-zero even when the
+          # filter matched nothing. Count specs that actually executed instead:
+          # every <testcase> minus those carrying a <skipped> child.
+          testcases=$(grep -o '<testcase ' "${REPORT}" | wc -l)
+          skipped=$(grep -o '<skipped' "${REPORT}" | wc -l)
+          executed=$((testcases - skipped))
+          if [ "${executed}" -lt 1 ]; then
+            echo "::error::${REPORT} contains no executed specs (testcases=${testcases}, skipped=${skipped}): the label filter matched nothing, so this gate would have passed without installing the chart."
             exit 1
-          }
-
-      - name: Capture KinD state on failure
-        if: ${{ failure() && steps.e2e.conclusion == 'failure' }}
-        env:
-          KUBECONFIG: ${{ github.workspace }}/out/helm-chart-e2e-artifacts/config
-        run: |
-          kubectl get nodes -o wide || true
-          kubectl get pods -A -o wide || true
-          kubectl get events -A --sort-by=.lastTimestamp | tail -100 || true
-          kubectl logs -n sail-operator deployment/sail-operator --all-containers=true --tail=200 || true
+          fi
 
       - name: Upload KinD smoke artifacts
         if: ${{ !cancelled() && steps.e2e.conclusion != 'skipped' }}
