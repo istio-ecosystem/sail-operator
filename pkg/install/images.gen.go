@@ -20,6 +20,12 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
+		"v1.31.4": {
+			IstiodImage:  "quay.io/sail-dev/pilot:1.31.4",
+			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.4",
+			CNIImage:     "quay.io/sail-dev/install-cni:1.31.4",
+			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.4",
+		},
 		"v1.31.3": {
 			IstiodImage:  "quay.io/sail-dev/pilot:1.31.3",
 			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.3",
@@ -43,6 +49,12 @@ func init() {
 			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0",
 			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0",
 			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0",
+		},
+		"v1.30.8": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.8",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.8",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.8",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.8",
 		},
 		"v1.30.7": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.7",
@@ -92,11 +104,11 @@ func init() {
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
 		},
-		"v1.33.0-alpha.c533e83a": {
-			IstiodImage:  "registry.istio.io/testing/pilot:1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71",
-			ProxyImage:   "registry.istio.io/testing/proxyv2:1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71",
-			CNIImage:     "registry.istio.io/testing/install-cni:1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71",
-			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.33.0-alpha.c533e83a50a37fcb47a535c4fb66679fcd963b71",
+		"v1.33.0-alpha.c8acd7ea": {
+			IstiodImage:  "registry.istio.io/testing/pilot:1.33.0-alpha.c8acd7eaa77275a852b32fddec196e81bb285e1f",
+			ProxyImage:   "registry.istio.io/testing/proxyv2:1.33.0-alpha.c8acd7eaa77275a852b32fddec196e81bb285e1f",
+			CNIImage:     "registry.istio.io/testing/install-cni:1.33.0-alpha.c8acd7eaa77275a852b32fddec196e81bb285e1f",
+			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.33.0-alpha.c8acd7eaa77275a852b32fddec196e81bb285e1f",
 		},
 	}
 }
