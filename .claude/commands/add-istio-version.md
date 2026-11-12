@@ -64,10 +64,6 @@ Use `UPSTREAM_REMOTE`, `FORK_REMOTE`, and `FORK_OWNER` throughout all subsequent
   ```bash
   git show <UPSTREAM_REMOTE>/release-X.YY:pkg/istioversion/versions.yaml
   ```
-- Also read each branch's `Makefile.core.mk` to get its current VERSION:
-  ```bash
-  git show <UPSTREAM_REMOTE>/release-X.YY:Makefile.core.mk | grep -E '^(VERSION|PREVIOUS_VERSION) \?='
-  ```
 
 ### 3. Fetch upstream Istio releases and identify missing versions
 
@@ -113,7 +109,6 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 ### 5. Determine the branch's supported minor versions
 
 - Extract the minor version from the branch name (e.g., `1.30` from `release-1.30`)
-- Read `Makefile.core.mk` to get current `VERSION` and `PREVIOUS_VERSION`
 - Read `pkg/istioversion/versions.yaml` to understand which versions are already present
 - Identify which minor version series are supported (non-EOL) on this branch (n-2: current + two previous minor versions)
 
@@ -123,43 +118,12 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 - List all missing stable versions for each supported minor series
 - **If no versions are missing on this branch**, inform the user and skip to the next branch
 
-### 7. Determine the new operator version
+### 7. Operator version handling (no bump)
 
-- Since this command adds new Istio versions, a new Sail Operator release is needed, so `VERSION` must always be incremented
-- The new `VERSION` is the current `VERSION` with the patch incremented by one (x.y.z → x.y.z+1). Do NOT set VERSION to the newly added Istio patch version — the Sail Operator version number is independent of the Istio patch version it ships. For example, if the current VERSION is 1.31.1 and Istio 1.31.3 (and 1.31.2) are being added, the new VERSION is 1.31.2, and that release ships both Istio 1.31.2 and 1.31.3
-- **PREVIOUS_VERSION** should only be updated on the **active release branch** (the branch matching the highest minor version among all release branches, e.g., `release-1.30` when 1.30 is the latest). On older branches (e.g., `release-1.28`), PREVIOUS_VERSION should NOT be changed because those branches are not used for new OLM releases.
-  - The active branch was already determined in Step 2 (highest minor version)
-  - If the current branch is NOT the active release branch, ask the user: "This is not the active release branch. Do you also plan to release this change in upstream as new Sail Operator version? If yes, PREVIOUS_VERSION will be updated; if no, only VERSION will be updated."
-  - If the user confirms they plan to release, update `PREVIOUS_VERSION` to the old `VERSION` value
-  - If not, leave `PREVIOUS_VERSION` unchanged
-- Present the proposed version changes to the user for confirmation before proceeding
+- Do NOT bump `VERSION` or `PREVIOUS_VERSION` in `Makefile.core.mk` when adding Istio versions. The operator version is bumped only during the release process (by the release coordinator / release-prep workflow), not when Istio versions are added.
+- The release checklist issue (Step 15b) derives the upcoming version on its own (released VERSION + next patch), so nothing needs to be prepared here.
 
-### 8. Update VERSION and PREVIOUS_VERSION in Makefile.core.mk
-
-- Update the `VERSION ?=` line in `Makefile.core.mk` to the new version
-- Only update `PREVIOUS_VERSION ?=` if this is the active release branch or the user confirmed they plan to release (see Step 7)
-- Example (active release branch, adding Istio 1.30.3):
-  ```
-  # Before:
-  VERSION ?= 1.30.0
-  PREVIOUS_VERSION ?= 1.29.2
-
-  # After:
-  VERSION ?= 1.30.1
-  PREVIOUS_VERSION ?= 1.30.0
-  ```
-- Example (older branch, no release planned, adding Istio 1.28.10):
-  ```
-  # Before:
-  VERSION ?= 1.28.8
-  PREVIOUS_VERSION ?= 1.28.5
-
-  # After:
-  VERSION ?= 1.28.9
-  PREVIOUS_VERSION ?= 1.28.5  (unchanged)
-  ```
-
-### 9. Run update_deps.sh
+### 8. Run update_deps.sh
 
 - Run the dependency update script with the appropriate branch:
   ```bash
@@ -177,16 +141,16 @@ For each selected branch, **processed from highest minor version to lowest** (e.
      ```
   3. Tool version updates in `Makefile.core.mk` (e.g., MISSPELL_VERSION, GITLEAKS_VERSION) can be skipped or updated manually later — they are not essential for adding Istio versions
 
-### 10. Clean up versions.yaml
+### 9. Clean up versions.yaml
 
 After `update_deps.sh` runs, verify and clean up `versions.yaml`:
 
-#### 10a. Remove alpha/beta/rc versions
+#### 9a. Remove alpha/beta/rc versions
 - Scan all entries for versions containing `-alpha`, `-beta`, `-rc`, or any other pre-release suffix
 - Remove those entries entirely
 - If any `-latest` ref points to a pre-release version, update it to point to the latest stable version instead
 
-#### 10b. Fill in missing patch versions (no gaps)
+#### 9b. Fill in missing patch versions (no gaps)
 - For each supported minor version series, check that all patch versions are present with no gaps
 - For example, if 1.29.0, 1.29.1, 1.29.3, 1.29.5 exist, then 1.29.2 and 1.29.4 are missing and need to be added
 - Verify each missing version actually exists as a release upstream before adding it:
@@ -208,10 +172,10 @@ After `update_deps.sh` runs, verify and clean up `versions.yaml`:
   ```
 - Versions must be ordered: within each minor series, latest patch first (descending). Minor series are ordered latest first (e.g., 1.30.x before 1.29.x)
 
-#### 10c. Update `-latest` refs
+#### 9c. Update `-latest` refs
 - Ensure each `vX.YY-latest` ref entry points to the actual latest stable patch version for that series
 
-### 11. Run make gen
+### 10. Run make gen
 
 ```bash
 make gen
@@ -219,7 +183,7 @@ make gen
 
 This regenerates CRDs, charts, manifests, and all other generated code based on the updated versions.
 
-### 12. Commit the new Istio versions
+### 11. Commit the new Istio versions
 
 - Stage and commit all changes so far so the added Istio versions are captured in a separate commit before dependency validation
 - Use a descriptive commit message listing the versions added, e.g.:
@@ -230,11 +194,11 @@ This regenerates CRDs, charts, manifests, and all other generated code based on 
 - Sign the commit with `-s` flag as required by project policy
 - This makes it easy to see exactly which Istio versions were added, separate from any go.mod dependency fixes in the next step
 
-### 13. Verify and fix go.mod dependencies
+### 12. Verify and fix go.mod dependencies
 
 The go.mod `istio.io/*` dependencies must match the most recent Istio version in versions.yaml. Check and fix each:
 
-#### 13a. istio.io/client-go
+#### 12a. istio.io/client-go
 - Should use the actual release tag, NOT a pseudoversion
 - Example: `istio.io/client-go v1.30.3` (not a pseudoversion like `v1.30.3-alpha.0.0.20240809...`)
 - Update if needed:
@@ -242,7 +206,7 @@ The go.mod `istio.io/*` dependencies must match the most recent Istio version in
   go get istio.io/client-go@v1.30.3
   ```
 
-#### 13b. istio.io/istio
+#### 12b. istio.io/istio
 - This is special: Istio release tags do NOT have a `v` prefix, so Go cannot resolve them as normal version tags
 - Must use a pseudoversion, but it MUST point to the tagged release commit
 - Update by running:
@@ -256,30 +220,30 @@ The go.mod `istio.io/*` dependencies must match the most recent Istio version in
   gh api repos/istio/istio/git/refs/tags/1.30.3 --jq '.object.sha' | head -c 12
   ```
 
-#### 13c. istio.io/api
+#### 12c. istio.io/api
 - May also use a pseudoversion; verify it corresponds to the correct release
 - If update_deps.sh set it to a non-release version, update it:
   ```bash
   go get istio.io/api@v1.30.3
   ```
 
-#### 13d. Run go mod tidy and make gen
+#### 12d. Run go mod tidy and make gen
 ```bash
 go mod tidy
 make gen
 ```
 
-### 14. Commit go.mod dependency fixes
+### 13. Commit go.mod dependency fixes
 
-- If go.mod or go.sum changed in Step 13, stage and commit them separately:
+- If go.mod or go.sum changed in Step 12, stage and commit them separately:
   ```
   Fix istio.io/istio pseudoversion for X.YY.Z
   ```
 - Include the `Co-Authored-By` trailer using the current model name dynamically (do not hardcode a specific model name)
 - Sign the commit with `-s` flag as required by project policy
-- If nothing changed in Step 13 (dependencies were already correct), skip this commit
+- If nothing changed in Step 12 (dependencies were already correct), skip this commit
 
-### 15. Final verification for this branch
+### 14. Final verification for this branch
 
 - Run `make all` to ensure everything builds, lints, and tests pass
 - If any step fails, fix the issue and re-run `make all`
@@ -287,7 +251,7 @@ make gen
   1. Skip this branch and continue with the remaining branches
   2. Stop processing entirely
 
-### 16. Push branch and create PR
+### 15. Push branch and create PR
 
 - Push the temporary branch to the fork remote:
   ```bash
@@ -303,7 +267,6 @@ make gen
     --body "$(cat <<'EOF'
   ## Summary
   - Add missing Istio versions: <list all versions added>
-  - Bump VERSION to <new version> (x.y.z+1, independent of the Istio patch versions)
   - Update go.mod dependencies to match latest Istio version
 
   Co-Authored-By: <current model name> <noreply@anthropic.com>
@@ -313,30 +276,21 @@ make gen
 - `FORK_OWNER` was determined in Step 1 from the fork remote URL
 - Save the PR URL for the final summary
 
-### 16b. Create release checklist issue (OLM / planned-release branches only)
+### 15b. Create release checklist issue (active OLM release branch only)
 
-When this branch is the **active OLM release branch** or the user confirmed in Step 7 that they plan to ship a new Sail Operator version from it (`PREVIOUS_VERSION` was updated):
+When this branch is the **active OLM release branch** (the highest `release-X.Y`, determined in Step 2):
 
-1. Read the new `VERSION` from `Makefile.core.mk` on the working branch.
-2. Dedupe — search for an existing issue (any state) with that exact title:
-   ```bash
-   TITLE="Release Sail Operator <VERSION>"
-   gh issue list --repo istio-ecosystem/sail-operator --state all \
-     --search "in:title \"${TITLE}\"" --json number,title,url \
-     --jq ".[] | select(.title == \"${TITLE}\")"
-   ```
-3. If none exists, create one via the shared helper (same path as the GitHub Action):
+1. Create the checklist via the shared helper (same path as the GitHub Action):
    ```bash
    ./hack/create-release-issue.sh \
      --pr-url <PR_URL> \
      --base-branch release-X.YY \
-     --version <VERSION> \
      --repo istio-ecosystem/sail-operator
    ```
-   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). The helper skips unless that branch is the latest `release-X.Y` (active OLM line), unless the user is intentionally releasing from an older line — then pass `--force`.
-4. Save the issue URL (or note that it already existed) for the Phase 3 summary.
+   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). Do not pass `--version`: the helper derives the upcoming version on its own — the next patch version of the released `VERSION` (x.y.z+1), or the unreleased `VERSION` itself if a release is already in flight. It also dedupes by title and skips unless the base branch is the latest `release-X.Y` (pass `--force` only when intentionally releasing from an older line).
+2. Save the issue URL (or note that it already existed) for the Phase 3 summary.
 
-Skip this step for branches that are only receiving Istio version support without an OLM release. The merge workflow also creates a checklist **only** for the latest `release-X.Y` branch (see `.github/workflows/create-release-issue.yaml`).
+Skip this step for branches that are only receiving Istio version support without an OLM release. The merge workflow no longer creates a checklist for manual "Add Istio" PRs — it only triggers for "Automator: Update dependencies in ...@release-X.Y" PRs (see `.github/workflows/create-release-issue.yaml`) — so this step is the only automatic path for PRs created by this command.
 
 ---
 
@@ -344,7 +298,7 @@ Skip this step for branches that are only receiving Istio version support withou
 
 ---
 
-### 17. Return to original branch and show cross-branch summary
+### 16. Return to original branch and show cross-branch summary
 
 - Switch back to the branch saved in Step 1:
   ```bash
@@ -357,8 +311,6 @@ Skip this step for branches that are only receiving Istio version support withou
   release-1.30:
     Branch: release-1.30_add_istio_1.30.3
     Versions added: 1.30.3, 1.29.6
-    VERSION: 1.30.0 → 1.30.1
-    PREVIOUS_VERSION: 1.29.2 → 1.30.0
     go.mod: istio.io/client-go v1.30.3, istio.io/istio@1.30.3
     PR: https://github.com/istio-ecosystem/sail-operator/pull/XXXX
     Release issue: https://github.com/istio-ecosystem/sail-operator/issues/YYYY
@@ -366,8 +318,6 @@ Skip this step for branches that are only receiving Istio version support withou
   release-1.29:
     Branch: release-1.29_add_istio_1.29.6
     Versions added: 1.29.3, 1.29.4, 1.29.5, 1.29.6, 1.28.7, 1.28.8, 1.28.9, 1.28.10
-    VERSION: 1.29.2 → 1.29.3
-    PREVIOUS_VERSION: unchanged
     go.mod: istio.io/client-go v1.29.6, istio.io/istio@1.29.6
     PR: https://github.com/istio-ecosystem/sail-operator/pull/ZZZZ
     Release issue: (skipped — not the latest release branch)
@@ -376,12 +326,11 @@ Skip this step for branches that are only receiving Istio version support withou
 
 ## Important Notes
 
-- **Sail Operator VERSION is independent of the Istio patch version**: The new `VERSION` in `Makefile.core.mk` is always the current VERSION with the patch incremented by one (x.y.z+1), does not have to be equal to the newly added Istio patch version. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
+- **Sail Operator VERSION is not bumped here**: Adding Istio versions no longer touches `VERSION`/`PREVIOUS_VERSION` in `Makefile.core.mk` — the operator version is bumped only during the release process (release-prep workflow / release coordinator), as the next patch version (x.y.z+1) of the released VERSION. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
 - **Version ordering in versions.yaml**: The first entry is the default version. Within each minor series, versions are ordered from newest to oldest. Minor series are ordered from newest to oldest. EOL versions come last.
 - **Chart URLs follow a strict pattern**: `https://istio-release.storage.googleapis.com/charts/<chart>-<version>.tgz` with charts: base, istiod, gateway, cni, ztunnel
 - **The go.mod comment in versions.yaml** (lines 8-12) explains that istio.io/istio and istio.io/api dependencies must match the most recent version - this is critical for correct CRD generation
 - **istio.io/istio tags have no v prefix**: Unlike other Go modules, istio/istio uses tags like `1.30.3` not `v1.30.3`, so pseudoversions are required in go.mod
-- **Always confirm version changes with the user** before modifying Makefile.core.mk
 - **Do not remove EOL entries** from versions.yaml - they must remain for API compatibility
 - **Run make all at the end of each branch** to verify everything is consistent
 - **Branch processing order**: Always process from highest minor version to lowest — this ensures the active branch determination is consistent
@@ -389,4 +338,4 @@ Skip this step for branches that are only receiving Istio version support withou
 - **Upstream releases are fetched once**: The list of upstream Istio releases from GitHub is fetched once in Step 3 and reused across all branches to avoid redundant API calls
 - **Remote names are detected dynamically**: The upstream remote is identified by matching the URL `istio-ecosystem/sail-operator`, not by assuming the name `upstream`. The fork remote is similarly auto-detected. This ensures the skill works regardless of how users name their remotes.
 - **Temporary branches are created from the upstream remote**: Each working branch (e.g., `release-1.30_add_istio_1.30.3`) is created directly from `<UPSTREAM_REMOTE>/release-X.YY`, not from a local branch, to ensure it's based on the latest upstream code
-- **Release checklist issues**: For the OLM / planned-release branch, Step 16b opens `Release Sail Operator <VERSION>` early (deduped). On merge, `.github/workflows/create-release-issue.yaml` creates the same checklist **only** when the PR base is the latest `release-X.Y` branch. Template: `.github/ISSUE_TEMPLATE/release-checklist.md`
+- **Release checklist issues**: For the active OLM release branch, Step 15b opens the `Release Sail Operator <upcoming version>` checklist (the helper derives the version and dedupes by title). The merge workflow (`.github/workflows/create-release-issue.yaml`) only creates checklists for "Automator: Update dependencies" PRs that change `pkg/istioversion/versions.yaml` — not for manual "Add Istio" PRs, whose checklist must be opened in Step 15b or via `workflow_dispatch`. Template: `.github/ISSUE_TEMPLATE/release-checklist.md`
