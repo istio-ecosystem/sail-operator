@@ -1,8 +1,0 @@
-category: fixed
-title: Finish Istio CRD cleanup when OpenShift leaves them terminating
-description: |
-  CRC cleanup waited three minutes for Istio CRDs to disappear. On a small
-  node that was not long enough, so the extended job failed while
-  wasmplugins.extensions.istio.io was still terminating. Cleanup now removes
-  the finalizers after deletion starts and waits longer for the CRDs to go.
-issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2577
