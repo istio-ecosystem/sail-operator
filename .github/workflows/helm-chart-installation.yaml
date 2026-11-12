@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   install-chart:
@@ -41,6 +42,8 @@ jobs:
           # base sha recorded in the webhook payload: that sha goes stale as soon
           # as the base branch moves.
           BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -63,6 +66,16 @@ jobs:
             exit 1
           fi
 
+          # Whether this PR touches the chart index. Decided from the PR's file
+          # list rather than by diffing the two indexes: the base branch may
+          # have moved since the PR was opened, so an index this PR did not
+          # touch can still differ from the base tip's copy.
+          files_json=$(curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${INDEX_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100")
+          index_changed=$(jq -r '.[].filename' <<<"${files_json}" | grep -Fx index.yaml) || true
+
           versions() {
             helm search repo "${1}/sail-operator" --devel --versions | awk -v name="${1}/sail-operator" '$1 == name {print $2}' | sort
           }
@@ -76,7 +89,11 @@ jobs:
           count=$(printf '%s\n' "${added}" | grep -c . || true)
 
           if [ "${count}" -eq 0 ]; then
-            echo "::notice::This PR does not add a new chart version; skipping the install gate."
+            if [ -n "${index_changed}" ]; then
+              echo "::error::This PR modifies index.yaml but adds no new chart version (e.g. an updated digest on an already published entry). Republishing an existing version must not pass silently; revert the index change or cut a new version."
+              exit 1
+            fi
+            echo "::notice::This PR does not touch the chart index; skipping the install gate."
             echo "should_test=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
