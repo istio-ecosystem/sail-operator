@@ -21,8 +21,14 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -44,74 +50,83 @@ type MetricsRecorder struct {
 	interval   time.Duration
 }
 
-// metricPrefix will be populated at build time via -ldflags
-var metricPrefix = "sail_operator"
+const (
+	metricsMonitorSuffix = "-metrics-monitor"
+	metricsServiceSuffix = "-metrics-service"
+	serviceCAFile        = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
+)
+
+// populated at build time via -ldflags
+var (
+	operatorName   = "sailoperator"  // chart .Values.name
+	deploymentName = "sail-operator" // chart .Values.deployment.name
+)
 
 // metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
 var metricDescription = map[string]MetricDescription{
-	"IstioVersionTotal": {
-		Name: fmt.Sprintf("%s_istiod_total", metricPrefix),
+	"IstioVersionCurrent": {
+		Name: fmt.Sprintf("%s_istiod_current", operatorName),
 		Help: "Total number of Istiod control planes at each Istio version.",
 		Type: "GaugeVec",
 	},
-	"SidecarProxyTotal": {
-		Name: fmt.Sprintf("%s_sidecar_proxy_total", metricPrefix),
+	"SidecarProxyCurrent": {
+		Name: fmt.Sprintf("%s_sidecar_proxy_current", operatorName),
 		Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
 		Type: "Gauge",
 	},
-	"SidecarNamespaceTotal": {
-		Name: fmt.Sprintf("%s_sidecar_namespace_total", metricPrefix),
+	"SidecarNamespaceCurrent": {
+		Name: fmt.Sprintf("%s_sidecar_namespace_current", operatorName),
 		Help: "Total number of namespaces enrolled in Istio sidecar mode.",
 		Type: "Gauge",
 	},
-	"ZTunnelVersionTotal": {
-		Name: fmt.Sprintf("%s_ztunnel_total", metricPrefix),
+	"ZTunnelVersionCurrent": {
+		Name: fmt.Sprintf("%s_ztunnel_current", operatorName),
 		Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
 		Type: "GaugeVec",
 	},
-	"AmbientNamespaceTotal": {
-		Name: fmt.Sprintf("%s_ambient_namespace_total", metricPrefix),
+	"AmbientNamespaceCurrent": {
+		Name: fmt.Sprintf("%s_ambient_namespace_current", operatorName),
 		Help: "Total number of namespaces enrolled in Istio Ambient mode.",
 		Type: "Gauge",
 	},
 }
 
 var (
-	// IstioVersionTotal will count how many Istio custom resources were created at each Istio version.
-	IstioVersionTotal = prometheus.NewGaugeVec(
+	// IstioVersionCurrent will count how many Istio custom resources were created at each Istio version.
+	IstioVersionCurrent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: metricDescription["IstioVersionTotal"].Name,
-			Help: metricDescription["IstioVersionTotal"].Help,
+			Name: metricDescription["IstioVersionCurrent"].Name,
+			Help: metricDescription["IstioVersionCurrent"].Help,
 		},
 		[]string{"app.kubernetes.io/version"},
 	)
-	// SidecarProxyTotal will count how many Envoy sidecar proxies were injected.
-	SidecarProxyTotal = prometheus.NewGauge(
+	// SidecarProxyCurrent will count how many Envoy sidecar proxies were injected.
+	SidecarProxyCurrent = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: metricDescription["SidecarProxyTotal"].Name,
-			Help: metricDescription["SidecarProxyTotal"].Help,
+			Name: metricDescription["SidecarProxyCurrent"].Name,
+			Help: metricDescription["SidecarProxyCurrent"].Help,
 		},
 	)
-	// SidecarNamespaceTotal will count how many namespaces were enabled in Istio sidecar mode.
-	SidecarNamespaceTotal = prometheus.NewGauge(
+	// SidecarNamespaceCurrent will count how many namespaces were enabled in Istio sidecar mode.
+	SidecarNamespaceCurrent = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: metricDescription["SidecarNamespaceTotal"].Name,
-			Help: metricDescription["SidecarNamespaceTotal"].Help,
+			Name: metricDescription["SidecarNamespaceCurrent"].Name,
+			Help: metricDescription["SidecarNamespaceCurrent"].Help,
 		},
 	)
-	// ZTunnelVersionTotal will count how many ZTunnel custom resources were created at each Istio version.
-	ZTunnelVersionTotal = prometheus.NewGaugeVec(
+	// ZTunnelVersionCurrent will count how many ZTunnel custom resources were created at each Istio version.
+	ZTunnelVersionCurrent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: metricDescription["ZTunnelVersionTotal"].Name,
-			Help: metricDescription["ZTunnelVersionTotal"].Help,
+			Name: metricDescription["ZTunnelVersionCurrent"].Name,
+			Help: metricDescription["ZTunnelVersionCurrent"].Help,
 		},
 		[]string{"app.kubernetes.io/version"},
 	)
-	// AmbientNamespaceTotal will count how many namespaces were enabled in Istio Ambient mode.
-	AmbientNamespaceTotal = prometheus.NewGauge(
+	// AmbientNamespaceCurrent will count how many namespaces were enabled in Istio Ambient mode.
+	AmbientNamespaceCurrent = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: metricDescription["AmbientNamespaceTotal"].Name,
-			Help: metricDescription["AmbientNamespaceTotal"].Help,
+			Name: metricDescription["AmbientNamespaceCurrent"].Name,
+			Help: metricDescription["AmbientNamespaceCurrent"].Help,
 		},
 	)
 )
@@ -119,11 +134,11 @@ var (
 // RegisterMetrics will register metrics with the global prometheus registry
 func RegisterMetrics() {
 	metrics.Registry.MustRegister(
-		IstioVersionTotal,
-		SidecarProxyTotal,
-		SidecarNamespaceTotal,
-		ZTunnelVersionTotal,
-		AmbientNamespaceTotal,
+		IstioVersionCurrent,
+		SidecarProxyCurrent,
+		SidecarNamespaceCurrent,
+		ZTunnelVersionCurrent,
+		AmbientNamespaceCurrent,
 	)
 }
 
@@ -172,15 +187,15 @@ func (m *MetricsRecorder) recordMetrics(ctx context.Context) {
 
 	// Update GaugeVec values
 	for version, count := range istiodCounts {
-		IstioVersionTotal.WithLabelValues(version).Set(count)
+		IstioVersionCurrent.WithLabelValues(version).Set(count)
 	}
 	for version, count := range ztunnelCounts {
-		ZTunnelVersionTotal.WithLabelValues(version).Set(count)
+		ZTunnelVersionCurrent.WithLabelValues(version).Set(count)
 	}
 
-	SidecarProxyTotal.Set(sidecarProxyCounts)
-	SidecarNamespaceTotal.Set(sidecarNsCounts)
-	AmbientNamespaceTotal.Set(ambientNsCounts)
+	SidecarProxyCurrent.Set(sidecarProxyCounts)
+	SidecarNamespaceCurrent.Set(sidecarNsCounts)
+	AmbientNamespaceCurrent.Set(ambientNsCounts)
 }
 
 func (m *MetricsRecorder) listIstiod(ctx context.Context) map[string]float64 {
@@ -289,4 +304,72 @@ func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
 		return fmt.Errorf("failed to ensure OpenShift cluster-monitoring label: %w", err)
 	}
 	return nil
+}
+
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;create;delete
+
+// EnsureServiceMonitor ensures a ServiceMonitor resource for scraping metrics from the operator metrics-service
+func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context) error {
+	desired := m.buildServiceMonitor()
+
+	existing := &monitoringv1.ServiceMonitor{}
+	err := m.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
+	switch {
+	case apierrors.IsNotFound(err):
+		if err := m.Client.Create(ctx, desired); err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create ServiceMonitor: %w", err)
+		}
+		return nil
+	case meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err):
+		// prometheus-operator CRDs absent — nothing to do
+		return nil
+	case err != nil:
+		return fmt.Errorf("failed to get ServiceMonitor: %w", err)
+	}
+
+	// adopt an older monitor that still points at the wrong namespace
+	patchBase := client.MergeFrom(existing.DeepCopy())
+	existing.Labels = desired.Labels
+	existing.Spec = desired.Spec
+	return m.Client.Patch(ctx, existing, patchBase)
+}
+
+func (m *MetricsRecorder) buildServiceMonitor() *monitoringv1.ServiceMonitor {
+	ns := m.metricsCfg.OperatorNamespace
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      operatorName + metricsMonitorSuffix,
+			Namespace: ns,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  operatorName,
+				"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
+				"app.kubernetes.io/name":       operatorName,
+				"app.kubernetes.io/part-of":    operatorName,
+				"release":                      "prometheus", // Prometheus serviceMonitorSelector
+			},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"control-plane": deploymentName},
+			},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port:            "https",
+				Path:            "/metrics",
+				Scheme:          new(monitoringv1.SchemeHTTPS),
+				Interval:        monitoringv1.Duration("30s"),
+				HonorLabels:     true,
+				BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{
+							TLSFilesConfig: monitoringv1.TLSFilesConfig{CAFile: serviceCAFile},
+							SafeTLSConfig: monitoringv1.SafeTLSConfig{
+								ServerName: new(fmt.Sprintf("%s%s.%s.svc", deploymentName, metricsServiceSuffix, ns)),
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
 }

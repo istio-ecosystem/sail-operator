@@ -17,18 +17,26 @@ package analyze
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	model "github.com/prometheus/client_model/go"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func createScheme(t *testing.T) *runtime.Scheme {
@@ -39,6 +47,9 @@ func createScheme(t *testing.T) *runtime.Scheme {
 	}
 	if err := v1.AddToScheme(scheme); err != nil {
 		t.Fatalf("failed to add v1 scheme: %v", err)
+	}
+	if err := monitoringv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add monitoringv1 scheme: %v", err)
 	}
 	return scheme
 }
@@ -156,24 +167,24 @@ func TestRecordMetrics(t *testing.T) {
 	recorder.recordMetrics(ctx)
 
 	// Assert GaugeVec metrics
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
-		t.Errorf("expected IstioVersionTotal for v1.30.0 to be 1, got %f", val)
+	if val := getGaugeValue(t, IstioVersionCurrent.WithLabelValues("v1.30.0")); val != 1 {
+		t.Errorf("expected IstioVersionCurrent for v1.30.0 to be 1, got %f", val)
 	}
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.31.0")); val != 2 {
+	if val := getGaugeValue(t, IstioVersionCurrent.WithLabelValues("v1.31.0")); val != 2 {
 		t.Errorf("expected IstioVersionTotal for v1.31.0 to be 2, got %f", val)
 	}
-	if val := getGaugeValue(t, ZTunnelVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
+	if val := getGaugeValue(t, ZTunnelVersionCurrent.WithLabelValues("v1.30.0")); val != 1 {
 		t.Errorf("expected ZTunnelVersionTotal for v1.30.0 to be 1, got %f", val)
 	}
 
 	// Assert Gauge metrics
-	if val := getGaugeValue(t, SidecarProxyTotal); val != 1 {
+	if val := getGaugeValue(t, SidecarProxyCurrent); val != 1 {
 		t.Errorf("expected SidecarProxyTotal to be 1, got %f", val)
 	}
-	if val := getGaugeValue(t, SidecarNamespaceTotal); val != 2 {
+	if val := getGaugeValue(t, SidecarNamespaceCurrent); val != 2 {
 		t.Errorf("expected SidecarNamespaceTotal to be 2, got %f", val)
 	}
-	if val := getGaugeValue(t, AmbientNamespaceTotal); val != 3 {
+	if val := getGaugeValue(t, AmbientNamespaceCurrent); val != 3 {
 		t.Errorf("expected AmbientNamespaceTotal to be 3, got %f", val)
 	}
 }
@@ -269,5 +280,255 @@ func TestEnsureNamespaceLabel(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBuildServiceMonitor(t *testing.T) {
+	tests := []struct {
+		name              string
+		operatorNamespace string
+	}{
+		{
+			name:              "openshift-operators namespace",
+			operatorNamespace: "openshift-operators",
+		},
+		{
+			name:              "custom namespace",
+			operatorNamespace: "sail-operator",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{
+				OperatorNamespace: tt.operatorNamespace,
+			})
+
+			expected := &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sailoperator-metrics-monitor",
+					Namespace: tt.operatorNamespace,
+					Labels: map[string]string{
+						"app.kubernetes.io/component":  "sailoperator",
+						"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
+						"app.kubernetes.io/name":       "sailoperator",
+						"app.kubernetes.io/part-of":    "sailoperator",
+						"release":                      "prometheus",
+					},
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"control-plane": "sail-operator"},
+					},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port:            "https",
+						Path:            "/metrics",
+						Scheme:          new(monitoringv1.SchemeHTTPS),
+						Interval:        monitoringv1.Duration("30s"),
+						HonorLabels:     true,
+						BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+								TLSConfig: &monitoringv1.TLSConfig{
+									TLSFilesConfig: monitoringv1.TLSFilesConfig{
+										CAFile: "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt",
+									},
+									SafeTLSConfig: monitoringv1.SafeTLSConfig{
+										ServerName: new(fmt.Sprintf("sail-operator-metrics-service.%s.svc", tt.operatorNamespace)),
+									},
+								},
+							},
+						},
+					}},
+				},
+			}
+
+			if diff := cmp.Diff(expected, recorder.buildServiceMonitor()); diff != "" {
+				t.Errorf("buildServiceMonitor() mismatch (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestEnsureServiceMonitor(t *testing.T) {
+	const operatorNamespace = "openshift-operators"
+
+	staleServiceMonitor := func() *monitoringv1.ServiceMonitor {
+		return &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sailoperator-metrics-monitor",
+				Namespace: operatorNamespace,
+				Labels: map[string]string{
+					"app.kubernetes.io/component": "something-else",
+					"release":                     "not-prometheus",
+				},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{"control-plane": "old-operator"},
+				},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "http",
+					Path: "/metrics",
+				}},
+			},
+		}
+	}
+
+	tests := []struct {
+		name             string
+		registerCRDs     bool
+		existing         *monitoringv1.ServiceMonitor
+		interceptorFuncs interceptor.Funcs
+		expectError      bool
+		expectMonitor    bool
+	}{
+		{
+			name:          "creates ServiceMonitor when it does not exist",
+			registerCRDs:  true,
+			expectError:   false,
+			expectMonitor: true,
+		},
+		{
+			name:          "patches existing ServiceMonitor that is out of date",
+			registerCRDs:  true,
+			existing:      staleServiceMonitor(),
+			expectError:   false,
+			expectMonitor: true,
+		},
+		{
+			name:         "no-op when prometheus-operator types are not registered",
+			registerCRDs: false,
+			expectError:  false,
+		},
+		{
+			name:         "no-op when prometheus-operator CRDs are not installed",
+			registerCRDs: true,
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return &meta.NoKindMatchError{
+						GroupKind:        schema.GroupKind{Group: monitoringv1.SchemeGroupVersion.Group, Kind: monitoringv1.ServiceMonitorsKind},
+						SearchedVersions: []string{monitoringv1.SchemeGroupVersion.Version},
+					}
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:         "returns error when Get fails",
+			registerCRDs: true,
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return fmt.Errorf("simulated get error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:         "returns error when Create fails",
+			registerCRDs: true,
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return fmt.Errorf("simulated create error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:         "ignores AlreadyExists error on create",
+			registerCRDs: true,
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return apierrors.NewAlreadyExists(
+						schema.GroupResource{Group: monitoringv1.SchemeGroupVersion.Group, Resource: monitoringv1.ServiceMonitorName},
+						obj.GetName())
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:         "returns error when Patch fails",
+			registerCRDs: true,
+			existing:     staleServiceMonitor(),
+			interceptorFuncs: interceptor.Funcs{
+				Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					return fmt.Errorf("simulated patch error")
+				},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := createScheme(t)
+
+			builder := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(tt.interceptorFuncs)
+			if tt.existing != nil {
+				builder = builder.WithObjects(tt.existing)
+			}
+			fakeClient := builder.Build()
+
+			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
+				OperatorNamespace: operatorNamespace,
+			})
+
+			ctx := context.Background()
+			err := recorder.EnsureServiceMonitor(ctx)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("EnsureServiceMonitor() error = %v, expectError %v", err, tt.expectError)
+			}
+
+			if !tt.expectMonitor {
+				return
+			}
+
+			desired := recorder.buildServiceMonitor()
+			actual := &monitoringv1.ServiceMonitor{}
+			if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), actual); err != nil {
+				t.Fatalf("failed to get ServiceMonitor: %v", err)
+			}
+
+			if diff := cmp.Diff(desired.Spec, actual.Spec); diff != "" {
+				t.Errorf("ServiceMonitor spec mismatch (-desired +actual):\n%s", diff)
+			}
+			for key, want := range desired.Labels {
+				if got := actual.Labels[key]; got != want {
+					t.Errorf("expected label %s=%s, got %q", key, want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestEnsureServiceMonitorIsIdempotent(t *testing.T) {
+	scheme := createScheme(t)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
+		OperatorNamespace: "openshift-operators",
+	})
+
+	ctx := context.Background()
+	if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+		t.Fatalf("first EnsureServiceMonitor() returned error: %v", err)
+	}
+
+	desired := recorder.buildServiceMonitor()
+	afterCreate := &monitoringv1.ServiceMonitor{}
+	if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), afterCreate); err != nil {
+		t.Fatalf("failed to get ServiceMonitor after create: %v", err)
+	}
+
+	if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+		t.Fatalf("second EnsureServiceMonitor() returned error: %v", err)
+	}
+
+	afterPatch := &monitoringv1.ServiceMonitor{}
+	if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), afterPatch); err != nil {
+		t.Fatalf("failed to get ServiceMonitor after second call: %v", err)
+	}
+
+	if diff := cmp.Diff(afterCreate.Labels, afterPatch.Labels); diff != "" {
+		t.Errorf("second EnsureServiceMonitor() modified the labels (-first +second):\n%s", diff)
 	}
 }
