@@ -1,0 +1,219 @@
+name: Validate Helm chart installation
+
+on:
+  # The PRs target gh-pages, which does not contain workflow files. GitHub loads
+  # pull_request_target workflows from the default branch. This job never checks
+  # out the PR: it only reads the PR's index.yaml over the raw.githubusercontent
+  # API and installs the chart that index references, exactly as a user of the
+  # published repository would.
+  pull_request_target:
+    branches:
+      - gh-pages
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  install-chart:
+    # Any same-repo PR to gh-pages is considered; whether there is actually a new
+    # chart to test is decided from the index.yaml diff, not from the branch name.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    name: Install chart and run smoke e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      # Resolve the chart version this PR adds with plain helm: add the PR's
+      # index as a repository, search it, and diff the result against the base
+      # branch's index. Helm verifies the chart digest against index.yaml when
+      # it downloads the archive during install.
+      - name: Resolve the chart version added by this PR
+        id: chart
+        env:
+          INDEX_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Compare against the current tip of the base branch rather than the
+          # base sha recorded in the webhook payload: that sha goes stale as soon
+          # as the base branch moves.
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          helm repo add sail-operator-pr-index "https://raw.githubusercontent.com/${INDEX_REPOSITORY}/${HEAD_SHA}/"
+          helm repo add sail-operator-published "https://raw.githubusercontent.com/${INDEX_REPOSITORY}/${BASE_REF}/"
+          helm repo update
+          helm repo list
+
+          # helm search collapses duplicate entries in an index, so a PR that
+          # duplicates an already-published version would otherwise look like
+          # "no new version" and skip the gate. Inspect the raw index instead.
+          # Chart keys sit at 2-space indent; entry list items start with "- ",
+          # which must not be mistaken for a new chart key.
+          dups=$(curl -fsSL "https://raw.githubusercontent.com/${INDEX_REPOSITORY}/${HEAD_SHA}/index.yaml" \
+            | awk '/^  [^ -]/ { in_sail = ($0 == "  sail-operator:") }
+                   in_sail && /^    version:/ { print $2 }' \
+            | sort | uniq -d)
+          if [ -n "${dups}" ]; then
+            echo "::error::Duplicate chart entries in the proposed index: $(echo "${dups}" | tr '\n' ' ')"
+            exit 1
+          fi
+
+          # Whether this PR touches the chart index. Decided from the PR's file
+          # list rather than by diffing the two indexes: the base branch may
+          # have moved since the PR was opened, so an index this PR did not
+          # touch can still differ from the base tip's copy.
+          files_json=$(curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${INDEX_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100")
+          index_changed=$(jq -r '.[].filename' <<<"${files_json}" | grep -Fx index.yaml) || true
+
+          versions() {
+            helm search repo "${1}/sail-operator" --devel --versions | awk -v name="${1}/sail-operator" '$1 == name {print $2}' | sort
+          }
+          # The lists are consumed by command substitution below; echo them
+          # first so the diff the gate computes is visible in the job log.
+          echo "Versions in the PR index:"
+          versions sail-operator-pr-index
+          echo "Versions already published on ${BASE_REF}:"
+          versions sail-operator-published
+          added=$(comm -13 <(versions sail-operator-published) <(versions sail-operator-pr-index))
+          count=$(printf '%s\n' "${added}" | grep -c . || true)
+
+          if [ "${count}" -eq 0 ]; then
+            if [ -n "${index_changed}" ]; then
+              echo "::error::This PR modifies index.yaml but adds no new chart version (e.g. an updated digest on an already published entry). Republishing an existing version must not pass silently; revert the index change or cut a new version."
+              exit 1
+            fi
+            echo "::notice::This PR does not touch the chart index; skipping the install gate."
+            echo "should_test=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          if [ "${count}" -ne 1 ]; then
+            echo "::error::This PR adds ${count} chart versions ($(echo "${added}" | tr '\n' ' ')); expected exactly one."
+            exit 1
+          fi
+
+          version="${added}"
+          release_branch="release-$(echo "${version#v}" | cut -d. -f1,2)"
+          {
+            echo "should_test=true"
+            echo "version=${version}"
+            echo "release_branch=${release_branch}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Chart under test: sail-operator ${version} (e2e suite from ${release_branch})"
+
+      - name: Check out release branch for chart ${{ steps.chart.outputs.version }}
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ steps.chart.outputs.release_branch }}
+          persist-credentials: false
+
+      - name: Set up Go
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      # kind and helm are taken from the GitHub-hosted runner image; both are in
+      # its preinstalled tools (https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md),
+      # and nothing else in this job needs a newer or pinned version of either.
+      # CAVEAT: the runner's kind can be older than the kindest/node image pinned
+      # by a freshly cut release branch (KIND_IMAGE in Makefile.core.mk), and old
+      # kind binaries reject newer node images. If this job starts failing around
+      # cluster creation with a kindest/node image error, this is the known gap:
+      # fix it by re-adding a `go install sigs.k8s.io/kind@latest` step here.
+
+      - name: Install chart and run smoke e2e tests
+        if: ${{ steps.chart.outputs.should_test == 'true' }}
+        id: e2e
+        env:
+          ARTIFACTS: ${{ github.workspace }}/out/helm-chart-e2e-artifacts
+          BUILD_WITH_CONTAINER: "0"
+          CI: "true"
+          E2E_VERSIONS_LIMIT: "1"
+          # The label filter rides in GINKGO_FLAGS, which the suite script
+          # expands unquoted, so it must not contain spaces; ginkgo's filter
+          # parser ignores whitespace between tokens. GINKGO_FLAGS (unlike the
+          # newer GINKGO_LABEL_FILTER knob) exists on every release branch.
+          GINKGO_FLAGS: "--no-color --label-filter=smoke&&(operator||sidecar||ambient)&&!tls-profile"
+          SKIP_BUILD: "true"
+          SKIP_DEPLOY: "true"
+        run: |
+          set -euo pipefail
+          mkdir -p "${ARTIFACTS}"
+          make istioctl
+
+          # Create the KinD cluster and local registry the same way
+          # `make test.e2e.kind` does; this also exports KUBECONFIG and applies
+          # the Gateway API CRDs the tests need.
+          source tests/e2e/setup/setup-kind.sh
+
+          # Install the chart exactly as a user of the published repository
+          # would. The image the chart itself references is used; nothing is
+          # built here.
+          kubectl create namespace sail-operator
+          helm install sail-operator sail-operator-pr-index/sail-operator \
+            --version "${{ steps.chart.outputs.version }}" --namespace sail-operator
+          kubectl wait --for=condition=available deployment/sail-operator \
+            --namespace sail-operator --timeout=10m
+
+          # Run only the tests; the operator was installed above.
+          # setup-kind.sh installs an EXIT trap that exports the kind logs and
+          # deletes the cluster when this step's shell exits, so cluster
+          # diagnostics must be collected here, while the cluster still exists;
+          # a separate workflow step would run after the trap has already torn
+          # the cluster down and would capture nothing.
+          if ! ISTIOCTL="${GITHUB_WORKSPACE}/bin/istioctl" \
+            tests/e2e/common-operator-integ-suite.sh --kind; then
+            kubectl get nodes -o wide || true
+            kubectl get pods -A -o wide || true
+            kubectl get events -A --sort-by=.lastTimestamp | tail -100 || true
+            kubectl logs -n sail-operator deployment/sail-operator \
+              --all-containers=true --tail=200 || true
+            exit 1
+          fi
+
+      # A label rename on the release branch would leave the filter matching
+      # nothing, and a suite that runs no specs exits 0 — the gate would go green
+      # without installing anything.
+      - name: Assert the label filter matched some specs
+        if: ${{ !cancelled() && steps.e2e.conclusion != 'skipped' }}
+        env:
+          REPORT: out/helm-chart-e2e-artifacts/report.xml
+        run: |
+          set -o pipefail
+          test -f "${REPORT}"
+          # Do NOT trust the testsuite tests="N" attribute: Ginkgo counts
+          # label-filter-skipped specs in it, so it is non-zero even when the
+          # filter matched nothing. Count specs that actually executed instead:
+          # every <testcase> minus those carrying a <skipped> child.
+          testcases=$(grep -o '<testcase ' "${REPORT}" | wc -l)
+          skipped=$(grep -o '<skipped' "${REPORT}" | wc -l)
+          executed=$((testcases - skipped))
+          if [ "${executed}" -lt 1 ]; then
+            echo "::error::${REPORT} contains no executed specs (testcases=${testcases}, skipped=${skipped}): the label filter matched nothing, so this gate would have passed without installing the chart."
+            exit 1
+          fi
+
+      - name: Upload KinD smoke artifacts
+        if: ${{ !cancelled() && steps.e2e.conclusion != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helm-chart-kind-smoke
+          # Upload the whole artifacts dir (kind logs, operator logs), not just the
+          # JUnit report — the extra files are what you need when the gate fails.
+          path: |
+            out/helm-chart-e2e-artifacts
+            !out/helm-chart-e2e-artifacts/config
+          if-no-files-found: warn
