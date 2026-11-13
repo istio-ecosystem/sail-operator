@@ -1,0 +1,10 @@
+apiVersion: sailoperator.io/v1alpha1
+kind: MetricsIntegration
+metadata:
+  name: openshift-observability
+spec:
+  targetRefs:
+    - kind: Istio
+      name: default
+  type: UserWorkloadMonitoring
+  userWorkloadMonitoring: {}
