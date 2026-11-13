@@ -1,0 +1,8 @@
+category: added
+title: Reconcile MetricsIntegration for User Workload Monitoring
+description: |
+  Adds a MetricsIntegration controller that enables User Workload Monitoring by
+  creating ServiceMonitor and PodMonitor resources for referenced Istio CRs.
+  The controller uses DelayedStartController so it waits for the prometheus-operator
+  CRDs before starting. ClusterObservabilityOperator remains NotImplemented.
+  The sailoperator.io/monitoring annotation remains supported.
