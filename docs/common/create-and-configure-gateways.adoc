@@ -176,11 +176,13 @@ kubectl apply -f egress-gateway-config.yaml
 ----
 
 
-. Test the egress gateway by making a request from a pod in the mesh (EG: using a bookinfo pod within the mesh):
+. Test the egress gateway by making a request from a pod in the mesh (e.g. the `curl` sample, deployed alongside `bookinfo`):
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl exec -it $(kubectl get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c productpage -- curl -v http://httpbin.org/get
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/curl/curl.yaml
+kubectl rollout status deploy/curl
+kubectl exec deploy/curl -c curl -- curl -v http://httpbin.org/get
 ----
 
 *Note:* With gateway injection, the gateway proxy automatically handles the routing configuration for the injected workload. The VirtualService above directs mesh traffic to the egress gateway service, and the gateway proxy forwards it to the external destination. This approach provides centralized egress traffic monitoring, policy enforcement, and security controls for outbound traffic.
