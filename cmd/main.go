@@ -334,6 +334,9 @@ func main() {
 		if err := recorder.EnsureNamespaceLabel(ctx); err != nil {
 			setupLog.Error(err, "problem adding cluster-monitoring label")
 		}
+		if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+			setupLog.Error(err, "problem creating metrics ServiceMonitor")
+		}
 	}
 
 	// Start the background recorder (non-blocking)
