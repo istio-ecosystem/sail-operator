@@ -1,8 +1,14 @@
 name: Create release checklist issue
 
-# When an "Add Istio" PR merges to the latest release-X.Y branch (active OLM
-# line), open a "Release Sail Operator <VERSION>" checklist (deduped by title).
-# Merges to older release-* branches are ignored.
+# When the daily update-deps automation adds new Istio versions on the latest
+# release-X.Y branch (active OLM line), open a "Release Sail Operator <VERSION>"
+# checklist (deduped by title). Merges to older release-* branches are ignored.
+#
+# Only "Automator: Update dependencies in ...@release-X.Y" PRs trigger this —
+# the title alone is not enough, since most of them only bump libraries/tools,
+# so hack/create-release-issue.sh additionally requires that the PR changed
+# pkg/istioversion/versions.yaml. Manually created "Add Istio" PRs do not
+# trigger a checklist; open one by hand (or via workflow_dispatch) if needed.
 #
 # Uses pull_request_target (not pull_request) so GITHUB_TOKEN retains issues:write
 # for PRs from forks — every real Add Istio PR is opened from a fork.
@@ -22,11 +28,11 @@ on:
   workflow_dispatch:
     inputs:
       pr:
-        description: "Add Istio PR number or URL to link in the checklist"
+        description: "Merged PR number or URL to link in the checklist"
         required: true
         type: string
       version:
-        description: "Optional VERSION override (default: Makefile.core.mk on the PR merge/base ref)"
+        description: "Optional VERSION override (default: Makefile.core.mk on the PR merge/base ref). The checklist is titled with this version if it is not released yet, otherwise with the next patch version"
         required: false
         type: string
         default: ''
@@ -49,7 +55,8 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.merged == true &&
-       contains(github.event.pull_request.title, 'Add Istio'))
+       startsWith(github.event.pull_request.title, 'Automator: Update dependencies in') &&
+       contains(github.event.pull_request.title, '@release-'))
     runs-on: ubuntu-latest
     permissions:
       issues: write

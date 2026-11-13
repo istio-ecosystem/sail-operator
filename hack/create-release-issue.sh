@@ -32,8 +32,9 @@ usage() {
 Usage: hack/create-release-issue.sh [options]
 
 Options:
-  --pr-url URL         Add Istio PR URL to embed in the checklist (required)
-  --pr-title TITLE     If set, skip unless title matches "Add Istio" + version
+  --pr-url URL         PR URL to embed in the checklist (required)
+  --pr-title TITLE     If set, skip unless the title matches
+                       "Automator: Update dependencies in ...@release-"
   --version X.Y.Z      Override VERSION (default: parse Makefile.core.mk)
   --base-branch NAME   PR base branch (e.g. release-1.31). Required unless --force.
                        Skips unless this is the highest release-X.Y branch (active OLM line).
@@ -111,14 +112,27 @@ if [[ -z "${GH_TOKEN:-}" && -n "${GITHUB_TOKEN:-}" ]]; then
   export GH_TOKEN="${GITHUB_TOKEN}"
 fi
 
-# Require "Add Istio" (optional "versions") followed by a version digit.
-# Matches: "Add Istio 1.31.2 support", "[release-1.31] Add Istio versions 1.31.2, ..."
-# Skips:   "Add custom Istio CR ...", "Update deps", etc.
+# Require the "Automator: Update dependencies in <org>/<repo>@release-X.Y" title
+# of the daily update-deps automation, which adds new Istio versions on release
+# branches. Skips every other PR title, including "Add Istio ..." PRs (their
+# checklist, if needed, is opened manually or via workflow_dispatch).
 if [[ -n "${PR_TITLE}" ]]; then
-  if ! grep -qiE 'Add Istio( versions)?[[:space:]]+[0-9]' <<< "${PR_TITLE}"; then
-    echo "PR title does not match 'Add Istio' + version; skipping: ${PR_TITLE}"
+  if ! grep -qE '^Automator: Update dependencies in .+@release-' <<< "${PR_TITLE}"; then
+    echo "PR title does not match 'Automator: Update dependencies in ...@release-'; skipping: ${PR_TITLE}"
     exit 0
   fi
+fi
+
+# The checklist is only needed when the PR actually added Istio versions, i.e.
+# changed pkg/istioversion/versions.yaml. Most "Automator: Update dependencies"
+# PRs only bump libraries/tools and must not open one.
+# Note: use `gh pr diff --name-only`, not `gh pr view --json files`; the latter
+# caps at 100 files and these PRs regularly change several hundred, which would
+# silently hide versions.yaml and skip the checklist.
+PR_FILES=$(gh pr diff "${PR_URL}" --repo "${REPO}" --name-only)
+if ! grep -qx "pkg/istioversion/versions.yaml" <<< "${PR_FILES}"; then
+  echo "PR did not change pkg/istioversion/versions.yaml; no Istio version was added; skipping."
+  exit 0
 fi
 
 # Only the active OLM line (highest release-X.Y) gets a checklist. Older
@@ -164,7 +178,18 @@ if [[ -z "${VERSION}" ]]; then
 fi
 echo "Parsed VERSION=${VERSION}"
 
-TITLE="Release Sail Operator ${VERSION}"
+# The operator VERSION is not bumped when Istio versions are added — that happens
+# during the release process, after this checklist is created. So the checklist is
+# titled with the next patch version (x.y.z+1) of the released VERSION. If VERSION
+# itself is not released yet (a release is already in flight), the new Istio
+# versions fold into that pending release and the checklist keeps its title.
+if gh release view "${VERSION}" --repo "${REPO}" >/dev/null 2>&1; then
+  TITLE_VERSION=$(echo "${VERSION}" | awk -F. '{print $1"."$2"."$3+1}')
+else
+  echo "VERSION ${VERSION} is not released yet; folding new Istio versions into its release"
+  TITLE_VERSION="${VERSION}"
+fi
+TITLE="Release Sail Operator ${TITLE_VERSION}"
 # Dedupe across all states so a closed checklist for the same VERSION is not
 # recreated on re-runs; reopen the existing issue if a redo is needed.
 EXISTING=$(gh issue list \
