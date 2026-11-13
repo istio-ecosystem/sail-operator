@@ -17,6 +17,16 @@ issueLink: https://github.com/istio-ecosystem/sail-operator/issues/NNN  # requir
 
 The `category` and `title` fields are required. The `issueLink` field is required when the category is `fixed`. Use `skip-changelog` label on the PR to opt out.
 
+## Branch propagation of fixes
+
+Bug fixes (`category: fixed`) merged into a release branch must also be present on every higher release branch, and a release can only go out after the higher branches' releases containing its fixes. Both rules are enforced by the regression check (`hack/regression-check.sh`), which matches fragments across branches by file name, `issueLink`, or changelog title.
+
+If a fix deliberately stays on one branch (for example, it fixes code that no longer exists on higher branches), set `propagate: false` in its fragment:
+
+```yaml
+propagate: false
+```
+
 ## Fragments on main after a release
 
 A fix made on main can also land in a release branch (via cherry-pick) and ship in a patch release before main cuts its own next release. Its fragment stays on main until then, so it doesn't get lost.
