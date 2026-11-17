@@ -138,4 +138,7 @@ spec:
           - fieldRef:
               fieldPath: metadata.annotations
             path: config.properties
+          - fieldRef:
+              fieldPath: metadata.labels
+            path: config.labels
         name: operator-config

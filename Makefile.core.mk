@@ -39,7 +39,6 @@ PREVIOUS_VERSION ?=
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
 VERSIONS_YAML_FILE ?= versions.yaml
-HELM_VALUES_FILE ?= chart/values.yaml
 
 # Istio images names
 ISTIO_CNI_IMAGE_NAME ?= install-cni
@@ -71,16 +70,6 @@ LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YAML_FILE}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/analyze.metricPrefix=${METRIC_PREFIX}
-
-# Set operator names in the analytic metrics
-ifndef OPERATOR_CHART_NAME
-OPERATOR_CHART_NAME := $(shell yq eval '.name' $(HELM_VALUES_FILE) 2> /dev/null || echo "sailoperator")
-endif
-ifndef OPERATOR_DEPLOYMENT_NAME
-OPERATOR_DEPLOYMENT_NAME := $(shell yq eval '.deployment.name' $(HELM_VALUES_FILE) 2> /dev/null || echo "sail-operator")
-endif
-LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/analyze.operatorName=${OPERATOR_CHART_NAME}
-LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/analyze.deploymentName=${OPERATOR_DEPLOYMENT_NAME}
 
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
@@ -194,6 +183,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Default values and flags used when rendering chart templates locally
+HELM_VALUES_FILE ?= chart/values.yaml
 HELM_TEMPL_DEF_FLAGS ?= --include-crds --values $(HELM_VALUES_FILE)
 # When true, all operand images will be added to the HELM_VALUES_FILE automatically
 PATCH_HELM_VALUES ?= true

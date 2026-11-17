@@ -56,42 +56,48 @@ const (
 	serviceCAFile        = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
 )
 
-// populated at build time via -ldflags
 var (
-	operatorName   = "sailoperator"  // chart .Values.name
-	deploymentName = "sail-operator" // chart .Values.deployment.name
+	metricDescription       map[string]MetricDescription
+	IstioVersionCurrent     *prometheus.GaugeVec
+	SidecarProxyCurrent     prometheus.Gauge
+	SidecarNamespaceCurrent prometheus.Gauge
+	ZTunnelVersionCurrent   *prometheus.GaugeVec
+	AmbientNamespaceCurrent prometheus.Gauge
 )
 
-// metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
-var metricDescription = map[string]MetricDescription{
-	"IstioVersionCurrent": {
-		Name: fmt.Sprintf("%s_istiod_current", operatorName),
-		Help: "Total number of Istiod control planes at each Istio version.",
-		Type: "GaugeVec",
-	},
-	"SidecarProxyCurrent": {
-		Name: fmt.Sprintf("%s_sidecar_proxy_current", operatorName),
-		Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
-		Type: "Gauge",
-	},
-	"SidecarNamespaceCurrent": {
-		Name: fmt.Sprintf("%s_sidecar_namespace_current", operatorName),
-		Help: "Total number of namespaces enrolled in Istio sidecar mode.",
-		Type: "Gauge",
-	},
-	"ZTunnelVersionCurrent": {
-		Name: fmt.Sprintf("%s_ztunnel_current", operatorName),
-		Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
-		Type: "GaugeVec",
-	},
-	"AmbientNamespaceCurrent": {
-		Name: fmt.Sprintf("%s_ambient_namespace_current", operatorName),
-		Help: "Total number of namespaces enrolled in Istio Ambient mode.",
-		Type: "Gauge",
-	},
-}
+func defineMetrics(operatorName string) {
+	if operatorName == "" {
+		operatorName = "sailoperator"
+	}
+	// metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
+	metricDescription = map[string]MetricDescription{
+		"IstioVersionCurrent": {
+			Name: fmt.Sprintf("%s_istiod_current", operatorName),
+			Help: "Total number of Istiod control planes at each Istio version.",
+			Type: "GaugeVec",
+		},
+		"SidecarProxyCurrent": {
+			Name: fmt.Sprintf("%s_sidecar_proxy_current", operatorName),
+			Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
+			Type: "Gauge",
+		},
+		"SidecarNamespaceCurrent": {
+			Name: fmt.Sprintf("%s_sidecar_namespace_current", operatorName),
+			Help: "Total number of namespaces enrolled in Istio sidecar mode.",
+			Type: "Gauge",
+		},
+		"ZTunnelVersionCurrent": {
+			Name: fmt.Sprintf("%s_ztunnel_current", operatorName),
+			Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
+			Type: "GaugeVec",
+		},
+		"AmbientNamespaceCurrent": {
+			Name: fmt.Sprintf("%s_ambient_namespace_current", operatorName),
+			Help: "Total number of namespaces enrolled in Istio Ambient mode.",
+			Type: "Gauge",
+		},
+	}
 
-var (
 	// IstioVersionCurrent will count how many Istio custom resources were created at each Istio version.
 	IstioVersionCurrent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -129,10 +135,10 @@ var (
 			Help: metricDescription["AmbientNamespaceCurrent"].Help,
 		},
 	)
-)
+}
 
 // RegisterMetrics will register metrics with the global prometheus registry
-func RegisterMetrics() {
+func registerMetrics() {
 	metrics.Registry.MustRegister(
 		IstioVersionCurrent,
 		SidecarProxyCurrent,
@@ -153,7 +159,9 @@ func ListMetrics() []MetricDescription {
 	return v
 }
 
-func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig) *MetricsRecorder {
+func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig, operatorName string) *MetricsRecorder {
+	defineMetrics(operatorName)
+	registerMetrics()
 	return &MetricsRecorder{
 		Client:     client,
 		metricsCfg: metricsCfg,
@@ -309,8 +317,8 @@ func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;create;delete
 
 // EnsureServiceMonitor ensures a ServiceMonitor resource for scraping metrics from the operator metrics-service
-func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context) error {
-	desired := m.buildServiceMonitor()
+func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context, operatorName, deploymentName string) error {
+	desired := m.buildServiceMonitor(operatorName, deploymentName)
 
 	existing := &monitoringv1.ServiceMonitor{}
 	err := m.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -334,7 +342,14 @@ func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context) error {
 	return m.Client.Patch(ctx, existing, patchBase)
 }
 
-func (m *MetricsRecorder) buildServiceMonitor() *monitoringv1.ServiceMonitor {
+func (m *MetricsRecorder) buildServiceMonitor(operatorName, deploymentName string) *monitoringv1.ServiceMonitor {
+	if operatorName == "" {
+		operatorName = "sailoperator"
+	}
+	if deploymentName == "" {
+		deploymentName = "sail-operator"
+	}
+
 	ns := m.metricsCfg.OperatorNamespace
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{

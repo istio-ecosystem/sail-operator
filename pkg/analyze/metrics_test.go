@@ -39,6 +39,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+var operatorName = "sailoperator"
+var deploymentName = "sail-operator"
+
 func createScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -161,7 +164,7 @@ func TestRecordMetrics(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(initObjects...).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{})
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{}, operatorName)
 
 	ctx := context.Background()
 	recorder.recordMetrics(ctx)
@@ -193,7 +196,7 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	scheme := createScheme(t)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{})
+	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{}, operatorName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -252,7 +255,7 @@ func TestEnsureNamespaceLabel(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(initObjs...).Build()
 			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 				OperatorNamespace: tt.operatorNamespace,
-			})
+			}, operatorName)
 
 			ctx := context.Background()
 			err := recorder.EnsureNamespaceLabel(ctx)
@@ -302,7 +305,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{
 				OperatorNamespace: tt.operatorNamespace,
-			})
+			}, operatorName)
 
 			expected := &monitoringv1.ServiceMonitor{
 				ObjectMeta: metav1.ObjectMeta{
@@ -343,7 +346,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 				},
 			}
 
-			if diff := cmp.Diff(expected, recorder.buildServiceMonitor()); diff != "" {
+			if diff := cmp.Diff(expected, recorder.buildServiceMonitor(operatorName, deploymentName)); diff != "" {
 				t.Errorf("buildServiceMonitor() mismatch (-expected +actual):\n%s", diff)
 			}
 		})
@@ -471,10 +474,10 @@ func TestEnsureServiceMonitor(t *testing.T) {
 
 			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 				OperatorNamespace: operatorNamespace,
-			})
+			}, operatorName)
 
 			ctx := context.Background()
-			err := recorder.EnsureServiceMonitor(ctx)
+			err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("EnsureServiceMonitor() error = %v, expectError %v", err, tt.expectError)
 			}
@@ -483,7 +486,7 @@ func TestEnsureServiceMonitor(t *testing.T) {
 				return
 			}
 
-			desired := recorder.buildServiceMonitor()
+			desired := recorder.buildServiceMonitor(operatorName, deploymentName)
 			actual := &monitoringv1.ServiceMonitor{}
 			if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), actual); err != nil {
 				t.Fatalf("failed to get ServiceMonitor: %v", err)
@@ -506,20 +509,20 @@ func TestEnsureServiceMonitorIsIdempotent(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 		OperatorNamespace: "openshift-operators",
-	})
+	}, operatorName)
 
 	ctx := context.Background()
-	if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+	if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
 		t.Fatalf("first EnsureServiceMonitor() returned error: %v", err)
 	}
 
-	desired := recorder.buildServiceMonitor()
+	desired := recorder.buildServiceMonitor(operatorName, deploymentName)
 	afterCreate := &monitoringv1.ServiceMonitor{}
 	if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), afterCreate); err != nil {
 		t.Fatalf("failed to get ServiceMonitor after create: %v", err)
 	}
 
-	if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+	if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
 		t.Fatalf("second EnsureServiceMonitor() returned error: %v", err)
 	}
 
