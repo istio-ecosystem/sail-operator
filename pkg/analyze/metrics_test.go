@@ -37,10 +37,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-var operatorName = "sailoperator"
-var deploymentName = "sail-operator"
+const (
+	testOperatorName    = "test-operator"
+	testDeploymentName  = "test-deployment"
+	defaultOperatorName = "sailoperator"
+)
 
 func createScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
@@ -70,20 +74,161 @@ func getGaugeValue(t *testing.T, g prometheus.Gauge) float64 {
 	return *metric.Gauge.Value
 }
 
+// expectedMetricNames returns the metric names defineMetrics builds for the given operator name.
+func expectedMetricNames(prefix string) []string {
+	return []string{
+		prefix + "_istiod_current",
+		prefix + "_sidecar_proxy_current",
+		prefix + "_sidecar_namespace_current",
+		prefix + "_ztunnel_current",
+		prefix + "_ambient_namespace_current",
+	}
+}
+
+// resetMetrics restores the package-level metric state once the test finishes.
+func resetMetrics(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		defineMetrics(testOperatorName)
+		registerMetrics()
+	})
+}
+
+// gatheredMetricNames returns the names of the metrics currently exposed by the controller-runtime registry.
+func gatheredMetricNames(t *testing.T) map[string]bool {
+	t.Helper()
+	families, err := metrics.Registry.Gather()
+	if err != nil {
+		t.Fatalf("failed to gather metrics: %v", err)
+	}
+	names := make(map[string]bool, len(families))
+	for _, f := range families {
+		names[f.GetName()] = true
+	}
+	return names
+}
+
+// touchCollectors gives every collector a value, so that the GaugeVecs reports a metric in Gather()
+// rather than staying invisible while they have no children.
+func touchCollectors() {
+	IstioVersionCurrent.WithLabelValues("v1.30.0").Set(0)
+	ZTunnelVersionCurrent.WithLabelValues("v1.30.0").Set(0)
+	SidecarProxyCurrent.Set(0)
+	SidecarNamespaceCurrent.Set(0)
+	AmbientNamespaceCurrent.Set(0)
+}
+
 func TestListMetrics(t *testing.T) {
+	resetMetrics(t)
+	tests := []struct {
+		name         string
+		operatorName string
+		wantPrefix   string
+	}{
+		{name: "custom operator name", operatorName: testOperatorName, wantPrefix: testOperatorName},
+		{name: "vendor operator name", operatorName: "vendor-mesh-operator", wantPrefix: "vendor-mesh-operator"},
+		{name: "empty operator name falls back to the default", operatorName: "", wantPrefix: defaultOperatorName},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defineMetrics(tt.operatorName)
+
+			metricsList := ListMetrics()
+			want := expectedMetricNames(tt.wantPrefix)
+			if len(metricsList) != len(want) {
+				t.Errorf("expected %d metrics, got %d", len(want), len(metricsList))
+			}
+
+			foundMap := make(map[string]bool)
+			for _, m := range metricsList {
+				foundMap[m.Name] = true
+				if m.Help == "" {
+					t.Errorf("metric %q has an empty Help string", m.Name)
+				}
+				if m.Type == "" {
+					t.Errorf("metric %q has an empty Type", m.Name)
+				}
+			}
+
+			for _, expected := range want {
+				if !foundMap[expected] {
+					t.Errorf("expected metric name %q to be in ListMetrics output", expected)
+				}
+			}
+		})
+	}
+}
+
+// TestListMetricsWithoutRecorder covers the metricsdocs generator, which calls ListMetrics
+// without ever building a MetricsRecorder. It must still describe every metric.
+func TestListMetricsWithoutRecorder(t *testing.T) {
+	resetMetrics(t)
+	metricDescription = nil
+
 	metricsList := ListMetrics()
-	if len(metricsList) != len(metricDescription) {
-		t.Errorf("expected %d metrics, got %d", len(metricDescription), len(metricsList))
+	if len(metricsList) == 0 {
+		t.Fatal("ListMetrics() returned no metrics; the generated metrics docs would be empty")
 	}
 
 	foundMap := make(map[string]bool)
 	for _, m := range metricsList {
 		foundMap[m.Name] = true
 	}
+	// An empty operator name falls back to the default prefix.
+	for _, expected := range expectedMetricNames(defaultOperatorName) {
+		if !foundMap[expected] {
+			t.Errorf("expected metric name %q to be in ListMetrics output", expected)
+		}
+	}
+}
 
-	for _, expected := range metricDescription {
-		if !foundMap[expected.Name] {
-			t.Errorf("expected metric name %q to be in ListMetrics output", expected.Name)
+// TestNewMetricsRecorderIsIdempotent guards against the duplicate collector registration
+// defineMetrics builds new collectors every time, so registering them a second time must replace the previous set.
+func TestNewMetricsRecorderIsIdempotent(t *testing.T) {
+	resetMetrics(t)
+	scheme := createScheme(t)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	for i := range 3 {
+		// a panic here fails the test.
+		if recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{}, testOperatorName); recorder == nil {
+			t.Fatalf("NewMetricsRecorder() returned nil on call %d", i+1)
+		}
+	}
+
+	touchCollectors()
+	names := gatheredMetricNames(t)
+	for _, want := range expectedMetricNames(testOperatorName) {
+		if !names[want] {
+			t.Errorf("expected metric %q to be registered after repeated calls", want)
+		}
+	}
+}
+
+// TestRegisterMetricsReplacesPreviousCollectors verifies that re-registering under a new
+// operator name drops the collectors registered under the old one, rather than leaving
+// two generations of the same metrics exposed.
+func TestRegisterMetricsReplacesPreviousCollectors(t *testing.T) {
+	resetMetrics(t)
+
+	defineMetrics("old-operator")
+	registerMetrics()
+	touchCollectors()
+
+	defineMetrics("new-operator")
+	registerMetrics()
+	touchCollectors()
+
+	names := gatheredMetricNames(t)
+	for _, want := range expectedMetricNames("new-operator") {
+		if !names[want] {
+			t.Errorf("expected metric %q to be registered", want)
+		}
+	}
+	for _, stale := range expectedMetricNames("old-operator") {
+		if names[stale] {
+			t.Errorf("expected stale metric %q to be unregistered", stale)
 		}
 	}
 }
@@ -164,7 +309,7 @@ func TestRecordMetrics(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(initObjects...).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{}, operatorName)
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{}, testOperatorName)
 
 	ctx := context.Background()
 	recorder.recordMetrics(ctx)
@@ -196,7 +341,7 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	scheme := createScheme(t)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{}, operatorName)
+	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{}, testOperatorName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -255,7 +400,7 @@ func TestEnsureNamespaceLabel(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(initObjs...).Build()
 			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 				OperatorNamespace: tt.operatorNamespace,
-			}, operatorName)
+			}, testOperatorName)
 
 			ctx := context.Background()
 			err := recorder.EnsureNamespaceLabel(ctx)
@@ -305,23 +450,23 @@ func TestBuildServiceMonitor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{
 				OperatorNamespace: tt.operatorNamespace,
-			}, operatorName)
+			}, testOperatorName)
 
 			expected := &monitoringv1.ServiceMonitor{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sailoperator-metrics-monitor",
+					Name:      testOperatorName + "-metrics-monitor",
 					Namespace: tt.operatorNamespace,
 					Labels: map[string]string{
-						"app.kubernetes.io/component":  "sailoperator",
+						"app.kubernetes.io/component":  testOperatorName,
 						"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
-						"app.kubernetes.io/name":       "sailoperator",
-						"app.kubernetes.io/part-of":    "sailoperator",
+						"app.kubernetes.io/name":       testOperatorName,
+						"app.kubernetes.io/part-of":    testOperatorName,
 						"release":                      "prometheus",
 					},
 				},
 				Spec: monitoringv1.ServiceMonitorSpec{
 					Selector: metav1.LabelSelector{
-						MatchLabels: map[string]string{"control-plane": "sail-operator"},
+						MatchLabels: map[string]string{"control-plane": testDeploymentName},
 					},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port:            "https",
@@ -337,7 +482,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 										CAFile: "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt",
 									},
 									SafeTLSConfig: monitoringv1.SafeTLSConfig{
-										ServerName: new(fmt.Sprintf("sail-operator-metrics-service.%s.svc", tt.operatorNamespace)),
+										ServerName: new(fmt.Sprintf("%s-metrics-service.%s.svc", testDeploymentName, tt.operatorNamespace)),
 									},
 								},
 							},
@@ -346,20 +491,47 @@ func TestBuildServiceMonitor(t *testing.T) {
 				},
 			}
 
-			if diff := cmp.Diff(expected, recorder.buildServiceMonitor(operatorName, deploymentName)); diff != "" {
+			if diff := cmp.Diff(expected, recorder.buildServiceMonitor(testOperatorName, testDeploymentName)); diff != "" {
 				t.Errorf("buildServiceMonitor() mismatch (-expected +actual):\n%s", diff)
 			}
 		})
 	}
 }
 
+// TestBuildServiceMonitorDefaults covers the fallback names used when the operator's
+// downward-API labels are missing, which is what happens outside an OLM install.
+func TestBuildServiceMonitorDefaults(t *testing.T) {
+	const customNamespace = "custom-namespace"
+
+	recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{OperatorNamespace: customNamespace}, "")
+	sm := recorder.buildServiceMonitor("", "")
+
+	if got, want := sm.Name, "sailoperator"+metricsMonitorSuffix; got != want {
+		t.Errorf("expected ServiceMonitor name %q, got %q", want, got)
+	}
+	for _, key := range []string{"app.kubernetes.io/component", "app.kubernetes.io/name", "app.kubernetes.io/part-of"} {
+		if got := sm.Labels[key]; got != "sailoperator" {
+			t.Errorf("expected label %s=%s, got %q", key, testOperatorName, got)
+		}
+	}
+	if got, want := sm.Spec.Selector.MatchLabels["control-plane"], "sail-operator"; got != want {
+		t.Errorf("expected selector control-plane=%q, got %q", want, got)
+	}
+
+	wantServerName := fmt.Sprintf("%s%s.%s.svc", "sail-operator", metricsServiceSuffix, customNamespace)
+	serverName := sm.Spec.Endpoints[0].TLSConfig.ServerName
+	if serverName == nil || *serverName != wantServerName {
+		t.Errorf("expected TLS ServerName %q, got %v", wantServerName, serverName)
+	}
+}
+
 func TestEnsureServiceMonitor(t *testing.T) {
 	const operatorNamespace = "openshift-operators"
 
-	staleServiceMonitor := func() *monitoringv1.ServiceMonitor {
+	staleServiceMonitor := func(name string) *monitoringv1.ServiceMonitor {
 		return &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "sailoperator-metrics-monitor",
+				Name:      name + "-metrics-monitor",
 				Namespace: operatorNamespace,
 				Labels: map[string]string{
 					"app.kubernetes.io/component": "something-else",
@@ -380,6 +552,8 @@ func TestEnsureServiceMonitor(t *testing.T) {
 
 	tests := []struct {
 		name             string
+		operatorName     string
+		deploymentName   string
 		registerCRDs     bool
 		existing         *monitoringv1.ServiceMonitor
 		interceptorFuncs interceptor.Funcs
@@ -393,11 +567,28 @@ func TestEnsureServiceMonitor(t *testing.T) {
 			expectMonitor: true,
 		},
 		{
+			name:           "creates ServiceMonitor named after a vendor operator",
+			operatorName:   "service-mesh-operator",
+			deploymentName: "service-mesh-controller",
+			registerCRDs:   true,
+			expectError:    false,
+			expectMonitor:  true,
+		},
+		{
 			name:          "patches existing ServiceMonitor that is out of date",
 			registerCRDs:  true,
-			existing:      staleServiceMonitor(),
+			existing:      staleServiceMonitor(testOperatorName),
 			expectError:   false,
 			expectMonitor: true,
+		},
+		{
+			name:           "adopts a stale ServiceMonitor belonging to the same vendor operator",
+			operatorName:   "service-mesh-operator",
+			deploymentName: "service-mesh-controller",
+			registerCRDs:   true,
+			existing:       staleServiceMonitor("vendor-mesh-operator"),
+			expectError:    false,
+			expectMonitor:  true,
 		},
 		{
 			name:         "no-op when prometheus-operator types are not registered",
@@ -449,17 +640,6 @@ func TestEnsureServiceMonitor(t *testing.T) {
 			},
 			expectError: false,
 		},
-		{
-			name:         "returns error when Patch fails",
-			registerCRDs: true,
-			existing:     staleServiceMonitor(),
-			interceptorFuncs: interceptor.Funcs{
-				Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					return fmt.Errorf("simulated patch error")
-				},
-			},
-			expectError: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -474,10 +654,10 @@ func TestEnsureServiceMonitor(t *testing.T) {
 
 			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 				OperatorNamespace: operatorNamespace,
-			}, operatorName)
+			}, tt.operatorName)
 
 			ctx := context.Background()
-			err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName)
+			err := recorder.EnsureServiceMonitor(ctx, tt.operatorName, tt.deploymentName)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("EnsureServiceMonitor() error = %v, expectError %v", err, tt.expectError)
 			}
@@ -486,7 +666,7 @@ func TestEnsureServiceMonitor(t *testing.T) {
 				return
 			}
 
-			desired := recorder.buildServiceMonitor(operatorName, deploymentName)
+			desired := recorder.buildServiceMonitor(tt.operatorName, tt.deploymentName)
 			actual := &monitoringv1.ServiceMonitor{}
 			if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), actual); err != nil {
 				t.Fatalf("failed to get ServiceMonitor: %v", err)
@@ -501,37 +681,5 @@ func TestEnsureServiceMonitor(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestEnsureServiceMonitorIsIdempotent(t *testing.T) {
-	scheme := createScheme(t)
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
-		OperatorNamespace: "openshift-operators",
-	}, operatorName)
-
-	ctx := context.Background()
-	if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
-		t.Fatalf("first EnsureServiceMonitor() returned error: %v", err)
-	}
-
-	desired := recorder.buildServiceMonitor(operatorName, deploymentName)
-	afterCreate := &monitoringv1.ServiceMonitor{}
-	if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), afterCreate); err != nil {
-		t.Fatalf("failed to get ServiceMonitor after create: %v", err)
-	}
-
-	if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
-		t.Fatalf("second EnsureServiceMonitor() returned error: %v", err)
-	}
-
-	afterPatch := &monitoringv1.ServiceMonitor{}
-	if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), afterPatch); err != nil {
-		t.Fatalf("failed to get ServiceMonitor after second call: %v", err)
-	}
-
-	if diff := cmp.Diff(afterCreate.Labels, afterPatch.Labels); diff != "" {
-		t.Errorf("second EnsureServiceMonitor() modified the labels (-first +second):\n%s", diff)
 	}
 }

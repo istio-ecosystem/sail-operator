@@ -26,9 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -63,6 +61,7 @@ var (
 	SidecarNamespaceCurrent prometheus.Gauge
 	ZTunnelVersionCurrent   *prometheus.GaugeVec
 	AmbientNamespaceCurrent prometheus.Gauge
+	registeredCollectors    []prometheus.Collector
 )
 
 func defineMetrics(operatorName string) {
@@ -137,19 +136,34 @@ func defineMetrics(operatorName string) {
 	)
 }
 
-// RegisterMetrics will register metrics with the global prometheus registry
-func registerMetrics() {
-	metrics.Registry.MustRegister(
+// getCollectors returns all metric collectors owned by this package
+func getCollectors() []prometheus.Collector {
+	return []prometheus.Collector{
 		IstioVersionCurrent,
 		SidecarProxyCurrent,
 		SidecarNamespaceCurrent,
 		ZTunnelVersionCurrent,
 		AmbientNamespaceCurrent,
-	)
+	}
+}
+
+// registerMetrics will register metrics with the global prometheus registry.
+// previously registered metrics under the same name is unregistered first.
+// This function idempotent instead of panicking on a duplicate register.
+func registerMetrics() {
+	for _, c := range registeredCollectors {
+		metrics.Registry.Unregister(c)
+	}
+	registeredCollectors = getCollectors()
+	metrics.Registry.MustRegister(registeredCollectors...)
 }
 
 // ListMetrics will create a slice with the metrics available in metricDescription
 func ListMetrics() []MetricDescription {
+	if metricDescription == nil {
+		defineMetrics("")
+	}
+
 	v := make([]MetricDescription, 0, len(metricDescription))
 	// Insert value (Name, Help) for each metric
 	for _, value := range metricDescription {
@@ -328,16 +342,12 @@ func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context, operatorName
 			return fmt.Errorf("failed to create ServiceMonitor: %w", err)
 		}
 		return nil
-	case meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err):
-		// prometheus-operator CRDs absent — nothing to do
-		return nil
 	case err != nil:
 		return fmt.Errorf("failed to get ServiceMonitor: %w", err)
 	}
 
-	// adopt an older monitor that still points at the wrong namespace
+	// adopt an older monitor that still configures wrong tls serverName
 	patchBase := client.MergeFrom(existing.DeepCopy())
-	existing.Labels = desired.Labels
 	existing.Spec = desired.Spec
 	return m.Client.Patch(ctx, existing, patchBase)
 }
