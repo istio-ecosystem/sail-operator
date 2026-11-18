@@ -129,6 +129,7 @@ inputFiles:
       PilotConfig.Volumes: "[]k8sv1.Volume"
       PilotConfig.InitContainers: "[]k8sv1.Container"
       PilotConfig.Pdb: "*policyv1.PodDisruptionBudgetSpec"
+      PilotConfig.PdbLabels: "map[string]string"
       PilotConfig.DeploymentAnnotations: "map[string]string"
       PilotConfig.SidecarInjectorWebhookAnnotations: "map[string]string"
       ProxyConfig.Resources: "*k8sv1.ResourceRequirements"
