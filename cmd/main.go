@@ -122,10 +122,10 @@ func main() {
 	setupLog.Info("reading labels")
 	labels, err := config.ReadLabels(labelsFile)
 	if err != nil {
-		setupLog.Error(err, "unable to read labels file at "+labelsFile)
-		os.Exit(1)
+		setupLog.Info("unable to read labels file at ", labelsFile)
+	} else {
+		setupLog.Info("labels loaded", "labels", labels)
 	}
-	setupLog.Info("labels loaded", "labels", labels)
 
 	cfg := ctrl.GetConfigOrDie()
 	if logAPIRequests {
@@ -339,19 +339,15 @@ func main() {
 	}
 
 	setupLog.Info("starting custom resource metrics recorder")
-	operatorName := labels["app.kubernetes.io/part-of"]
-	deploymentName := labels["control-plane"]
-
-	// prepare custom usage metrics so Prometheus can scrape them
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg, operatorName)
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg, labels)
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		if err := recorder.EnsureNamespaceLabel(ctx); err != nil {
 			setupLog.Error(err, "problem adding cluster-monitoring label")
 		}
-		if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
+		if err := recorder.EnsureServiceMonitor(ctx); err != nil {
 			setupLog.Error(err, "problem creating metrics ServiceMonitor")
 		}
-		if err := recorder.EnsureRecordingRules(ctx, operatorName); err != nil {
+		if err := recorder.EnsureRecordingRules(ctx); err != nil {
 			setupLog.Error(err, "problem creating metrics PrometheusRule")
 		}
 	}

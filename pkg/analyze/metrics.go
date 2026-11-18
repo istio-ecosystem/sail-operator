@@ -21,7 +21,6 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -48,12 +47,17 @@ type MetricsRecorder struct {
 	client.Client
 	metricsCfg config.ReconcilerConfig
 	interval   time.Duration
+	labels     map[string]string
 }
 
 const (
-	metricsMonitorSuffix = "-metrics-monitor"
-	metricsServiceSuffix = "-metrics-service"
-	serviceCAFile        = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
+	metricsMonitorSuffix  = "-metrics-monitor"
+	metricsServiceSuffix  = "-metrics-service"
+	serviceCAFile         = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
+	operatorNameLabel     = "app.kubernetes.io/part-of"
+	deploymentNameLabel   = "control-plane"
+	defaultOperatorName   = "sailoperator"
+	defaultDeploymentName = "sail-operator"
 )
 
 // metricPrefix will be populated at build time via -ldflags
@@ -124,12 +128,32 @@ func ListMetrics() []MetricDescription {
 	return v
 }
 
-func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig, operatorName string) *MetricsRecorder {
+func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig, labels map[string]string) *MetricsRecorder {
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	return &MetricsRecorder{
 		Client:     client,
 		metricsCfg: metricsCfg,
 		interval:   interval,
+		labels:     labels,
 	}
+}
+
+// getOperatorName returns the operator name taken from the downward API labels.
+func (m *MetricsRecorder) getOperatorName() string {
+	if name := m.labels[operatorNameLabel]; name != "" {
+		return name
+	}
+	return defaultOperatorName
+}
+
+// getDeploymentName returns the name of the Deployment running the operator, taken from the downward API labels.
+func (m *MetricsRecorder) getDeploymentName() string {
+	if name := m.labels[deploymentNameLabel]; name != "" {
+		return name
+	}
+	return defaultDeploymentName
 }
 
 // Start begins recording metrics every interval until context is canceled
@@ -198,8 +222,8 @@ func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;create;delete
 
 // EnsureServiceMonitor ensures a ServiceMonitor resource for scraping metrics from the operator metrics-service
-func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context, operatorName, deploymentName string) error {
-	desired := m.buildServiceMonitor(operatorName, deploymentName)
+func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context) error {
+	desired := m.buildServiceMonitor()
 
 	existing := &monitoringv1.ServiceMonitor{}
 	err := m.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -215,34 +239,27 @@ func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context, operatorName
 
 	// adopt an older monitor that still configures wrong tls serverName
 	patchBase := client.MergeFrom(existing.DeepCopy())
+	existing.Labels = desired.Labels
 	existing.Spec = desired.Spec
 	return m.Client.Patch(ctx, existing, patchBase)
 }
 
-func (m *MetricsRecorder) buildServiceMonitor(operatorName, deploymentName string) *monitoringv1.ServiceMonitor {
-	if operatorName == "" {
-		operatorName = "sailoperator"
-	}
-	if deploymentName == "" {
-		deploymentName = "sail-operator"
-	}
+func (m *MetricsRecorder) buildServiceMonitor() *monitoringv1.ServiceMonitor {
+	operatorName := m.getOperatorName()
+	deploymentName := m.getDeploymentName()
+	smLabels := m.labels
+	smLabels["release"] = "prometheus" // Prometheus serviceMonitorSelector
 
 	ns := m.metricsCfg.OperatorNamespace
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      operatorName + metricsMonitorSuffix,
 			Namespace: ns,
-			Labels: map[string]string{
-				"app.kubernetes.io/component":  operatorName,
-				"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
-				"app.kubernetes.io/name":       operatorName,
-				"app.kubernetes.io/part-of":    operatorName,
-				"release":                      "prometheus", // Prometheus serviceMonitorSelector
-			},
+			Labels:    smLabels,
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"control-plane": deploymentName},
+				MatchLabels: map[string]string{deploymentNameLabel: deploymentName},
 			},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:            "https",
@@ -270,8 +287,8 @@ func (m *MetricsRecorder) buildServiceMonitor(operatorName, deploymentName strin
 
 // EnsureRecordingRules ensures the recording rules that derive namespace enrolment counts from kube-state-metrics.
 // These are computed in Prometheus rather than by the operator, so the operator does not have to list every namespace on every collection interval.
-func (m *MetricsRecorder) EnsureRecordingRules(ctx context.Context, operatorName string) error {
-	desired := m.buildPrometheusRule(operatorName)
+func (m *MetricsRecorder) EnsureRecordingRules(ctx context.Context) error {
+	desired := m.buildPrometheusRule()
 
 	existing := &monitoringv1.PrometheusRule{}
 	err := m.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -290,19 +307,14 @@ func (m *MetricsRecorder) EnsureRecordingRules(ctx context.Context, operatorName
 	return m.Client.Patch(ctx, existing, patchBase)
 }
 
-func (m *MetricsRecorder) buildPrometheusRule(operatorName string) *monitoringv1.PrometheusRule {
-	if operatorName == "" {
-		operatorName = "sailoperator"
-	}
+func (m *MetricsRecorder) buildPrometheusRule() *monitoringv1.PrometheusRule {
+	operatorName := m.getOperatorName()
+
 	return &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      operatorName + "-metrics-rules",
 			Namespace: m.metricsCfg.OperatorNamespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
-				"app.kubernetes.io/name":       operatorName,
-				"role":                         "alert-rules",
-			},
+			Labels:    m.labels,
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
