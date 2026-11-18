@@ -16,13 +16,42 @@ package revision
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// ListNamespacesReferencingRevisions returns, keyed by name, only the namespaces that can
+// reference a revision: those labeled istio-injection=enabled or carrying an istio.io/rev label.
+// Namespaces without these labels never reference a revision, so scoping the list this way avoids
+// pulling every namespace in the cluster during in-use detection.
+func ListNamespacesReferencingRevisions(ctx context.Context, c client.Client) (map[string]corev1.Namespace, error) {
+	nsMap := map[string]corev1.Namespace{}
+
+	injectionList := corev1.NamespaceList{}
+	if err := c.List(ctx, &injectionList,
+		client.MatchingLabels{constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue}); err != nil {
+		return nil, fmt.Errorf("failed to list namespaces: %w", err)
+	}
+	for _, ns := range injectionList.Items {
+		nsMap[ns.Name] = ns
+	}
+
+	revList := corev1.NamespaceList{}
+	if err := c.List(ctx, &revList, client.HasLabels{constants.IstioRevLabel}); err != nil {
+		return nil, fmt.Errorf("failed to list namespaces: %w", err)
+	}
+	for _, ns := range revList.Items {
+		nsMap[ns.Name] = ns
+	}
+
+	return nsMap, nil
+}
 
 func GetReferencedRevisionFromNamespace(labels map[string]string) string {
 	// istio-injection label takes precedence over istio.io/rev

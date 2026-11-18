@@ -491,8 +491,6 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioR
 
 func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1.IstioRevision) (bool, error) {
 	log := logf.FromContext(ctx)
-	nsList := corev1.NamespaceList{}
-	nsMap := map[string]corev1.Namespace{}
 	// if an IstioRevision is referenced by a revisionTag, it's considered as InUse
 	revisionTagList := v1.IstioRevisionTagList{}
 	if err := r.Client.List(ctx, &revisionTagList); err != nil {
@@ -505,19 +503,19 @@ func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1.IstioRevi
 		}
 	}
 
-	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
-		return false, fmt.Errorf("failed to list namespaces: %w", err)
+	nsMap, err := revision.ListNamespacesReferencingRevisions(ctx, r.Client)
+	if err != nil {
+		return false, err
 	}
-	for _, ns := range nsList.Items {
+	for _, ns := range nsMap {
 		if namespaceReferencesRevision(ns, rev) {
 			log.V(2).Info("Revision is referenced by Namespace", "Namespace", ns.Name)
 			return true, nil
 		}
-		nsMap[ns.Name] = ns
 	}
 
 	podList := corev1.PodList{}
-	if err := r.Client.List(ctx, &podList); err != nil { // TODO: can we optimize this by specifying a label selector
+	if err := r.Client.List(ctx, &podList); err != nil {
 		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
@@ -526,7 +524,11 @@ func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1.IstioRevi
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevision(pod, ns, rev) {
+		// nsMap only contains namespaces that carry an injection label. A pod in any other
+		// namespace maps to the zero-value Namespace (no labels), which podReferencesRevision
+		// treats as a namespace that doesn't reference a revision - the correct behavior.
+		ns := nsMap[pod.Namespace]
+		if podReferencesRevision(pod, ns, rev) {
 			log.V(2).Info("Revision is referenced by Pod", "Pod", client.ObjectKeyFromObject(&pod))
 			return true, nil
 		}
