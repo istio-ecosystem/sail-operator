@@ -62,6 +62,9 @@ ifndef GIT_STATUS
 GIT_STATUS := $(shell git diff-index --quiet HEAD -- 2> /dev/null; if [ "$$?" = "0" ]; then echo Clean; else echo Modified; fi)
 endif
 
+# metric name prefix
+METRIC_PREFIX := $(shell yq eval '.name' chart/values.yaml)
+
 # Linker flags for the go builds
 GO_MODULE = github.com/istio-ecosystem/sail-operator
 LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}

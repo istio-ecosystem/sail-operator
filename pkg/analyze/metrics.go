@@ -22,12 +22,14 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -54,49 +56,29 @@ const (
 	serviceCAFile        = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
 )
 
+// metricPrefix will be populated at build time via -ldflags
+var metricPrefix = "sail_operator"
+
+// metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
+var metricDescription = map[string]MetricDescription{
+	"IstioVersionCurrent": {
+		Name: fmt.Sprintf("%s_istiod_current", metricPrefix),
+		Help: "Total number of Istiod control planes at each Istio version.",
+		Type: "GaugeVec",
+	},
+	"SidecarProxyCurrent": {
+		Name: fmt.Sprintf("%s_sidecar_proxy_current", metricPrefix),
+		Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
+		Type: "Gauge",
+	},
+	"ZTunnelVersionCurrent": {
+		Name: fmt.Sprintf("%s_ztunnel_current", metricPrefix),
+		Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
+		Type: "GaugeVec",
+	},
+}
+
 var (
-	metricDescription       map[string]MetricDescription
-	IstioVersionCurrent     *prometheus.GaugeVec
-	SidecarProxyCurrent     prometheus.Gauge
-	SidecarNamespaceCurrent prometheus.Gauge
-	ZTunnelVersionCurrent   *prometheus.GaugeVec
-	AmbientNamespaceCurrent prometheus.Gauge
-	registeredCollectors    []prometheus.Collector
-)
-
-func defineMetrics(operatorName string) {
-	if operatorName == "" {
-		operatorName = "sailoperator"
-	}
-	// metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
-	metricDescription = map[string]MetricDescription{
-		"IstioVersionCurrent": {
-			Name: fmt.Sprintf("%s_istiod_current", operatorName),
-			Help: "Total number of Istiod control planes at each Istio version.",
-			Type: "GaugeVec",
-		},
-		"SidecarProxyCurrent": {
-			Name: fmt.Sprintf("%s_sidecar_proxy_current", operatorName),
-			Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
-			Type: "Gauge",
-		},
-		"SidecarNamespaceCurrent": {
-			Name: fmt.Sprintf("%s_sidecar_namespace_current", operatorName),
-			Help: "Total number of namespaces enrolled in Istio sidecar mode.",
-			Type: "Gauge",
-		},
-		"ZTunnelVersionCurrent": {
-			Name: fmt.Sprintf("%s_ztunnel_current", operatorName),
-			Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
-			Type: "GaugeVec",
-		},
-		"AmbientNamespaceCurrent": {
-			Name: fmt.Sprintf("%s_ambient_namespace_current", operatorName),
-			Help: "Total number of namespaces enrolled in Istio Ambient mode.",
-			Type: "Gauge",
-		},
-	}
-
 	// IstioVersionCurrent will count how many Istio custom resources were created at each Istio version.
 	IstioVersionCurrent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -112,13 +94,6 @@ func defineMetrics(operatorName string) {
 			Help: metricDescription["SidecarProxyCurrent"].Help,
 		},
 	)
-	// SidecarNamespaceCurrent will count how many namespaces were enabled in Istio sidecar mode.
-	SidecarNamespaceCurrent = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: metricDescription["SidecarNamespaceCurrent"].Name,
-			Help: metricDescription["SidecarNamespaceCurrent"].Help,
-		},
-	)
 	// ZTunnelVersionCurrent will count how many ZTunnel custom resources were created at each Istio version.
 	ZTunnelVersionCurrent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -127,43 +102,19 @@ func defineMetrics(operatorName string) {
 		},
 		[]string{"app.kubernetes.io/version"},
 	)
-	// AmbientNamespaceCurrent will count how many namespaces were enabled in Istio Ambient mode.
-	AmbientNamespaceCurrent = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: metricDescription["AmbientNamespaceCurrent"].Name,
-			Help: metricDescription["AmbientNamespaceCurrent"].Help,
-		},
-	)
-}
+)
 
-// getCollectors returns all metric collectors owned by this package
-func getCollectors() []prometheus.Collector {
-	return []prometheus.Collector{
+// RegisterMetrics will register metrics with the global prometheus registry
+func RegisterMetrics() {
+	metrics.Registry.MustRegister(
 		IstioVersionCurrent,
 		SidecarProxyCurrent,
-		SidecarNamespaceCurrent,
 		ZTunnelVersionCurrent,
-		AmbientNamespaceCurrent,
-	}
-}
-
-// registerMetrics will register metrics with the global prometheus registry.
-// previously registered metrics under the same name is unregistered first.
-// This function idempotent instead of panicking on a duplicate register.
-func registerMetrics() {
-	for _, c := range registeredCollectors {
-		metrics.Registry.Unregister(c)
-	}
-	registeredCollectors = getCollectors()
-	metrics.Registry.MustRegister(registeredCollectors...)
+	)
 }
 
 // ListMetrics will create a slice with the metrics available in metricDescription
 func ListMetrics() []MetricDescription {
-	if metricDescription == nil {
-		defineMetrics("")
-	}
-
 	v := make([]MetricDescription, 0, len(metricDescription))
 	// Insert value (Name, Help) for each metric
 	for _, value := range metricDescription {
@@ -174,8 +125,6 @@ func ListMetrics() []MetricDescription {
 }
 
 func NewMetricsRecorder(interval time.Duration, client client.Client, metricsCfg config.ReconcilerConfig, operatorName string) *MetricsRecorder {
-	defineMetrics(operatorName)
-	registerMetrics()
 	return &MetricsRecorder{
 		Client:     client,
 		metricsCfg: metricsCfg,
@@ -204,8 +153,6 @@ func (m *MetricsRecorder) recordMetrics(ctx context.Context) {
 	istiodCounts := m.listIstiod(ctx)
 	ztunnelCounts := m.listZTunnel(ctx)
 	sidecarProxyCounts := m.listSidecarProxies(ctx)
-	sidecarNsCounts := m.listSidecarNamespace(ctx)
-	ambientNsCounts := m.listAmbientNamespace(ctx)
 
 	// Update GaugeVec values
 	for version, count := range istiodCounts {
@@ -216,96 +163,16 @@ func (m *MetricsRecorder) recordMetrics(ctx context.Context) {
 	}
 
 	SidecarProxyCurrent.Set(sidecarProxyCounts)
-	SidecarNamespaceCurrent.Set(sidecarNsCounts)
-	AmbientNamespaceCurrent.Set(ambientNsCounts)
-}
-
-func (m *MetricsRecorder) listIstiod(ctx context.Context) map[string]float64 {
-	log := logf.FromContext(ctx)
-	istiodCounts := make(map[string]float64)
-
-	istioList := v1.IstioList{}
-	if err := m.Client.List(ctx, &istioList); err != nil {
-		log.V(4).Error(err, "failed to list Istio")
-	}
-
-	for _, item := range istioList.Items {
-		if item.Spec.Version != "" {
-			istiodCounts[item.Spec.Version]++
-		}
-	}
-	return istiodCounts
-}
-
-func (m *MetricsRecorder) listZTunnel(ctx context.Context) map[string]float64 {
-	log := logf.FromContext(ctx)
-	ztunnelCounts := make(map[string]float64)
-
-	ztunnelList := v1.ZTunnelList{}
-	if err := m.Client.List(ctx, &ztunnelList); err != nil {
-		log.V(4).Error(err, "failed to list ZTunnel")
-	}
-	for _, item := range ztunnelList.Items {
-		if item.Spec.Version != "" {
-			ztunnelCounts[item.Spec.Version]++
-		}
-	}
-	return ztunnelCounts
 }
 
 func (m *MetricsRecorder) listSidecarProxies(ctx context.Context) float64 {
 	log := logf.FromContext(ctx)
-	podList := &corev1.PodList{}
-	// filter by security.istio.io/tlsMode=istio label
+	podList := &metav1.PartialObjectMetadataList{}
+	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 	if err := m.Client.List(ctx, podList, client.MatchingLabels{"security.istio.io/tlsMode": "istio"}); err != nil {
 		log.V(4).Error(err, "failed to list Pod")
 	}
 	return float64(len(podList.Items))
-}
-
-func (m *MetricsRecorder) listSidecarNamespace(ctx context.Context) float64 {
-	log := logf.FromContext(ctx)
-	nsList := &corev1.NamespaceList{}
-	nsListAlt := &corev1.NamespaceList{}
-	// filter by istio-injection=enabled or istio.io/rev labels
-	if err := m.Client.List(ctx, nsList, client.MatchingLabels{"istio-injection": "enabled"}); err != nil {
-		log.V(4).Error(err, "failed to list namespace")
-	}
-	if err := m.Client.List(ctx, nsListAlt, client.HasLabels{"istio.io/rev"}); err != nil {
-		log.V(4).Error(err, "failed to list namespace")
-	}
-	return float64(len(nsList.Items) + len(nsListAlt.Items))
-}
-
-func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
-	log := logf.FromContext(ctx)
-	setNs := make(map[string]corev1.Namespace)
-
-	ambientNsList := &corev1.NamespaceList{}
-	waypointNsList := &corev1.NamespaceList{}
-	ingressNsList := &corev1.NamespaceList{}
-	// filter by istio.io/dataplane-mode=ambient, istio.io/use-waypoint or istio.io/ingress-use-waypoint labels
-	if err := m.Client.List(ctx, ambientNsList, client.MatchingLabels{"istio.io/dataplane-mode": "ambient"}); err != nil {
-		log.V(4).Error(err, "failed to list namespace")
-	}
-	if err := m.Client.List(ctx, waypointNsList, client.HasLabels{"istio.io/use-waypoint"}); err != nil {
-		log.V(4).Error(err, "failed to list namespace")
-	}
-	if err := m.Client.List(ctx, ingressNsList, client.HasLabels{"istio.io/ingress-use-waypoint"}); err != nil {
-		log.V(4).Error(err, "failed to list namespace")
-	}
-
-	for _, ns := range ambientNsList.Items {
-		setNs[ns.Name] = ns
-	}
-	for _, ns := range waypointNsList.Items {
-		setNs[ns.Name] = ns
-	}
-	for _, ns := range ingressNsList.Items {
-		setNs[ns.Name] = ns
-	}
-
-	return float64(len(setNs))
 }
 
 // EnsureNamespaceLabel ensures label openshift.io/cluster-monitoring=true for the operator namespace
@@ -397,4 +264,106 @@ func (m *MetricsRecorder) buildServiceMonitor(operatorName, deploymentName strin
 			}},
 		},
 	}
+}
+
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;create;delete
+
+// EnsureRecordingRules ensures the recording rules that derive namespace enrolment counts from kube-state-metrics.
+// These are computed in Prometheus rather than by the operator, so the operator does not have to list every namespace on every collection interval.
+func (m *MetricsRecorder) EnsureRecordingRules(ctx context.Context, operatorName string) error {
+	desired := m.buildPrometheusRule(operatorName)
+
+	existing := &monitoringv1.PrometheusRule{}
+	err := m.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
+	switch {
+	case apierrors.IsNotFound(err):
+		if err := m.Client.Create(ctx, desired); err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create PrometheusRule: %w", err)
+		}
+		return nil
+	case err != nil:
+		return fmt.Errorf("failed to get PrometheusRule: %w", err)
+	}
+
+	patchBase := client.MergeFrom(existing.DeepCopy())
+	existing.Spec = desired.Spec
+	return m.Client.Patch(ctx, existing, patchBase)
+}
+
+func (m *MetricsRecorder) buildPrometheusRule(operatorName string) *monitoringv1.PrometheusRule {
+	if operatorName == "" {
+		operatorName = "sailoperator"
+	}
+	return &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      operatorName + "-metrics-rules",
+			Namespace: m.metricsCfg.OperatorNamespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
+				"app.kubernetes.io/name":       operatorName,
+				"role":                         "alert-rules",
+			},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name:     operatorName + ".namespaces",
+				Interval: new(monitoringv1.Duration("60s")),
+				Rules: []monitoringv1.Rule{
+					{
+						Record: fmt.Sprintf("%s_sidecar_namespace_current", operatorName),
+						Expr: intstr.FromString(`count(group by(namespace) (kube_namespace_labels{label_istio_injection="enabled"})` +
+							` or group by(namespace) (kube_namespace_labels{label_istio_io_rev!=""}))` +
+							` or vector(0)`),
+					},
+					{
+						Record: fmt.Sprintf("%s_ambient_namespace_current", operatorName),
+						Expr: intstr.FromString(`count(group by (namespace) (kube_namespace_labels{label_istio_io_dataplane_mode="ambient"})` +
+							` or group by (namespace) (kube_namespace_labels{label_istio_io_use_waypoint!=""})` +
+							` or group by (namespace) (kube_namespace_labels{label_istio_io_ingress_use_waypoint!=""})) or vector(0)`),
+					},
+				},
+			}},
+		},
+	}
+}
+
+func (m *MetricsRecorder) listIstiod(ctx context.Context) map[string]float64 {
+	log := logf.FromContext(ctx)
+	istiodCounts := make(map[string]float64)
+
+	istioList := v1.IstioList{}
+	if err := m.Client.List(ctx, &istioList); err != nil {
+		log.V(4).Error(err, "failed to list Istio")
+	}
+
+	for _, item := range istioList.Items {
+		if item.Spec.Version != "" {
+			istiodCounts[mapVersions(item.Spec.Version)]++
+		}
+	}
+	return istiodCounts
+}
+
+func (m *MetricsRecorder) listZTunnel(ctx context.Context) map[string]float64 {
+	log := logf.FromContext(ctx)
+	ztunnelCounts := make(map[string]float64)
+
+	ztunnelList := v1.ZTunnelList{}
+	if err := m.Client.List(ctx, &ztunnelList); err != nil {
+		log.V(4).Error(err, "failed to list ZTunnel")
+	}
+	for _, item := range ztunnelList.Items {
+		if item.Spec.Version != "" {
+			ztunnelCounts[mapVersions(item.Spec.Version)]++
+		}
+	}
+	return ztunnelCounts
+}
+
+// mapVersions reduces an Istio or ZTunnel version name ("v1.30.3", "v1.31-latest", "latest") to its "vX.Y" form
+func mapVersions(version string) string {
+	if info, ok := istioversion.Map[version]; ok && info.Version != nil {
+		return fmt.Sprintf("v%d.%d", info.Version.Major(), info.Version.Minor())
+	}
+	return version
 }

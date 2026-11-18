@@ -351,6 +351,9 @@ func main() {
 		if err := recorder.EnsureServiceMonitor(ctx, operatorName, deploymentName); err != nil {
 			setupLog.Error(err, "problem creating metrics ServiceMonitor")
 		}
+		if err := recorder.EnsureRecordingRules(ctx, operatorName); err != nil {
+			setupLog.Error(err, "problem creating metrics PrometheusRule")
+		}
 	}
 
 	// Start the background recorder (non-blocking)

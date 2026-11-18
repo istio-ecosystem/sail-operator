@@ -17,6 +17,7 @@ package scheme
 import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/analyze"
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -41,5 +42,7 @@ func init() {
 	utilruntime.Must(apiextensionsv1.AddToScheme(Scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(Scheme))
 
+	// prepare custom usage metrics so Prometheus can scrape them
+	analyze.RegisterMetrics()
 	// +kubebuilder:scaffold:scheme
 }
