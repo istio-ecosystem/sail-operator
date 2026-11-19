@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/install"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -946,11 +947,10 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		})
 
 		It("creates a configmap in the istiorevision-test namespace with the gateway class customization", func() {
-			// Format of ConfigMap name is "istio-<revision>-gatewayclass-<gatewayclass-name>"
-			cmKey := client.ObjectKey{Name: "istio-test-istiorevision-gatewayclass-istio", Namespace: istioNamespace}
+			cmKey := client.ObjectKey{Name: install.GatewayClassDefaultsConfigMapName(revName, "istio"), Namespace: istioNamespace}
 			cm := &corev1.ConfigMap{}
 			Eventually(k8sClient.Get).WithArguments(ctx, cmKey, cm).Should(Succeed())
-			Expect(cm.Labels).To(HaveKeyWithValue("gateway.istio.io/defaults-for-class", "istio"))
+			Expect(cm.Labels).To(HaveKeyWithValue(install.GatewayClassDefaultsLabel, "istio"))
 			// TrimSuffix allows Helm v4.1.4 (single trailing newline) and v4.2.0 (none)
 			Expect(cm.Data).To(HaveKey("service"))
 			Expect(strings.TrimSuffix(cm.Data["service"], "\n")).To(Equal("spec:\n  type: ClusterIP"))
