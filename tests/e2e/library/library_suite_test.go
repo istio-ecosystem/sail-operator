@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/operandimages"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/profiling"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/dynamic"
@@ -54,7 +55,7 @@ func TestLibrary(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Library Test Suite")
+	profiling.WrapSuite("library", func() { RunSpecs(t, "Library Test Suite") })
 }
 
 func setup() {

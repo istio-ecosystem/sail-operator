@@ -23,6 +23,7 @@ import (
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/profiling"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +51,7 @@ func TestDualStack(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "DualStack Test Suite")
+	profiling.WrapSuite("dualstack", func() { RunSpecs(t, "DualStack Test Suite") })
 }
 
 func setup() {
