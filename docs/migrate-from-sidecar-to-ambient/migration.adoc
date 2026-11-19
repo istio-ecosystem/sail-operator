@@ -597,7 +597,7 @@ Check that sidecars now support HBONE protocol:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for HBONE is enabled in sidecar
-kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | grep -A 2 'name: PROXY_CONFIG'
+kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | grep -A 2 'name: PROXY_CONFIG'
 ----
 
 The output should be similar to:
@@ -616,7 +616,7 @@ Send requests to ensure connectivity remains intact:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test service connectivity through sidecars
-kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
+kubectl exec $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
 ----
 
 The output result should be similar to:
@@ -1180,7 +1180,7 @@ bookinfo                                         waypoint-58cdc7f494-98h79      
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test connectivity after enabling each namespace, e.g., bookinfo
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
 ----
 
 **Important**: at this point sidecars are still present and handling traffic. Do NOT remove sidecars yet.
@@ -1317,7 +1317,7 @@ Test that L7 policies are now enforced through waypoints (L7 policies should wor
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test authorization policies work through waypoint
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl -s http://reviews.bookinfo:9080/reviews/1
 
 ----
 
@@ -1331,7 +1331,7 @@ Test the traffic routing through waypoint with header (if HTTPRoute configured):
 
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}') -- curl -s -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
 ----
 
 Output should be similar to:
