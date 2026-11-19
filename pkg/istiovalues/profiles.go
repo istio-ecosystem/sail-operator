@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"path"
 
+	"dario.cat/mergo"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -125,29 +126,48 @@ func parseProfileYAML(fileContents []byte, filename string) (helm.Values, error)
 	return m, nil
 }
 
+// MergeOverwrite merges overrides on top of base and returns a new map.
+// Nested maps are merged key by key. Any other override value replaces the base value.
+// The input maps are not modified, and the result does not share nested maps or slices with them.
+//
+// mergo writes into the destination and stores nested maps and slices from the
+// source by reference, so both inputs are copied before the merge.
 func MergeOverwrite(base map[string]any, overrides map[string]any) map[string]any {
-	if base == nil {
-		base = make(map[string]any, 1)
+	merged := cloneMap(base)
+	if merged == nil {
+		merged = make(map[string]any, len(overrides))
 	}
-
-	for key, value := range overrides {
-		// if the key doesn't already exist, add it
-		if _, exists := base[key]; !exists {
-			base[key] = value
-			continue
-		}
-
-		// At this point, key exists in both base and overrides.
-		// If both are maps, recurse so that we override only specific values in the map.
-		// If only override value is a map, overwrite base value completely.
-		// If both are values, overwrite base.
-		childOverrides, overrideValueIsMap := value.(map[string]any)
-		childBase, baseValueIsMap := base[key].(map[string]any)
-		if baseValueIsMap && overrideValueIsMap {
-			base[key] = MergeOverwrite(childBase, childOverrides)
-		} else {
-			base[key] = value
-		}
+	if overrides == nil {
+		return merged
 	}
-	return base
+	if err := mergo.Merge(&merged, cloneMap(overrides), mergo.WithOverride); err != nil {
+		return merged
+	}
+	return merged
+}
+
+func cloneMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = cloneValue(value)
+	}
+	return out
+}
+
+func cloneValue(value any) any {
+	switch v := value.(type) {
+	case map[string]any:
+		return cloneMap(v)
+	case []any:
+		out := make([]any, len(v))
+		for i := range v {
+			out[i] = cloneValue(v[i])
+		}
+		return out
+	default:
+		return v
+	}
 }
