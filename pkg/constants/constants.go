@@ -14,6 +14,24 @@
 
 package constants
 
+import "k8s.io/apimachinery/pkg/runtime/schema"
+
+var (
+	// ServiceMonitorGVR is the GroupVersionResource for prometheus-operator ServiceMonitors.
+	ServiceMonitorGVR = schema.GroupVersionResource{
+		Group:    "monitoring.coreos.com",
+		Version:  "v1",
+		Resource: "servicemonitors",
+	}
+
+	// PodMonitorGVR is the GroupVersionResource for prometheus-operator PodMonitors.
+	PodMonitorGVR = schema.GroupVersionResource{
+		Group:    "monitoring.coreos.com",
+		Version:  "v1",
+		Resource: "podmonitors",
+	}
+)
+
 const (
 	// MetadataNamespace is the namespace for service mesh metadata (labels, annotations)
 	MetadataNamespace = "sailoperator.io"
