@@ -21,6 +21,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -148,6 +149,32 @@ func TestGetInjectedRevisionFromPod(t *testing.T) {
 			result := GetInjectedRevisionFromPod(tt.podAnnotations)
 			assert.Equalf(t, tt.expected, result, "GetInjectedRevisionFromPod(%v)", tt.podAnnotations)
 		})
+	}
+}
+
+func TestListNamespacesReferencingRevisions(t *testing.T) {
+	namespaces := []client.Object{
+		&corev1.Namespace{Name: "injection-enabled", Labels: map[string]string{"istio-injection": "enabled"}},
+		&corev1.Namespace{Name: "rev-labeled", Labels: map[string]string{"istio.io/rev": "my-rev"}},
+		&corev1.Namespace{Name: "both-labels", Labels: map[string]string{"istio-injection": "enabled", "istio.io/rev": "my-rev"}},
+		&corev1.Namespace{Name: "injection-disabled", Labels: map[string]string{"istio-injection": "disabled"}},
+		&corev1.Namespace{Name: "unlabeled"},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(namespaces...).Build()
+
+	nsMap, err := ListNamespacesReferencingRevisions(context.TODO(), cl)
+	assert.NoError(t, err)
+
+	// Only namespaces carrying an injection label are returned; each appears once.
+	assert.Len(t, nsMap, 3)
+	for _, name := range []string{"injection-enabled", "rev-labeled", "both-labels"} {
+		_, ok := nsMap[name]
+		assert.Truef(t, ok, "expected namespace %q to be present", name)
+	}
+	for _, name := range []string{"injection-disabled", "unlabeled"} {
+		_, ok := nsMap[name]
+		assert.Falsef(t, ok, "expected namespace %q to be absent", name)
 	}
 }
 
