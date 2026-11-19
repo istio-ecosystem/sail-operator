@@ -304,11 +304,14 @@ rules:
   resources:
   - servicemonitors
   - podmonitors
+  - prometheusrules
   verbs:
   - create
   - delete
   - get
   - list
+  - patch
+  - update
 - apiGroups:
   - perses.dev
   resources:

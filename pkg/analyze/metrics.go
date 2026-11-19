@@ -219,7 +219,7 @@ func (m *MetricsRecorder) EnsureNamespaceLabel(ctx context.Context) error {
 	return nil
 }
 
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;create;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;create;delete;patch;update
 
 // EnsureServiceMonitor ensures a ServiceMonitor resource for scraping metrics from the operator metrics-service
 func (m *MetricsRecorder) EnsureServiceMonitor(ctx context.Context) error {
@@ -283,7 +283,7 @@ func (m *MetricsRecorder) buildServiceMonitor() *monitoringv1.ServiceMonitor {
 	}
 }
 
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;create;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;create;delete;patch;update
 
 // EnsureRecordingRules ensures the recording rules that derive namespace enrolment counts from kube-state-metrics.
 // These are computed in Prometheus rather than by the operator, so the operator does not have to list every namespace on every collection interval.
