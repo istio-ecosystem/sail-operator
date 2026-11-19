@@ -57,6 +57,7 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var configFile string
+	var labelsFile string
 	var resourceDirectory string
 	var logAPIRequests bool
 	var printVersion bool
@@ -66,6 +67,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
+	flag.StringVar(&labelsFile, "labels-file", "/etc/sail-operator/config.labels", "Location of the labels file, propagated by k8s downward APIs")
 	flag.StringVar(&resourceDirectory, "resource-directory", "", "Where to find resources (e.g. charts). If empty, uses embedded resources.")
 	flag.IntVar(&reconcilerCfg.MaxConcurrentReconciles, "max-concurrent-reconciles", 1,
 		"MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.")
@@ -116,6 +118,14 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("config loaded", "config", config.Config)
+
+	setupLog.Info("reading labels")
+	labels, err := config.ReadLabels(labelsFile)
+	if err != nil {
+		setupLog.Info("unable to read labels file at ", labelsFile)
+	} else {
+		setupLog.Info("labels loaded", "labels", labels)
+	}
 
 	cfg := ctrl.GetConfigOrDie()
 	if logAPIRequests {
@@ -329,10 +339,16 @@ func main() {
 	}
 
 	setupLog.Info("starting custom resource metrics recorder")
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg)
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, uncachedClient, reconcilerCfg, labels)
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		if err := recorder.EnsureNamespaceLabel(ctx); err != nil {
 			setupLog.Error(err, "problem adding cluster-monitoring label")
+		}
+		if err := recorder.EnsureServiceMonitor(ctx); err != nil {
+			setupLog.Error(err, "problem creating metrics ServiceMonitor")
+		}
+		if err := recorder.EnsureRecordingRules(ctx); err != nil {
+			setupLog.Error(err, "problem creating metrics PrometheusRule")
 		}
 	}
 

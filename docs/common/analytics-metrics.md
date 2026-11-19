@@ -4,19 +4,19 @@ This document describes the custom telemetry metrics for the Sail operator and C
 The following section outlines the usage and limitations on metric counts and cardinality.The last section provides a development guide about how to add additional metrics for new functionalities.
 
 ## Sail Operator Custom Metrics List
-### sailoperator_ambient_namespace_total
+### sailoperator_ambient_namespace_current
 Total number of namespaces enrolled in Istio Ambient mode. Type: Gauge.
 
-### sailoperator_istiod_total
+### sailoperator_istiod_current
 Total number of Istiod control planes at each Istio version. Type: GaugeVec.
 
-### sailoperator_sidecar_namespace_total
+### sailoperator_sidecar_namespace_current
 Total number of namespaces enrolled in Istio sidecar mode. Type: Gauge.
 
-### sailoperator_sidecar_proxy_total
+### sailoperator_sidecar_proxy_current
 Total number of Envoy Sidecar proxies managed by an Istiod control plane. Type: Gauge.
 
-### sailoperator_ztunnel_total
+### sailoperator_ztunnel_current
 Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode. Type: GaugeVec.
 
 ## Developing new metrics
