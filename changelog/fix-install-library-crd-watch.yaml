@@ -1,0 +1,7 @@
+category: fixed
+title: Reconcile the install library only for Istio CRDs
+description: |
+  The install library watched every CustomResourceDefinition in the cluster,
+  so a change to an unrelated CRD started a full istiod reconcile. The watch
+  now keeps CRDs in the *.istio.io groups, including their status updates.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2097

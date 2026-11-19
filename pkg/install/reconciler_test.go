@@ -20,6 +20,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -42,4 +43,31 @@ func TestManagedByWatchPredicate(t *testing.T) {
 		Labels: map[string]string{constants.KubernetesAppManagedByKey: managedByValue},
 	}
 	g.Expect(pred.Create(event.CreateEvent{Object: wrongKey})).To(BeFalse())
+}
+
+func TestIstioCRDWatchPredicate(t *testing.T) {
+	g := NewWithT(t)
+	pred := istioCRDWatchPredicate()
+
+	istio := &apiextensionsv1.CustomResourceDefinition{
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{Group: "networking.istio.io"},
+	}
+	other := &apiextensionsv1.CustomResourceDefinition{
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{Group: "cert-manager.io"},
+	}
+
+	g.Expect(pred.Create(event.CreateEvent{Object: istio})).To(BeTrue())
+	g.Expect(pred.Create(event.CreateEvent{Object: other})).To(BeFalse())
+	g.Expect(pred.Delete(event.DeleteEvent{Object: istio})).To(BeTrue())
+	g.Expect(pred.Delete(event.DeleteEvent{Object: other})).To(BeFalse())
+	g.Expect(pred.Generic(event.GenericEvent{Object: istio})).To(BeTrue())
+	g.Expect(pred.Generic(event.GenericEvent{Object: other})).To(BeFalse())
+
+	ready := istio.DeepCopy()
+	ready.Status.Conditions = []apiextensionsv1.CustomResourceDefinitionCondition{{
+		Type:   apiextensionsv1.Established,
+		Status: apiextensionsv1.ConditionTrue,
+	}}
+	g.Expect(pred.Update(event.UpdateEvent{ObjectOld: istio, ObjectNew: ready})).To(BeTrue())
+	g.Expect(pred.Update(event.UpdateEvent{ObjectOld: other, ObjectNew: other.DeepCopy()})).To(BeFalse())
 }

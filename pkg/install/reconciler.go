@@ -28,6 +28,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -104,9 +105,36 @@ func (l *Library) setupController(mgr ctrl.Manager) error {
 		WatchesRawSource(source.Channel(l.triggerCh, fixedKeyHandler))
 
 	watches.RegisterOwnedWatches(b, watches.IstiodWatches, fixedKeyHandler, nil, managedByPred)
-	b.Watches(&apiextensionsv1.CustomResourceDefinition{}, fixedKeyHandler)
+	// Only Istio CRDs (*.istio.io) should wake this loop. Readiness is a status
+	// condition, so status updates on those CRDs still reconcile.
+	b.Watches(&apiextensionsv1.CustomResourceDefinition{}, fixedKeyHandler, builder.WithPredicates(istioCRDWatchPredicate()))
 
 	return b.Complete(&libraryReconciler{lib: l})
+}
+
+// istioCRDWatchPredicate keeps reconcile events for Istio CRDs and drops every
+// other CustomResourceDefinition. The group check matches the CRDs this library
+// installs. Status updates stay included because CRD readiness is reported there.
+func istioCRDWatchPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isIstioCRDEventObject(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isIstioCRDEventObject(e.ObjectOld) || isIstioCRDEventObject(e.ObjectNew)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isIstioCRDEventObject(e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isIstioCRDEventObject(e.Object)
+		},
+	}
+}
+
+func isIstioCRDEventObject(obj client.Object) bool {
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	return ok && crd != nil && istioCRD(crd)
 }
 
 // Start begins the reconciliation loop and drift-detection watches.
