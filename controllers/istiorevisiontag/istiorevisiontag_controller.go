@@ -338,7 +338,9 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodSucceeded {
+		// Succeeded and Failed pods are terminal. They no longer run the revision,
+		// so they must not keep the InUse condition true.
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
 		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevisionTag(pod, tag, ns) {

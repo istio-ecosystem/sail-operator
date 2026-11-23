@@ -41,6 +41,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 		podLabels           map[string]string
 		podAnnotations      map[string]string
 		nsLabels            map[string]string
+		podPhase            corev1.PodPhase
 		enableAllNamespaces bool
 		interceptors        interceptor.Funcs
 		matchesTag          string
@@ -96,6 +97,28 @@ func TestDetermineInUseCondition(t *testing.T) {
 		{
 			podLabels:  map[string]string{"sidecar.istio.io/inject": "true", "istio.io/rev": "my-rev"},
 			matchesTag: "my-rev",
+		},
+
+		// pod succeeded: a terminal pod must not keep the tag in use
+		{
+			podLabels:  map[string]string{"istio.io/rev": "default"},
+			podPhase:   corev1.PodSucceeded,
+			matchesTag: "",
+		},
+
+		// pod failed: a terminal pod must not keep the tag in use
+		{
+			podLabels:  map[string]string{"istio.io/rev": "default"},
+			podPhase:   corev1.PodFailed,
+			matchesTag: "",
+		},
+
+		// a terminal pod does not stop an injection-labeled namespace from keeping the tag in use
+		{
+			nsLabels:   map[string]string{"istio-injection": "enabled"},
+			podLabels:  map[string]string{"istio.io/rev": "default"},
+			podPhase:   corev1.PodFailed,
+			matchesTag: "default",
 		},
 
 		// ns and pod labels
@@ -196,6 +219,9 @@ func TestDetermineInUseCondition(t *testing.T) {
 					nameBuilder.WriteString(k + ":" + v + ",")
 				}
 			}
+			if len(tc.podPhase) > 0 {
+				nameBuilder.WriteString("Phase:" + string(tc.podPhase) + ",")
+			}
 			name := strings.TrimSuffix(nameBuilder.String(), ",")
 
 			t.Run(name, func(t *testing.T) {
@@ -231,6 +257,9 @@ func TestDetermineInUseCondition(t *testing.T) {
 					Namespace:   namespace,
 					Labels:      tc.podLabels,
 					Annotations: tc.podAnnotations,
+					Status: corev1.PodStatus{
+						Phase: tc.podPhase,
+					},
 				}
 
 				cl := fake.NewClientBuilder().

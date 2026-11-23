@@ -1,0 +1,8 @@
+category: fixed
+title: Ignore failed pods when computing revision tag InUse
+description: |
+  A pod that reached the Failed phase still counted as a user of its
+  IstioRevisionTag, so the tag stayed InUse after the workload was gone.
+  Failed pods are now skipped the same way completed pods are, matching
+  the behavior already applied to IstioRevision.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2100
