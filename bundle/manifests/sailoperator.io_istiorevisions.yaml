@@ -967,6 +967,11 @@ spec:
                               in seconds.
                             format: int32
                             type: integer
+                          readinessTimeoutSeconds:
+                            description: Sets the timeout for readiness probes in
+                              seconds.
+                            format: int32
+                            type: integer
                           resources:
                             description: |-
                               K8s resources settings.
@@ -1095,6 +1100,11 @@ spec:
                             - stackdriver
                             - openCensusAgent
                             - none
+                            type: string
+                          variant:
+                            description: The variant of the proxy container image
+                              to use. Options are "debug" or "distroless". Unset will
+                              use global.variant.
                             type: string
                         type: object
                       proxy_init:
@@ -10263,6 +10273,14 @@ spec:
                             format: int32
                             type: integer
                         type: object
+                      minReadySeconds:
+                        description: |-
+                          Minimum number of seconds a newly created Pilot pod must be ready, without any of its containers crashing,
+                          for it to be considered available (see `minReadySeconds` here:
+                          https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec).
+                          Defaults to 0 (the pod is considered available as soon as it is ready).
+                        format: int32
+                        type: integer
                       nodeSelector:
                         additionalProperties:
                           type: string
@@ -10278,100 +10296,29 @@ spec:
                           Pod disruption budget for istiod.
                           See https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
                         properties:
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Additional labels for the istiod PodDisruptionBudget.
+                            type: object
                           maxUnavailable:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: |-
-                              maxUnavailable indicates that an eviction is allowed if at most "maxUnavailable" pods selected by
-                              "selector" are unavailable after the eviction, i.e. even in absence of
-                              the evicted pod. For example, one can prevent all voluntary evictions
-                              by specifying 0. This is a mutually exclusive setting with "minAvailable".
+                            description: Maximum unavailable pods (integer or percentage
+                              string). Takes precedence over minAvailable.
                             x-kubernetes-int-or-string: true
                           minAvailable:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: |-
-                              minAvailable indicates that an eviction is allowed if at least "minAvailable" pods selected by
-                              "selector" will still be available after the eviction, i.e. even in the
-                              absence of the evicted pod.  So for example you can prevent all voluntary
-                              evictions by specifying "100%".
+                            description: Minimum available pods (integer or percentage
+                              string). Ignored if maxUnavailable is set.
                             x-kubernetes-int-or-string: true
-                          selector:
-                            description: |-
-                              selector is a label query over pods whose evictions are managed by the disruption
-                              budget.
-                              A null selector will match no pods, while an empty ({}) selector will select
-                              all pods within the namespace.
-                            properties:
-                              matchExpressions:
-                                description: matchExpressions is a list of label selector
-                                  requirements. The requirements are ANDed.
-                                items:
-                                  description: |-
-                                    A label selector requirement is a selector that contains values, a key, and an operator that
-                                    relates the key and values.
-                                  properties:
-                                    key:
-                                      description: key is the label key that the selector
-                                        applies to.
-                                      type: string
-                                    operator:
-                                      description: |-
-                                        operator represents a key's relationship to a set of values.
-                                        Valid operators are In, NotIn, Exists and DoesNotExist.
-                                      type: string
-                                    values:
-                                      description: |-
-                                        values is an array of string values. If the operator is In or NotIn,
-                                        the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                        the values array must be empty. This array is replaced during a strategic
-                                        merge patch.
-                                      items:
-                                        type: string
-                                      type: array
-                                      x-kubernetes-list-type: atomic
-                                  required:
-                                  - key
-                                  - operator
-                                  type: object
-                                type: array
-                                x-kubernetes-list-type: atomic
-                              matchLabels:
-                                additionalProperties:
-                                  type: string
-                                description: |-
-                                  matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                                  map is equivalent to an element of matchExpressions, whose key field is "key", the
-                                  operator is "In", and the values array contains only "value". The requirements are ANDed.
-                                type: object
-                            type: object
-                            x-kubernetes-map-type: atomic
                           unhealthyPodEvictionPolicy:
                             description: |-
-                              unhealthyPodEvictionPolicy defines the criteria for when unhealthy pods
-                              should be considered for eviction. Current implementation considers healthy pods,
-                              as pods that have status.conditions item with type="Ready",status="True".
-
-                              Valid policies are IfHealthyBudget and AlwaysAllow.
-                              If no policy is specified, the default behavior will be used,
-                              which corresponds to the IfHealthyBudget policy.
-
-                              IfHealthyBudget policy means that running pods (status.phase="Running"),
-                              but not yet healthy can be evicted only if the guarded application is not
-                              disrupted (status.currentHealthy is at least equal to status.desiredHealthy).
-                              Healthy pods will be subject to the PDB for eviction.
-
-                              AlwaysAllow policy means that all running pods (status.phase="Running"),
-                              but not yet healthy are considered disrupted and can be evicted regardless
-                              of whether the criteria in a PDB is met. This means perspective running
-                              pods of a disrupted application might not get a chance to become healthy.
-                              Healthy pods will be subject to the PDB for eviction.
-
-                              Additional policies may be added in the future.
-                              Clients making eviction decisions should disallow eviction of unhealthy pods
-                              if they encounter an unrecognized policy in this field.
+                              Eviction policy for unhealthy pods guarded by the PodDisruptionBudget.
+                              See https://kubernetes.io/blog/2023/01/06/unhealthy-pod-eviction-policy-for-pdbs/
                             type: string
                         type: object
                       podAnnotations:
@@ -10784,6 +10731,11 @@ spec:
 
                           Allowed values: 0.0 to 1.0
                         type: number
+                      trafficDistribution:
+                        description: |-
+                          Traffic distribution preference for the istiod service.
+                          See https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution
+                        type: string
                       trustedZtunnelName:
                         description: The name of the ztunnel that istiod should trust
                           for mTLS.
@@ -13103,7 +13055,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.31.4, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30.8, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.33.0-alpha.4b3d1fe5.
+                  Must be one of: v1.31.4, v1.31.3, v1.31.2, v1.31.1, v1.31.0, v1.30.8, v1.30.7, v1.30.6, v1.30.5, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.33.0-alpha.a49b0c5c.
                 enum:
                 - v1.31.4
                 - v1.31.3
@@ -13182,7 +13134,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.33.0-alpha.4b3d1fe5
+                - v1.33.0-alpha.a49b0c5c
                 type: string
             required:
             - namespace

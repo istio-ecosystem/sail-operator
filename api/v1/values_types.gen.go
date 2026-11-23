@@ -22,7 +22,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sv1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -709,13 +708,36 @@ type PilotConfig struct {
 	InitContainers []k8sv1.Container `json:"initContainers,omitempty"`
 	// Pod disruption budget for istiod.
 	// See https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
-	Pdb *policyv1.PodDisruptionBudgetSpec `json:"pdb,omitempty"`
+	Pdb *PodDisruptionBudgetConfig `json:"pdb,omitempty"`
 	// Annotations for the istiod deployment.
 	DeploymentAnnotations map[string]string `json:"deploymentAnnotations,omitempty"`
 	// Annotations for the sidecar injector webhook.
 	SidecarInjectorWebhookAnnotations map[string]string `json:"sidecarInjectorWebhookAnnotations,omitempty"`
 	// The name of the ztunnel that istiod should trust for mTLS.
 	TrustedZtunnelName *string `json:"trustedZtunnelName,omitempty"`
+	// Minimum number of seconds a newly created Pilot pod must be ready, without any of its containers crashing,
+	// for it to be considered available (see `minReadySeconds` here:
+	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec).
+	// Defaults to 0 (the pod is considered available as soon as it is ready).
+	MinReadySeconds *int32 `json:"minReadySeconds,omitempty"`
+	// Traffic distribution preference for the istiod service.
+	// See https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution
+	TrafficDistribution *string `json:"trafficDistribution,omitempty"`
+}
+
+// Configuration for the istiod PodDisruptionBudget.
+type PodDisruptionBudgetConfig struct {
+	// Minimum available pods (integer or percentage string). Ignored if maxUnavailable is set.
+	// +kubebuilder:validation:XIntOrString
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+	// Maximum unavailable pods (integer or percentage string). Takes precedence over minAvailable.
+	// +kubebuilder:validation:XIntOrString
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// Eviction policy for unhealthy pods guarded by the PodDisruptionBudget.
+	// See https://kubernetes.io/blog/2023/01/06/unhealthy-pod-eviction-policy-for-pdbs/
+	UnhealthyPodEvictionPolicy *string `json:"unhealthyPodEvictionPolicy,omitempty"`
+	// Additional labels for the istiod PodDisruptionBudget.
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -830,6 +852,8 @@ type ProxyConfig struct {
 	ReadinessPeriodSeconds *uint32 `json:"readinessPeriodSeconds,omitempty"`
 	// Sets the number of successive failed probes before indicating readiness failure.
 	ReadinessFailureThreshold *uint32 `json:"readinessFailureThreshold,omitempty"`
+	// Sets the timeout for readiness probes in seconds.
+	ReadinessTimeoutSeconds *uint32 `json:"readinessTimeoutSeconds,omitempty"`
 	// Configures the seccomp profile for the istio-validation and istio-proxy containers.
 	//
 	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
@@ -863,6 +887,8 @@ type ProxyConfig struct {
 	IncludeInboundPorts *string `json:"includeInboundPorts,omitempty"`
 	// A comma separated list of outbound ports for which traffic is to be redirected to Envoy, regardless of the destination IP.
 	IncludeOutboundPorts *string `json:"includeOutboundPorts,omitempty"`
+	// The variant of the proxy container image to use. Options are "debug" or "distroless". Unset will use global.variant.
+	Variant *string `json:"variant,omitempty"`
 }
 
 type StartupProbe struct {
@@ -1381,7 +1407,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\xa5\x16\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\x9c\x17\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1429,11 +1455,21 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
 	"envVarFrom\x12*\n" +
 	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\x12?\n" +
-	"\x0einitContainers\x18A \x03(\v2\x17.google.protobuf.StructR\x0einitContainers\x12)\n" +
-	"\x03pdb\x18B \x01(\v2\x17.google.protobuf.StructR\x03pdb\x12M\n" +
+	"\x0einitContainers\x18A \x03(\v2\x17.google.protobuf.StructR\x0einitContainers\x12D\n" +
+	"\x03pdb\x18B \x01(\v22.istio.operator.v1alpha1.PodDisruptionBudgetConfigR\x03pdb\x12M\n" +
 	"\x15deploymentAnnotations\x18C \x01(\v2\x17.google.protobuf.StructR\x15deploymentAnnotations\x12e\n" +
 	"!sidecarInjectorWebhookAnnotations\x18D \x01(\v2\x17.google.protobuf.StructR!sidecarInjectorWebhookAnnotations\x12.\n" +
-	"\x12trustedZtunnelName\x18E \x01(\tR\x12trustedZtunnelName\"h\n" +
+	"\x12trustedZtunnelName\x18E \x01(\tR\x12trustedZtunnelName\x12(\n" +
+	"\x0fminReadySeconds\x18G \x01(\x05R\x0fminReadySeconds\x120\n" +
+	"\x13trafficDistribution\x18H \x01(\tR\x13trafficDistribution\"\xea\x02\n" +
+	"\x19PodDisruptionBudgetConfig\x12:\n" +
+	"\fminAvailable\x18\x01 \x01(\v2\x16.google.protobuf.ValueR\fminAvailable\x12>\n" +
+	"\x0emaxUnavailable\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x0emaxUnavailable\x12>\n" +
+	"\x1aunhealthyPodEvictionPolicy\x18\x03 \x01(\tR\x1aunhealthyPodEvictionPolicy\x12V\n" +
+	"\x06labels\x18\x04 \x03(\v2>.istio.operator.v1alpha1.PodDisruptionBudgetConfig.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"h\n" +
 	"\x1aPilotTaintControllerConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
@@ -1464,7 +1500,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"targetPort\x18\x04 \x01(\x05R\n" +
 	"targetPort\x12\x1a\n" +
-	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\x85\n" +
+	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\xd9\n" +
 	"\n" +
 	"\vProxyConfig\x12\x1e\n" +
 	"\n" +
@@ -1484,7 +1520,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"privileged\x12B\n" +
 	"\x1creadinessInitialDelaySeconds\x18\x14 \x01(\rR\x1creadinessInitialDelaySeconds\x126\n" +
 	"\x16readinessPeriodSeconds\x18\x15 \x01(\rR\x16readinessPeriodSeconds\x12<\n" +
-	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12?\n" +
+	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x128\n" +
+	"\x17readinessTimeoutSeconds\x18, \x01(\rR\x17readinessTimeoutSeconds\x12?\n" +
 	"\x0eseccompProfile\x18+ \x01(\v2\x17.google.protobuf.StructR\x0eseccompProfile\x12I\n" +
 	"\fstartupProbe\x18) \x01(\v2%.istio.operator.v1alpha1.StartupProbeR\fstartupProbe\x12\x1e\n" +
 	"\n" +
@@ -1496,7 +1533,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\tlifecycle\x18$ \x01(\v2\x17.google.protobuf.StructR\tlifecycle\x12h\n" +
 	"\x1fholdApplicationUntilProxyStarts\x18% \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x1fholdApplicationUntilProxyStarts\x120\n" +
 	"\x13includeInboundPorts\x18& \x01(\tR\x13includeInboundPorts\x122\n" +
-	"\x14includeOutboundPorts\x18' \x01(\tR\x14includeOutboundPorts\"p\n" +
+	"\x14includeOutboundPorts\x18' \x01(\tR\x14includeOutboundPorts\x12\x18\n" +
+	"\avariant\x18- \x01(\tR\avariant\"p\n" +
 	"\fStartupProbe\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12*\n" +
 	"\x10failureThreshold\x18\x02 \x01(\rR\x10failureThreshold\"\x9d\x01\n" +
