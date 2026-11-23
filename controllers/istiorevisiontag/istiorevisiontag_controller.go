@@ -237,7 +237,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("istiorevisiontag").
 		// watches related to in-use detection
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()))).
-		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()))).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(watches.AsPredicate(watches.PodFilter()))).
 
 		// cluster-scoped resources
 		Watches(&v1.Istio{}, operatorResourcesHandler).

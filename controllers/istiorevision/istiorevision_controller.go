@@ -280,7 +280,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler,
-			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(watches.AsPredicate(watches.PodFilter()), predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
 		Watches(&v1.IstioCNI{}, istioCniHandler).
 		Watches(&v1.ZTunnel{}, ztunnelHandler).
