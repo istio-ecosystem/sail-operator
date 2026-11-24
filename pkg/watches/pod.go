@@ -15,6 +15,8 @@
 package watches
 
 import (
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -28,9 +30,12 @@ import (
 // Both the old and the new pod are checked, so a pod that gains or loses its injection
 // metadata still passes.
 func PodReferencesRevision() ShouldReconcileFunc {
-	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
-	return func(_, _ client.Object) bool {
-		return false
+	return func(oldObj, newObj client.Object) bool {
+		oldPod, newPod, arePods := asPods(oldObj, newObj)
+		if !arePods {
+			return true
+		}
+		return referencesRevision(oldPod) || referencesRevision(newPod)
 	}
 }
 
@@ -47,9 +52,15 @@ func PodReferencesRevision() ShouldReconcileFunc {
 // Note that Istio acts on the injection labels at admission only, since the sidecar injector
 // webhook is registered for CREATE. A label edit on a running pod does not re-inject it.
 func PodRevisionChanges() ShouldReconcileFunc {
-	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
-	return func(_, _ client.Object) bool {
-		return false
+	return func(oldObj, newObj client.Object) bool {
+		oldPod, newPod, arePods := asPods(oldObj, newObj)
+		if !arePods {
+			return true
+		}
+		return revision.GetInjectedRevisionFromPod(oldPod.GetAnnotations()) !=
+			revision.GetInjectedRevisionFromPod(newPod.GetAnnotations()) ||
+			revision.GetReferencedRevisionFromPod(oldPod.GetLabels()) !=
+				revision.GetReferencedRevisionFromPod(newPod.GetLabels())
 	}
 }
 
@@ -61,8 +72,31 @@ func PodRevisionChanges() ShouldReconcileFunc {
 // between non-terminal phases, such as Pending to Running, and between the two terminal
 // phases are not admitted, because neither changes whether the pod is running.
 func PodTerminationChanges() ShouldReconcileFunc {
-	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
-	return func(_, _ client.Object) bool {
-		return false
+	return func(oldObj, newObj client.Object) bool {
+		oldPod, newPod, arePods := asPods(oldObj, newObj)
+		if !arePods {
+			return true
+		}
+		return isTerminal(oldPod) != isTerminal(newPod)
 	}
+}
+
+// asPods type-asserts both objects. A filter that is handed something other than a typed Pod
+// cannot tell whether the event matters, so callers reconcile rather than drop it.
+func asPods(oldObj, newObj client.Object) (oldPod, newPod *corev1.Pod, arePods bool) {
+	oldPod, oldIsPod := oldObj.(*corev1.Pod)
+	newPod, newIsPod := newObj.(*corev1.Pod)
+	return oldPod, newPod, oldIsPod && newIsPod
+}
+
+// referencesRevision reports whether the pod points at a revision by either signal.
+func referencesRevision(pod *corev1.Pod) bool {
+	return revision.GetInjectedRevisionFromPod(pod.GetAnnotations()) != "" ||
+		revision.GetReferencedRevisionFromPod(pod.GetLabels()) != ""
+}
+
+// isTerminal reports whether the pod has stopped running. This must stay in step with the
+// phases the InUse computations skip.
+func isTerminal(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed
 }
