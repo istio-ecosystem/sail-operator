@@ -18,19 +18,49 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PodFilter returns a filter for the Pod watch of the IstioRevision controller, admitting only
-// the updates that can change whether a pod keeps a revision in use.
+// PodReferencesRevision returns a filter that admits an update only when the pod references a
+// revision, by its injected istio.io/rev annotation or by its injection labels.
 //
-// The InUse computation reads exactly three things from a pod: the revision recorded in its
-// injected istio.io/rev annotation, the revision implied by its injection labels, and whether
-// the pod has reached a terminal phase. Everything else the platform writes to a pod during
-// its lifecycle - scheduler binding and topology labels, CNI and network-status annotations,
-// controller finalizers, owner references, spec edits - cannot change the answer.
+// On its own it admits every update to such a pod, so pair it with PodRevisionChanges or
+// PodTerminationChanges to limit those to pods in the mesh. This matters most for
+// PodTerminationChanges, which otherwise admits every pod on the cluster that completes.
 //
-// Unlike IgnoreStatusChanges, this filter admits a status-only update when it moves the pod
-// into or out of a terminal phase, because the InUse computation skips Succeeded and Failed
-// pods. Create and delete events are never filtered.
-func PodFilter() ShouldReconcileFunc {
+// Both the old and the new pod are checked, so a pod that gains or loses its injection
+// metadata still passes.
+func PodReferencesRevision() ShouldReconcileFunc {
+	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
+	return func(_, _ client.Object) bool {
+		return false
+	}
+}
+
+// PodRevisionChanges returns a filter that admits only the pod updates which change the mesh
+// revision a pod names: the revision recorded in its injected istio.io/rev annotation, or the
+// revision implied by its injection labels.
+//
+// The annotation and the labels are compared independently, because a pod may carry an
+// injected annotation naming one revision and a label naming another, and a caller may act on
+// either. Everything else the platform writes to a pod over its lifecycle - scheduler binding
+// and topology labels, CNI and network-status annotations, finalizers, owner references, spec
+// edits - leaves both untouched.
+//
+// Note that Istio acts on the injection labels at admission only, since the sidecar injector
+// webhook is registered for CREATE. A label edit on a running pod does not re-inject it.
+func PodRevisionChanges() ShouldReconcileFunc {
+	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
+	return func(_, _ client.Object) bool {
+		return false
+	}
+}
+
+// PodTerminationChanges returns a filter that admits only the pod updates which move a pod
+// into or out of a terminal phase. A pod in Succeeded or Failed has stopped running, so it no
+// longer runs whatever revision it was injected with.
+//
+// Unlike IgnoreStatusChanges, this filter therefore admits a status-only update. Transitions
+// between non-terminal phases, such as Pending to Running, and between the two terminal
+// phases are not admitted, because neither changes whether the pod is running.
+func PodTerminationChanges() ShouldReconcileFunc {
 	// TODO(OSSM-16613): not implemented yet, so that the tests covering it fail.
 	return func(_, _ client.Object) bool {
 		return false

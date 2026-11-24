@@ -28,6 +28,7 @@ import (
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/podwatch"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -1044,4 +1046,66 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,
 	}
+}
+
+// TestPodWatchPredicate is the specification of which pod events wake this controller.
+//
+// A pod event can only ever change the InUse condition, so the question for each scenario is
+// whether it changes which pods count towards a revision. This controller reads a pod's
+// injected istio.io/rev annotation as well as its injection labels, so it reacts to both.
+func TestPodWatchPredicate(t *testing.T) {
+	podwatch.Run(t, podWatchPredicate(), map[string]bool{
+		// Metadata the platform writes over a pod lifecycle.
+		"the pod is bound to a node":                    false,
+		"CNI writes the pod-network annotation":         false,
+		"Multus writes the network-status annotation":   false,
+		"job controller removes its tracking finalizer": false,
+		"pod is marked for deletion":                    false,
+		"pod is adopted by a ReplicaSet":                false,
+		"the app label changes":                         false,
+		"the prometheus.io/scrape annotation is added":  false,
+		"a container restarts":                          false,
+
+		// A pod stops counting towards its revision once it is terminal, so the move into a
+		// terminal phase has to wake us even though it is a status-only write.
+		"pod starts running": false,
+		"completed pod is recorded as failed (terminal state to terminal state)": false,
+		"injected pod completes":                  true,
+		"injected pod fails":                      true,
+		"pod with injection label only completes": true,
+
+		// This controller reads the injected annotation, so a pod carrying only that still
+		// counts, and still stops counting when it completes.
+		"pod with injected annotation only completes": true,
+		"pod loses its injected annotation":           true,
+		"pod's injected annotation changes":           true,
+
+		// Which revision a pod references.
+		"pod is moved to another revision": true,
+		"pod loses its injection label":    true,
+		"pod opts out of injection":        true,
+		"pod joins a revision":             true,
+
+		// Pods outside the mesh cannot affect any revision. Their completions are status-only
+		// writes that the watch drops today, and must keep dropping.
+		"pod with no injection metadata completes":    false,
+		"pod with no injection metadata is scheduled": false,
+		"istiod pod fails":                            false,
+	})
+
+	podwatch.AssertCreateAndDeletePass(t, podWatchPredicate())
+}
+
+// TestPodWatchPredicateHonorsIgnoreAnnotation covers the opt-out, which is specific to this
+// controller rather than shared with other pod watches.
+func TestPodWatchPredicateHonorsIgnoreAnnotation(t *testing.T) {
+	g := NewWithT(t)
+
+	oldPod := podwatch.InjectedPod()
+	newPod := oldPod.DeepCopy()
+	newPod.Annotations["sailoperator.io/ignore"] = "true"
+	newPod.Status.Phase = corev1.PodSucceeded
+
+	result := podWatchPredicate().Update(event.UpdateEvent{ObjectOld: oldPod, ObjectNew: newPod})
+	g.Expect(result).To(BeFalse(), "the opt-out annotation must suppress an otherwise relevant event")
 }

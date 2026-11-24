@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -279,13 +280,29 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, nsHandler,
 			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
-		Watches(&corev1.Pod{}, podHandler,
-			builder.WithPredicates(watches.AsPredicate(watches.PodFilter()), predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(podWatchPredicate())).
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
 		Watches(&v1.IstioCNI{}, istioCniHandler).
 		Watches(&v1.ZTunnel{}, ztunnelHandler).
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevision](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+}
+
+// podWatchPredicate decides which pod events reach this controller.
+//
+// Pods only affect the InUse condition. Two changes matter: the revision a pod belongs to,
+// and whether the pod is still running. PodReferencesRevision drops pods outside the mesh.
+//
+// Create and delete events always pass, because the filters only check updates.
+func podWatchPredicate() predicate.Predicate {
+	return predicate.And(
+		watches.AsPredicate(watches.PodReferencesRevision()),
+		predicate.Or(
+			watches.AsPredicate(watches.PodRevisionChanges()),
+			watches.AsPredicate(watches.PodTerminationChanges()),
+		),
+		predicate2.IgnoreUpdateWhenAnnotation(),
+	)
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision, reconcileErr error) (v1.IstioRevisionStatus, error) {
