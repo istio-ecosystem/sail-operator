@@ -1085,6 +1085,7 @@ func TestPodWatchPredicate(t *testing.T) {
 		"pod loses its injection label":    true,
 		"pod opts out of injection":        true,
 		"pod joins a revision":             true,
+		"pod loses all injection metadata": true,
 
 		// Pods outside the mesh cannot affect any revision. Their completions are status-only
 		// writes that the watch drops today, and must keep dropping.

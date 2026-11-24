@@ -220,6 +220,13 @@ func Scenarios() map[string]Scenario {
 			Pod:    InjectedPod,
 			Update: func(pod *corev1.Pod) { pod.Labels[sidecarInjectLabel] = "false" },
 		},
+		"pod loses all injection metadata": {
+			Pod: InjectedPod,
+			Update: func(pod *corev1.Pod) {
+				delete(pod.Labels, istioRevLabel)
+				delete(pod.Annotations, istioRevLabel)
+			},
+		},
 		"pod joins a revision": {
 			Pod:    PlainPod,
 			Update: func(pod *corev1.Pod) { pod.Labels[istioRevLabel] = revision },
