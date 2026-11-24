@@ -1088,9 +1088,9 @@ func TestPodWatchPredicate(t *testing.T) {
 
 		// Pods outside the mesh cannot affect any revision. Their completions are status-only
 		// writes that the watch drops today, and must keep dropping.
-		"pod with no injection metadata completes":    false,
-		"pod with no injection metadata is scheduled": false,
-		"istiod pod fails":                            false,
+		"pod with no injection metadata completes":          false,
+		"pod with no injection metadata is bound to a node": false,
+		"istiod pod fails": false,
 	})
 
 	podwatch.AssertCreateAndDeletePass(t, podWatchPredicate())

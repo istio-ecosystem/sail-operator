@@ -54,10 +54,9 @@ var platformWrites = []struct {
 	update func(pod *corev1.Pod)
 }{
 	{
-		name: "scheduler binding and topology labels added",
+		name: "pod is bound to a node",
 		update: func(pod *corev1.Pod) {
-			pod.Labels["kubernetes.io/hostname"] = "node-1"
-			pod.Labels["topology.kubernetes.io/zone"] = "us-east-1a"
+			pod.Spec.NodeName = "node-1"
 		},
 	},
 	{

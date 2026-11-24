@@ -230,9 +230,9 @@ func Scenarios() map[string]Scenario {
 			Pod:    PlainPod,
 			Update: func(pod *corev1.Pod) { pod.Status.Phase = corev1.PodSucceeded },
 		},
-		"pod with no injection metadata is scheduled": {
+		"pod with no injection metadata is bound to a node": {
 			Pod:    PlainPod,
-			Update: func(pod *corev1.Pod) { pod.Labels["kubernetes.io/hostname"] = "node-1" },
+			Update: func(pod *corev1.Pod) { pod.Spec.NodeName = "node-1" },
 		},
 
 		// control plane
