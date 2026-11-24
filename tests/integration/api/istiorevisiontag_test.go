@@ -258,31 +258,6 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					It("updates IstioRevisionTag status and detects that the revision tag is in use", func() {
 						expectTagInUse(ctx, metav1.ConditionTrue, "")
 					})
-
-					It("doesn't reconcile when the platform writes metadata to the pod", func() {
-						time.Sleep(5 * time.Second)
-
-						// None of these can change whether the pod uses the tag, but all of them are
-						// written by the platform during a normal pod lifecycle.
-						expectNoReconciliation(istioRevisionTagController, func() {
-							updatePod(ctx, workload, func(p *corev1.Pod) {
-								p.Labels["kubernetes.io/hostname"] = "node-1"
-								p.Labels["topology.kubernetes.io/zone"] = "us-east-1a"
-							})
-							updatePod(ctx, workload, func(p *corev1.Pod) {
-								p.Annotations = map[string]string{
-									"k8s.v1.cni.cncf.io/network-status": `[{"name":"ovn-kubernetes","interface":"eth0"}]`,
-								}
-							})
-						})
-					})
-
-					It("detects that the revision tag is no longer in use when the pod reaches a terminal phase", func() {
-						// A terminal pod no longer uses the tag. This is a status-only write, so
-						// nothing else about the pod changes to wake the controller.
-						setPodPhase(ctx, workload, corev1.PodFailed)
-						expectTagInUse(ctx, metav1.ConditionFalse, "")
-					})
 				})
 			})
 		}

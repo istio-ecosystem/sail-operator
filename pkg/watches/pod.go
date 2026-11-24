@@ -18,9 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PodFilter returns a filter for the Pod watches of the IstioRevision and
-// IstioRevisionTag controllers, admitting only updates that can change whether a pod keeps a
-// revision or a revision tag in use.
+// PodFilter returns a filter for the Pod watch of the IstioRevision controller, admitting only
+// the updates that can change whether a pod keeps a revision in use.
 //
 // The InUse computation reads exactly three things from a pod: the revision recorded in its
 // injected istio.io/rev annotation, the revision implied by its injection labels, and whether

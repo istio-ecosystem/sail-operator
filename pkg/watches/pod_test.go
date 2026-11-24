@@ -23,11 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-// TestPodFilter covers the update filter on the Pod watches of the IstioRevision and
-// IstioRevisionTag controllers. The InUse computation reads exactly three things from a pod:
-// the revision in its injected istio.io/rev annotation, the revision implied by its injection
-// labels, and whether it has reached a terminal phase. Only changes to those may wake the
-// controller.
+// TestPodFilter covers the update filter on the Pod watch of the IstioRevision controller.
+// The InUse computation reads exactly three things from a pod: the revision in its injected
+// istio.io/rev annotation, the revision implied by its injection labels, and whether it has
+// reached a terminal phase. Only changes to those may wake the controller.
 func TestPodFilter(t *testing.T) {
 	pred := AsPredicate(PodFilter())
 
@@ -202,8 +201,14 @@ func TestPodFilter(t *testing.T) {
 			expected: true,
 		},
 		{
-			// the IstioRevisionTag controller matches on the label only, so a label change must
-			// wake the controller even when the injected annotation is untouched
+			// podReferencesRevision treats the annotation and the labels as an OR rather than a
+			// fallback: the label branch applies whenever the pod's namespace carries no
+			// injection label, so one pod can keep two revisions in use at once. A label change
+			// therefore has to wake the controller even when the annotation is untouched.
+			//
+			// Istio itself only acts on this label at admission, since the injector webhook is
+			// registered for CREATE only, so in practice this is a hand-edit on a running pod.
+			// The case exists to keep the filter a superset of what the computation reads.
 			name: "istio.io/rev label changed while annotation unchanged",
 			update: func(pod *corev1.Pod) {
 				pod.Labels["istio.io/rev"] = "other-rev"
