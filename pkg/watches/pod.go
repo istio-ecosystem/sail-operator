@@ -18,17 +18,21 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // PodReferencesRevision returns a filter that admits an update only when the pod references a
-// revision, by its injected istio.io/rev annotation or by its injection labels.
+// revision, either by its injected istio.io/rev annotation or by its injection labels.
 //
-// On its own it admits every update to such a pod, so pair it with PodRevisionChanges or
-// PodTerminationChanges to limit those to pods in the mesh. This matters most for
-// PodTerminationChanges, which otherwise admits every pod on the cluster that completes.
+// The filter is a scope rather than a change detector: in isolation it admits every update to
+// such a pod. It is intended to be combined with PodRevisionChanges or PodTerminationChanges
+// in order to restrict those to pods that belong to a mesh. The restriction is most
+// significant for PodTerminationChanges, which otherwise admits the completion of every pod
+// in the cluster.
 //
-// Both the old and the new pod are checked, so a pod that gains or loses its injection
-// metadata still passes.
+// Both the old and the new pod are examined, so that a pod which gains or loses its injection
+// metadata is admitted.
 func PodReferencesRevision() ShouldReconcileFunc {
 	return func(oldObj, newObj client.Object) bool {
 		oldPod, newPod, arePods := asPods(oldObj, newObj)
@@ -39,18 +43,19 @@ func PodReferencesRevision() ShouldReconcileFunc {
 	}
 }
 
-// PodRevisionChanges returns a filter that admits only the pod updates which change the mesh
-// revision a pod names: the revision recorded in its injected istio.io/rev annotation, or the
-// revision implied by its injection labels.
+// PodRevisionChanges returns a filter that admits only the updates which change the revision a
+// pod references, as recorded in its injected istio.io/rev annotation or implied by its
+// injection labels.
 //
 // The annotation and the labels are compared independently, because a pod may carry an
-// injected annotation naming one revision and a label naming another, and a caller may act on
-// either. Everything else the platform writes to a pod over its lifecycle - scheduler binding
-// and topology labels, CNI and network-status annotations, finalizers, owner references, spec
-// edits - leaves both untouched.
+// annotation naming one revision and a label naming another, and a caller may act on either.
+// The remaining writes a platform makes to a pod over its lifetime, such as node binding, CNI
+// and network-status annotations, finalizers, owner references and spec edits, leave both
+// unchanged and are rejected.
 //
-// Note that Istio acts on the injection labels at admission only, since the sidecar injector
-// webhook is registered for CREATE. A label edit on a running pod does not re-inject it.
+// Note that Istio itself acts on the injection labels at admission only, because the sidecar
+// injector webhook is registered for CREATE. Editing the label on a running pod does not
+// cause it to be re-injected.
 func PodRevisionChanges() ShouldReconcileFunc {
 	return func(oldObj, newObj client.Object) bool {
 		oldPod, newPod, arePods := asPods(oldObj, newObj)
@@ -64,13 +69,13 @@ func PodRevisionChanges() ShouldReconcileFunc {
 	}
 }
 
-// PodTerminationChanges returns a filter that admits only the pod updates which move a pod
-// into or out of a terminal phase. A pod in Succeeded or Failed has stopped running, so it no
-// longer runs whatever revision it was injected with.
+// PodTerminationChanges returns a filter that admits only the updates which move a pod into or
+// out of a terminal phase. A pod in Succeeded or Failed has stopped running and therefore no
+// longer runs the revision it was injected with.
 //
-// Unlike IgnoreStatusChanges, this filter therefore admits a status-only update. Transitions
-// between non-terminal phases, such as Pending to Running, and between the two terminal
-// phases are not admitted, because neither changes whether the pod is running.
+// Unlike IgnoreStatusChanges, this filter admits an update that alters nothing but the status.
+// Transitions between non-terminal phases, such as Pending to Running, and transitions between
+// the two terminal phases are rejected, because neither changes whether the pod is running.
 func PodTerminationChanges() ShouldReconcileFunc {
 	return func(oldObj, newObj client.Object) bool {
 		oldPod, newPod, arePods := asPods(oldObj, newObj)
@@ -99,4 +104,29 @@ func referencesRevision(pod *corev1.Pod) bool {
 // phases the InUse computations skip.
 func isTerminal(pod *corev1.Pod) bool {
 	return pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed
+}
+
+// IgnoreTerminalPodDeletes returns a filter that rejects the deletion of a pod that had
+// already reached a terminal phase.
+//
+// Such a pod no longer runs the revision it was injected with, so it had ceased to count
+// towards that revision before the deletion and its removal cannot change the outcome.
+// Terminal pods are deleted routinely, for instance when a CronJob prunes its history, so
+// rejecting these deletions halves the number of events a completed pod produces.
+//
+// Deletions of running pods are admitted, as are deletions whose final state the informer did
+// not observe, because the object reported for those may be out of date.
+func IgnoreTerminalPodDeletes() predicate.Funcs {
+	return predicate.Funcs{
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			if e.DeleteStateUnknown {
+				return true
+			}
+			pod, isPod := e.Object.(*corev1.Pod)
+			if !isPod {
+				return true
+			}
+			return !isTerminal(pod)
+		},
+	}
 }

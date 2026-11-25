@@ -290,10 +290,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // podWatchPredicate decides which pod events reach this controller.
 //
-// Pods only affect the InUse condition. Two changes matter: the revision a pod belongs to,
-// and whether the pod is still running. PodReferencesRevision drops pods outside the mesh.
+// A pod influences only the InUse condition, which reports whether any running pod references
+// the revision. An update is therefore admitted when it changes the revision the pod
+// references, or moves the pod into or out of a terminal phase; PodReferencesRevision limits
+// both to pods that reference a revision at all.
 //
-// Create and delete events always pass, because the filters only check updates.
+// Create events are always admitted. Delete events are admitted unless the pod had already
+// reached a terminal phase, in which case it had ceased to count towards its revision before
+// the deletion and its removal cannot change the condition.
 func podWatchPredicate() predicate.Predicate {
 	return predicate.And(
 		watches.AsPredicate(watches.PodReferencesRevision()),
@@ -301,6 +305,7 @@ func podWatchPredicate() predicate.Predicate {
 			watches.AsPredicate(watches.PodRevisionChanges()),
 			watches.AsPredicate(watches.PodTerminationChanges()),
 		),
+		watches.IgnoreTerminalPodDeletes(),
 		predicate2.IgnoreUpdateWhenAnnotation(),
 	)
 }

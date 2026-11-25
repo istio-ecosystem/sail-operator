@@ -1092,9 +1092,22 @@ func TestPodWatchPredicate(t *testing.T) {
 		"pod with no injection metadata completes":          false,
 		"pod with no injection metadata is bound to a node": false,
 		"istiod pod fails": false,
+
+		// Removals. A pod that had already stopped running does not count towards the
+		// revision, so taking it away cannot change InUse. CronJobs prune completed pods on
+		// every run, so admitting these would double the wake-ups for such a workload.
+		"running pod is deleted":                                true,
+		"failed pod is deleted":                                 false,
+		"completed pod is deleted":                              false,
+		"completed pod is deleted but its final state was lost": true,
 	})
 
-	podwatch.AssertCreateAndDeletePass(t, podWatchPredicate())
+	// Creates and deletes are not updates, so the scenarios above never produce them.
+	t.Run("pod is created", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(podWatchPredicate().Create(event.CreateEvent{Object: podwatch.InjectedPod()})).To(BeTrue(),
+			"a pod appearing may start counting towards a revision")
+	})
 }
 
 // TestPodWatchPredicateHonorsIgnoreAnnotation covers the opt-out, which is specific to this

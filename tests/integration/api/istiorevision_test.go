@@ -766,10 +766,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 						})
 					})
 
-					// Clean up after test. The pod is bound to a node that has no kubelet to
-					// confirm deletion, so it has to be removed forcibly or it stays Terminating
-					// and keeps the revision in use for the specs that follow.
+					// Deleting a pod that is still running does remove a user of the revision,
+					// so unlike the terminal case below it has to wake the controller.
+					//
+					// The pod is bound to a node that has no kubelet to confirm deletion, so it
+					// has to be removed forcibly or it stays Terminating and keeps the revision
+					// in use for the specs that follow.
 					forceDeletePod(ctx, pod)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
 				})
 
 				DescribeTable("reconciles when an injected pod reaches a terminal phase",
@@ -784,8 +788,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 						setPodPhase(ctx, pod, phase)
 						expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
 
-						// Clean up after test
-						deletePod(ctx, pod)
+						// The pod stopped counting towards the revision when it reached a
+						// terminal phase, so removing it cannot change InUse. CronJobs prune
+						// completed pods on every run, so this would otherwise double the
+						// wake-ups for such a workload.
+						waitForInFlightReconcileToFinish()
+						expectNoReconciliation(istioRevisionController, func() {
+							deletePod(ctx, pod)
+						})
 					},
 					Entry("Succeeded", corev1.PodSucceeded),
 					Entry("Failed", corev1.PodFailed),

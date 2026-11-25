@@ -38,10 +38,20 @@ const (
 	revision           = "my-rev"
 )
 
-// Scenario is a pod update: a pod to start from, and the change applied to it.
+// Scenario is a pod event: the pod it concerns, and what happens to it.
+//
+// Exactly one of Update or Delete describes the event. Update makes it a change from the pod
+// Pod returns to the pod the function leaves behind; Delete makes it the removal of the pod
+// in the state Pod returns.
 type Scenario struct {
 	Pod    func() *corev1.Pod
 	Update func(pod *corev1.Pod)
+
+	// Delete makes this the removal of the pod rather than a change to it.
+	Delete bool
+	// DeleteStateUnknown marks a removal the informer lost track of, where the pod reported
+	// is the last state it saw and may be out of date.
+	DeleteStateUnknown bool
 }
 
 // InjectedPod is a running workload pod that references a revision both by injected annotation
@@ -105,6 +115,15 @@ func IstiodPod() *corev1.Pod {
 			sidecarInjectLabel: "false",
 		},
 		Status: corev1.PodStatus{Phase: corev1.PodRunning},
+	}
+}
+
+// terminalPod is an injected workload pod that has stopped running.
+func terminalPod(phase corev1.PodPhase) func() *corev1.Pod {
+	return func() *corev1.Pod {
+		pod := InjectedPod()
+		pod.Status.Phase = phase
+		return pod
 	}
 }
 
@@ -232,6 +251,26 @@ func Scenarios() map[string]Scenario {
 			Update: func(pod *corev1.Pod) { pod.Labels[istioRevLabel] = revision },
 		},
 
+		// removals. A pod that had already stopped running does not count towards its
+		// revision, so taking it away changes nothing; one still running does.
+		"running pod is deleted": {
+			Pod:    InjectedPod,
+			Delete: true,
+		},
+		"completed pod is deleted": {
+			Pod:    terminalPod(corev1.PodSucceeded),
+			Delete: true,
+		},
+		"failed pod is deleted": {
+			Pod:    terminalPod(corev1.PodFailed),
+			Delete: true,
+		},
+		"completed pod is deleted but its final state was lost": {
+			Pod:                terminalPod(corev1.PodSucceeded),
+			Delete:             true,
+			DeleteStateUnknown: true,
+		},
+
 		// pods outside the mesh
 		"pod with no injection metadata completes": {
 			Pod:    PlainPod,
@@ -281,29 +320,26 @@ func Run(t *testing.T, pred predicate.Predicate, expected map[string]bool) {
 		t.Run(name, func(t *testing.T) {
 			scenario := scenarios[name]
 
-			oldPod := scenario.Pod()
-			oldPod.ResourceVersion = "1"
-			newPod := oldPod.DeepCopy()
-			newPod.ResourceVersion = "2"
-			scenario.Update(newPod)
+			var got bool
+			switch {
+			case scenario.Delete:
+				got = pred.Delete(event.DeleteEvent{
+					Object:             scenario.Pod(),
+					DeleteStateUnknown: scenario.DeleteStateUnknown,
+				})
+			default:
+				oldPod := scenario.Pod()
+				oldPod.ResourceVersion = "1"
+				newPod := oldPod.DeepCopy()
+				newPod.ResourceVersion = "2"
+				scenario.Update(newPod)
 
-			if got := pred.Update(event.UpdateEvent{ObjectOld: oldPod, ObjectNew: newPod}); got != want {
+				got = pred.Update(event.UpdateEvent{ObjectOld: oldPod, ObjectNew: newPod})
+			}
+
+			if got != want {
 				t.Errorf("expected the watch to be woken: %t, but it was: %t", want, got)
 			}
 		})
-	}
-}
-
-// AssertCreateAndDeletePass checks that pred never filters out a pod appearing or
-// disappearing, which always has to reach the controller.
-func AssertCreateAndDeletePass(t *testing.T, pred predicate.Predicate) {
-	t.Helper()
-	pod := InjectedPod()
-
-	if !pred.Create(event.CreateEvent{Object: pod}) {
-		t.Error("create events must not be filtered out")
-	}
-	if !pred.Delete(event.DeleteEvent{Object: pod}) {
-		t.Error("delete events must not be filtered out")
 	}
 }
