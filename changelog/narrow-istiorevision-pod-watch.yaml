@@ -1,0 +1,13 @@
+category: changed
+title: Narrow the IstioRevision pod watch to changes that can affect the InUse condition
+description: |
+  The IstioRevision controller was woken by every metadata write a platform
+  makes to a pod over its lifetime, such as node binding, CNI and
+  network-status annotations and controller finalizers, and each
+  reconciliation re-rendered and re-applied the istiod Helm chart. The pod
+  watch now admits only the changes the InUse condition depends on: the
+  revision a pod references, and whether the pod is still running.
+
+  A pod reaching the Succeeded or Failed phase now wakes the controller,
+  which it previously did not, so a revision no longer reports a stale InUse
+  condition after its last workload completes.
