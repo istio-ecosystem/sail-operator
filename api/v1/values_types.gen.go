@@ -723,6 +723,8 @@ type PilotConfig struct {
 	// Traffic distribution preference for the istiod service.
 	// See https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution
 	TrafficDistribution *string `json:"trafficDistribution,omitempty"`
+	// The terminationMessagePolicy of the discovery container.
+	TerminationMessagePolicy *string `json:"terminationMessagePolicy,omitempty"`
 }
 
 // Configuration for the istiod PodDisruptionBudget.
@@ -1101,6 +1103,9 @@ type Values struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
 	GatewayClasses json.RawMessage `json:"gatewayClasses,omitempty"`
+	// Specifies the platform the charts are installed on, selecting a platform profile.
+	// See manifests/helm-profiles/platform-*.yaml for the supported platforms.
+	Platform *string `json:"platform,omitempty"`
 }
 
 // ExperimentalConfig is a placeholder for experimental installation features.
@@ -1407,7 +1412,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\x9c\x17\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\xd8\x17\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1461,7 +1466,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"!sidecarInjectorWebhookAnnotations\x18D \x01(\v2\x17.google.protobuf.StructR!sidecarInjectorWebhookAnnotations\x12.\n" +
 	"\x12trustedZtunnelName\x18E \x01(\tR\x12trustedZtunnelName\x12(\n" +
 	"\x0fminReadySeconds\x18G \x01(\x05R\x0fminReadySeconds\x120\n" +
-	"\x13trafficDistribution\x18H \x01(\tR\x13trafficDistribution\"\xea\x02\n" +
+	"\x13trafficDistribution\x18H \x01(\tR\x13trafficDistribution\x12:\n" +
+	"\x18terminationMessagePolicy\x18I \x01(\tR\x18terminationMessagePolicy\"\xea\x02\n" +
 	"\x19PodDisruptionBudgetConfig\x12:\n" +
 	"\fminAvailable\x18\x01 \x01(\v2\x16.google.protobuf.ValueR\fminAvailable\x12>\n" +
 	"\x0emaxUnavailable\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x0emaxUnavailable\x12>\n" +
@@ -1598,7 +1604,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\rinjectionPath\x18\x02 \x01(\tR\rinjectionPath\x12,\n" +
 	"\x11injectionCABundle\x18\x03 \x01(\tR\x11injectionCABundle\x124\n" +
 	"\aenabled\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12Z\n" +
-	"\x1aenabledLocalInjectorIstiod\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x1aenabledLocalInjectorIstiod\"\xd7\b\n" +
+	"\x1aenabledLocalInjectorIstiod\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x1aenabledLocalInjectorIstiod\"\xf3\b\n" +
 	"\x06Values\x124\n" +
 	"\x03cni\x18\x02 \x01(\v2\".istio.operator.v1alpha1.CNIConfigR\x03cni\x12C\n" +
 	"\bgateways\x18\x05 \x01(\v2'.istio.operator.v1alpha1.GatewaysConfigR\bgateways\x12=\n" +
@@ -1621,7 +1627,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\aprofile\x18* \x01(\tR\aprofile\x122\n" +
 	"\x14compatibilityVersion\x18+ \x01(\tR\x14compatibilityVersion\x12O\n" +
 	"\fexperimental\x18, \x01(\v2+.istio.operator.v1alpha1.ExperimentalConfigR\fexperimental\x12>\n" +
-	"\x0egatewayClasses\x18- \x01(\v2\x16.google.protobuf.ValueR\x0egatewayClasses\"h\n" +
+	"\x0egatewayClasses\x18- \x01(\v2\x16.google.protobuf.ValueR\x0egatewayClasses\x12\x1a\n" +
+	"\bplatform\x18. \x01(\tR\bplatform\"h\n" +
 	"\x12ExperimentalConfig\x12R\n" +
 	"\x16stableValidationPolicy\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x16stableValidationPolicy\"\x8c\x01\n" +
 	"\vIntOrString\x12\x12\n" +
