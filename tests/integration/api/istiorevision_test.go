@@ -739,6 +739,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				})
 
 				It("doesn't reconcile when the platform writes metadata to an injected pod", func() {
+					// Leave the namespace non-injected so the pod is the only reference keeping
+					// the revision in use; this lets the test verify the pod lifecycle in isolation.
 					ns := createOrUpdateNamespace(ctx, "non-injected-"+name, nil)
 					pod := createPod(ctx, "churn-pod", ns.Name, podLabels)
 					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
