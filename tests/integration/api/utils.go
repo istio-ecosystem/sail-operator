@@ -17,12 +17,18 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"time"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const (
@@ -62,4 +68,33 @@ func expectNoReconciliation(controller string, action func()) {
 		latestCount := getReconcileCount(g, controller)
 		g.Expect(latestCount).To(Equal(reconcileCount))
 	}, 5*time.Second).Should(Succeed(), "%s was reconciled when it shouldn't have been", controller)
+}
+
+func deleteAll[T client.Object, L client.ObjectList](ctx context.Context, object T, list L) {
+	gvk, err := apiutil.GVKForObject(object, k8sClient.Scheme())
+	Expect(err).To(Succeed())
+	Step("Deleting all " + gvk.Kind + "s")
+
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, object).Should(Succeed())
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
+		g.Expect(meta.LenList(list)).To(BeZero())
+	}).Should(Succeed())
+}
+
+func deleteAllIstioRevisions(ctx context.Context) {
+	deleteAll(ctx, &v1.IstioRevision{}, &v1.IstioRevisionList{})
+}
+
+func deleteAllIstioRevisionTags(ctx context.Context) {
+	deleteAll(ctx, &v1.IstioRevisionTag{}, &v1.IstioRevisionTagList{})
+}
+
+func deleteAllIstiosAndRevisions(ctx context.Context) {
+	deleteAll(ctx, &v1.Istio{}, &v1.IstioList{})
+	deleteAllIstioRevisions(ctx)
+}
+
+func deleteAllIstioCNIs(ctx context.Context) {
+	deleteAll(ctx, &v1.IstioCNI{}, &v1.IstioCNIList{})
 }

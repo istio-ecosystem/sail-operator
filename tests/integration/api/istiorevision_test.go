@@ -964,16 +964,6 @@ func waitForInFlightReconcileToFinish() {
 	time.Sleep(5 * time.Second)
 }
 
-func deleteAllIstioRevisions(ctx context.Context) {
-	Step("Deleting all IstioRevisions")
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
-	Eventually(func(g Gomega) {
-		list := &v1.IstioRevisionList{}
-		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
-		g.Expect(list.Items).To(BeEmpty())
-	}).Should(Succeed())
-}
-
 func createOrUpdateNamespace(ctx context.Context, name string, labels map[string]string) *corev1.Namespace {
 	ns := &corev1.Namespace{
 		Name:   name,
