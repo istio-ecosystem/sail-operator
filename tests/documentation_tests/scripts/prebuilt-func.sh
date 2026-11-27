@@ -92,12 +92,14 @@ get_pod_names() {
     namespace="$1"
     label="$2"
 
+    # Skip pods that are already being deleted. rollout status returns before
+    # those pods are gone, and waiting for them to become Ready never succeeds.
     if [ -n "$label" ] || [ -z "$label" ]; then
-        pods=$(kubectl get pods -n "$namespace" -l "$label" \
-            -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
+        pods=$(kubectl get pods -n "$namespace" -l "$label" -o json 2>/dev/null \
+            | jq -r '.items[] | select(.metadata.deletionTimestamp == null) | .metadata.name')
     else
-        pods=$(kubectl get pods -n "$namespace" \
-            -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
+        pods=$(kubectl get pods -n "$namespace" -o json 2>/dev/null \
+            | jq -r '.items[] | select(.metadata.deletionTimestamp == null) | .metadata.name')
     fi
 
     [ -z "$pods" ] && return 1
@@ -323,6 +325,16 @@ wait_for_rollout_success() {
     for deploy in $deploy_names; do
         kubectl rollout status "$deploy" -n "$namespace" --timeout=60s
     done
+
+    # rollout status returns while replaced pods are still terminating.
+    # A terminating pod can already be phase Succeeded, and the next command
+    # selects the first pod in the list.
+    terminating=$(kubectl get pods -n "$namespace" -o json \
+        | jq -r '.items[] | select(.metadata.deletionTimestamp != null) | .metadata.name')
+    if [ -n "$terminating" ]; then
+        echo "Waiting for terminating pods in namespace $namespace to be removed: $terminating"
+        return 1
+    fi
 }
 
 # Create default Istio resource
