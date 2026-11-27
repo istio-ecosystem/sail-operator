@@ -392,14 +392,20 @@ GH_RELEASE_ADDITIONAL_FLAGS += --draft
 endif
 
 .PHONY: create-gh-release
-create-gh-release: helm-package ## Create a GitHub release and upload the helm charts package to it.
-	export GITHUB_TOKEN=$(GITHUB_TOKEN)
-	$(REPO_ROOT)/hack/extract-changelog-section.sh $(VERSION) > $(REPO_ROOT)/out/release-notes.md
-	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
-		--target release-$(MINOR_VERSION) \
-		--title "Sail Operator $(VERSION)" \
-		--notes-file $(REPO_ROOT)/out/release-notes.md \
-		$(GH_RELEASE_ADDITIONAL_FLAGS)
+create-gh-release: helm-package ## Create a GitHub release and upload the helm charts package to it. Reruns update existing release (edit + clobber upload).
+	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
+	$(REPO_ROOT)/hack/extract-changelog-section.sh $(VERSION) > $(REPO_ROOT)/out/release-notes.md; \
+	if gh release view $(VERSION) >/dev/null 2>&1; then \
+		echo "Release $(VERSION) already exists — updating..."; \
+		gh release edit $(VERSION) --title "Sail Operator $(VERSION)" --notes-file $(REPO_ROOT)/out/release-notes.md $(GH_RELEASE_ADDITIONAL_FLAGS); \
+		gh release upload $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz --clobber; \
+	else \
+		gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
+			--target release-$(MINOR_VERSION) \
+			--title "Sail Operator $(VERSION)" \
+			--notes-file $(REPO_ROOT)/out/release-notes.md \
+			$(GH_RELEASE_ADDITIONAL_FLAGS); \
+	fi
 
 .PHONY: cluster
 cluster: SKIP_CLEANUP=true

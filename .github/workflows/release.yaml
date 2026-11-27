@@ -49,11 +49,20 @@ jobs:
       with:
         name: project-v4-builder
 
-    - name: Build and push operator image
+    - name: Create GitHub release
+      env:
+        GH_PRE_RELEASE: ${{ inputs.is_pre_release == 'true' }}
+        GH_RELEASE_DRAFT: ${{ inputs.is_draft_release == 'true' }}
       run: |
-        make docker-buildx
+        make create-gh-release \
+          -e GH_PRE_RELEASE=$GH_PRE_RELEASE \
+          -e GH_RELEASE_DRAFT=$GH_RELEASE_DRAFT
+
+    - name: Build and push operator image
       env:
         PREVENT_IMAGE_OVERWRITE: ${{ inputs.prevent_image_overwrite }}
+      run: |
+        make docker-buildx
 
     - name: Generate bundle metadata
       run: |
@@ -61,6 +70,9 @@ jobs:
 
     - name: Publish bundle in operatorhub.io
       continue-on-error: true
+      env:
+        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
       run: |
         make bundle-publish \
           -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
@@ -68,26 +80,14 @@ jobs:
           -e OPERATOR_HUB=community-operators \
           -e OWNER=k8s-operatorhub \
           -e FORK=maistra
+
+    - name: Publish bundle in OpenShift OperatorHub
       env:
         GIT_CONFIG_USER_NAME: "${{ github.actor }}"
         GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-
-    - name: Publish bundle in OpenShift OperatorHub
       run: |
         make bundle-publish \
           -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
           -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
           -e OWNER=redhat-openshift-ecosystem \
           -e FORK=maistra
-      env:
-        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
-        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-
-    - name: Create GitHub release
-      run: |
-        make create-gh-release \
-          -e GH_PRE_RELEASE=$GH_PRE_RELEASE \
-          -e GH_RELEASE_DRAFT=$GH_RELEASE_DRAFT
-      env:
-        GH_PRE_RELEASE: ${{ github.event.inputs.is_pre_release == 'true' }}
-        GH_RELEASE_DRAFT: ${{ github.event.inputs.is_draft_release == 'true' }}
