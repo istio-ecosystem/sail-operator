@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -279,13 +280,34 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, nsHandler,
 			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
-		Watches(&corev1.Pod{}, podHandler,
-			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(podWatchPredicate())).
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
 		Watches(&v1.IstioCNI{}, istioCniHandler).
 		Watches(&v1.ZTunnel{}, ztunnelHandler).
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevision](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+}
+
+// podWatchPredicate decides which pod events reach this controller.
+//
+// A pod influences only the InUse condition, which reports whether any running pod references
+// the revision. An update is therefore admitted when it changes the revision the pod
+// references, or moves the pod into or out of a terminal phase; PodReferencesRevision limits
+// both to pods that reference a revision at all.
+//
+// Create events are always admitted. Delete events are admitted unless the pod had already
+// reached a terminal phase, in which case it had ceased to count towards its revision before
+// the deletion and its removal cannot change the condition.
+func podWatchPredicate() predicate.Predicate {
+	return predicate.And(
+		watches.AsPredicate(watches.PodReferencesRevision()),
+		predicate.Or(
+			watches.AsPredicate(watches.PodRevisionChanges()),
+			watches.AsPredicate(watches.PodTerminationChanges()),
+		),
+		watches.IgnoreTerminalPodDeletes(),
+		predicate2.IgnoreUpdateWhenAnnotation(),
+	)
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision, reconcileErr error) (v1.IstioRevisionStatus, error) {

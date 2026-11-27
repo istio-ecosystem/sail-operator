@@ -737,6 +737,71 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					deletePod(ctx, pod)
 					createOrUpdateNamespace(ctx, ns.Name, nil)
 				})
+
+				It("doesn't reconcile when the platform writes metadata to an injected pod", func() {
+					// Leave the namespace non-injected so the pod is the only reference keeping
+					// the revision in use; this lets the test verify the pod lifecycle in isolation.
+					ns := createOrUpdateNamespace(ctx, "non-injected-"+name, nil)
+					pod := createPod(ctx, "churn-pod", ns.Name, podLabels)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+					waitForInFlightReconcileToFinish()
+
+					// None of these can change which revision the pod belongs to, but all of them
+					// are written during a normal pod lifecycle: binding to a node, the
+					// OVN-Kubernetes pod-network annotation, the Multus network-status
+					// annotation, and a controller adding and removing its own finalizer.
+					expectNoReconciliation(istioRevisionController, func() {
+						bindPod(ctx, pod, "node-1")
+						updatePod(ctx, pod, func(p *corev1.Pod) {
+							p.Annotations = map[string]string{
+								"k8s.ovn.org/pod-networks": `{"default":{"ip_addresses":["10.128.2.17/23"]}}`,
+							}
+						})
+						updatePod(ctx, pod, func(p *corev1.Pod) {
+							p.Annotations["k8s.v1.cni.cncf.io/network-status"] = `[{"name":"ovn-kubernetes","interface":"eth0"}]`
+						})
+						updatePod(ctx, pod, func(p *corev1.Pod) {
+							p.Finalizers = append(p.Finalizers, "batch.kubernetes.io/job-tracking")
+						})
+						updatePod(ctx, pod, func(p *corev1.Pod) {
+							p.Finalizers = nil
+						})
+					})
+
+					// Deleting a pod that is still running does remove a user of the revision,
+					// so unlike the terminal case below it has to wake the controller.
+					//
+					// The pod is bound to a node that has no kubelet to confirm deletion, so it
+					// has to be removed forcibly or it stays Terminating and keeps the revision
+					// in use for the specs that follow.
+					forceDeletePod(ctx, pod)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+				})
+
+				DescribeTable("reconciles when an injected pod reaches a terminal phase",
+					func(phase corev1.PodPhase) {
+						ns := createOrUpdateNamespace(ctx, "non-injected-"+name, nil)
+						pod := createPod(ctx, "terminal-pod", ns.Name, podLabels)
+						expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+						waitForInFlightReconcileToFinish()
+
+						// A terminal pod no longer uses the revision. This is a status-only write,
+						// so nothing else about the pod changes to wake the controller.
+						setPodPhase(ctx, pod, phase)
+						expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+
+						// The pod stopped counting towards the revision when it reached a
+						// terminal phase, so removing it cannot change InUse. CronJobs prune
+						// completed pods on every run, so this would otherwise double the
+						// wake-ups for such a workload.
+						waitForInFlightReconcileToFinish()
+						expectNoReconciliation(istioRevisionController, func() {
+							deletePod(ctx, pod)
+						})
+					},
+					Entry("Succeeded", corev1.PodSucceeded),
+					Entry("Failed", corev1.PodFailed),
+				)
 			})
 		},
 		Entry("using the default IstioRevision", "default", "",
@@ -995,6 +1060,58 @@ func createPod(ctx context.Context, name, ns string, labels map[string]string) *
 	}
 	Expect(k8sClient.Create(ctx, pod)).To(Succeed())
 	return pod
+}
+
+// updatePod applies mutate to the latest version of the pod, retrying on conflict.
+func updatePod(ctx context.Context, pod *corev1.Pod, mutate func(*corev1.Pod)) {
+	Eventually(func(g Gomega) {
+		p := &corev1.Pod{}
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), p)).To(Succeed())
+		mutate(p)
+		g.Expect(k8sClient.Update(ctx, p)).To(Succeed())
+	}).Should(Succeed())
+}
+
+// bindPod binds the pod to a node the way the scheduler does. spec.nodeName cannot be set
+// through a normal update, which the API server rejects, so this goes through the binding
+// subresource. envtest runs no scheduler, so pods stay unbound unless bound explicitly.
+func bindPod(ctx context.Context, pod *corev1.Pod, nodeName string) {
+	Step("Binding pod to node " + nodeName)
+	binding := &corev1.Binding{
+		Name:      pod.Name,
+		Namespace: pod.Namespace,
+		Target:    corev1.ObjectReference{Kind: "Node", Name: nodeName},
+	}
+	Eventually(func(g Gomega) {
+		p := &corev1.Pod{}
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), p)).To(Succeed())
+		g.Expect(k8sClient.SubResource("binding").Create(ctx, p, binding)).To(Succeed())
+	}).Should(Succeed())
+}
+
+// forceDeletePod removes a pod without waiting for a kubelet to confirm it, which no node in
+// envtest has.
+func forceDeletePod(ctx context.Context, pod *corev1.Pod) {
+	Step("Force deleting pod")
+	Eventually(func(g Gomega) {
+		g.Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
+	}).Should(Succeed())
+	Eventually(func(g Gomega) {
+		p := &corev1.Pod{}
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), p)).To(ReturnNotFoundError())
+	}).Should(Succeed())
+}
+
+// setPodPhase writes the pod phase through the status subresource. envtest runs no kubelet,
+// so phase transitions have to be simulated.
+func setPodPhase(ctx context.Context, pod *corev1.Pod, phase corev1.PodPhase) {
+	Step("Setting pod phase to " + string(phase))
+	Eventually(func(g Gomega) {
+		p := &corev1.Pod{}
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), p)).To(Succeed())
+		p.Status.Phase = phase
+		g.Expect(k8sClient.Status().Update(ctx, p)).To(Succeed())
+	}).Should(Succeed())
 }
 
 // expectCondition on a given IstioRevision (identified by name) to eventually have a given status.
