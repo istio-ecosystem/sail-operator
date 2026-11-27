@@ -178,27 +178,42 @@ if [[ -z "${VERSION}" ]]; then
 fi
 echo "Parsed VERSION=${VERSION}"
 
-# The operator VERSION is not bumped when Istio versions are added — that happens
-# during the release process, after this checklist is created. So the checklist is
-# titled with the next patch version (x.y.z+1) of the released VERSION. If VERSION
-# itself is not released yet (a release is already in flight), the new Istio
-# versions fold into that pending release and the checklist keeps its title.
-if gh release view "${VERSION}" --repo "${REPO}" >/dev/null 2>&1; then
-  TITLE_VERSION=$(echo "${VERSION}" | awk -F. '{print $1"."$2"."$3+1}')
-else
-  echo "VERSION ${VERSION} is not released yet; folding new Istio versions into its release"
-  TITLE_VERSION="${VERSION}"
+# Print "<number>\t<url>" of the first issue with exactly the given title and state.
+find_issue() {
+  local title="$1" state="$2"
+  gh issue list \
+    --repo "${REPO}" \
+    --state "${state}" \
+    --search "in:title \"${title}\"" \
+    --json number,title,url \
+    --jq ".[] | select(.title == \"${title}\") | \"\(.number)\t\(.url)\"" \
+    | head -1
+}
+
+# VERSION in Makefile.core.mk is the source of truth. On a release branch it holds
+# the last released version, because the operator VERSION is only bumped by the
+# release preparation workflow. The one exception is a release in progress: the
+# prep PR already bumped VERSION and its checklist is still open. Then the new Istio
+# versions fold into that release instead of opening a checklist for VERSION+1.
+IN_PROGRESS=$(find_issue "Release Sail Operator ${VERSION}" open)
+if [[ -n "${IN_PROGRESS}" ]]; then
+  IN_PROGRESS_NUM="${IN_PROGRESS%%$'\t'*}"
+  IN_PROGRESS_URL="${IN_PROGRESS#*$'\t'}"
+  echo "Release ${VERSION} is in progress (#${IN_PROGRESS_NUM} is open); folding new Istio versions into it."
+  if [[ "${DRY_RUN}" == true ]]; then
+    echo "DRY_RUN=true — would comment on ${IN_PROGRESS_URL}"
+  else
+    gh issue comment "${IN_PROGRESS_NUM}" --repo "${REPO}" \
+      --body "More Istio versions were added in ${PR_URL} while this release is in progress. Re-run the release preparation workflow (with \`version: ${VERSION}\`) to pin them and include them in this release."
+  fi
+  exit 0
 fi
+
+TITLE_VERSION=$(echo "${VERSION}" | awk -F. '{print $1"."$2"."$3+1}')
 TITLE="Release Sail Operator ${TITLE_VERSION}"
 # Dedupe across all states so a closed checklist for the same VERSION is not
 # recreated on re-runs; reopen the existing issue if a redo is needed.
-EXISTING=$(gh issue list \
-  --repo "${REPO}" \
-  --state all \
-  --search "in:title \"${TITLE}\"" \
-  --json number,title,url \
-  --jq ".[] | select(.title == \"${TITLE}\") | \"\(.number)\t\(.url)\"" \
-  | head -1)
+EXISTING=$(find_issue "${TITLE}" all)
 if [[ -n "${EXISTING}" ]]; then
   EXISTING_NUM="${EXISTING%%$'\t'*}"
   EXISTING_URL="${EXISTING#*$'\t'}"
@@ -214,13 +229,16 @@ fi
 
 BODY_FILE=$(mktemp)
 trap 'rm -f "${BODY_FILE}"' EXIT
-# Drop optional YAML frontmatter; substitute the Add Istio PR URL placeholder.
+# Drop optional YAML frontmatter; substitute the placeholders (PR URL, repo URL so
+# workflow links point to the repo the issue is created in, and the release branch).
 awk '
   NR == 1 && /^---$/ { fm = 1; next }
   fm && /^---$/ { fm = 0; next }
   fm { next }
   { print }
-' "${TEMPLATE}" | sed "s|ADD_ISTIO_PR_URL|${PR_URL}|g" > "${BODY_FILE}"
+' "${TEMPLATE}" | sed -e "s|ADD_ISTIO_PR_URL|${PR_URL}|g" \
+  -e "s|REPO_URL|https://github.com/${REPO}|g" \
+  -e "s|RELEASE_BRANCH|${BASE_BRANCH:-release-X.Y}|g" > "${BODY_FILE}"
 
 LABELS=("automated" "release")
 
@@ -235,8 +253,12 @@ if [[ "${DRY_RUN}" == true ]]; then
   exit 0
 fi
 
-# Ensure the release label exists (automated already does). Matches
+# Ensure the labels exist (forks used for testing may have neither). Matches
 # validate_ztunnel_values / brokenlinks, which attach workflow-specific labels.
+gh label create automated \
+  --repo "${REPO}" \
+  --description "Created by automation" \
+  --color "EDEDED" >/dev/null 2>&1 || true
 gh label create release \
   --repo "${REPO}" \
   --description "Release checklist / process" \

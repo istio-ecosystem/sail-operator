@@ -120,8 +120,9 @@ For each selected branch, **processed from highest minor version to lowest** (e.
 
 ### 7. Operator version handling (no bump)
 
-- Do NOT bump `VERSION` or `PREVIOUS_VERSION` in `Makefile.core.mk` when adding Istio versions. The operator version is bumped only during the release process (by the release coordinator / release-prep workflow), not when Istio versions are added.
-- The release checklist issue (Step 15b) derives the upcoming version on its own (released VERSION + next patch), so nothing needs to be prepared here.
+- Do NOT bump `VERSION` or `PREVIOUS_VERSION` in `Makefile.core.mk` when adding Istio versions. The operator version is bumped only during the release preparation workflow (`.github/workflows/release-prep.yaml` — `Actions → Release preparation → Run workflow` on `release-X.Y`), not when Istio versions are added.
+- After this command's PR(s) merge (or after the automator's `update-deps` PR merges), the Release Manager runs the **Release preparation workflow** on the release branch to create one PR with 3 commits: VERSION/PREVIOUS_VERSION bump, pin Go deps + `make gen`, and changelog (`hack/update-changelog.sh`).
+- The release checklist issue (Step 15b) derives the upcoming version on its own (next patch of `VERSION` in `Makefile.core.mk`), so nothing needs to be prepared here.
 
 ### 8. Run update_deps.sh
 
@@ -287,7 +288,7 @@ When this branch is the **active OLM release branch** (the highest `release-X.Y`
      --base-branch release-X.YY \
      --repo istio-ecosystem/sail-operator
    ```
-   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). Do not pass `--version`: the helper derives the upcoming version on its own — the next patch version of the released `VERSION` (x.y.z+1), or the unreleased `VERSION` itself if a release is already in flight. It also dedupes by title and skips unless the base branch is the latest `release-X.Y` (pass `--force` only when intentionally releasing from an older line).
+   Use the real release branch name for `--base-branch` (e.g. `release-1.31`). Do not pass `--version`: the helper derives the upcoming version on its own — the next patch version (x.y.z+1) of `VERSION` in `Makefile.core.mk`. It also dedupes by title and skips unless the base branch is the latest `release-X.Y` (pass `--force` only when intentionally releasing from an older line).
 2. Save the issue URL (or note that it already existed) for the Phase 3 summary.
 
 Skip this step for branches that are only receiving Istio version support without an OLM release. The merge workflow no longer creates a checklist for manual "Add Istio" PRs — it only triggers for "Automator: Update dependencies in ...@release-X.Y" PRs (see `.github/workflows/create-release-issue.yaml`) — so this step is the only automatic path for PRs created by this command.
@@ -326,7 +327,7 @@ Skip this step for branches that are only receiving Istio version support withou
 
 ## Important Notes
 
-- **Sail Operator VERSION is not bumped here**: Adding Istio versions no longer touches `VERSION`/`PREVIOUS_VERSION` in `Makefile.core.mk` — the operator version is bumped only during the release process (release-prep workflow / release coordinator), as the next patch version (x.y.z+1) of the released VERSION. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
+- **Sail Operator VERSION is not bumped here**: Adding Istio versions no longer touches `VERSION`/`PREVIOUS_VERSION` in `Makefile.core.mk` — the operator version is bumped only via the **Release preparation workflow** (`.github/workflows/release-prep.yaml`, `workflow_dispatch` on `release-X.Y`), which creates one PR with 3 commits (VERSION bump, pin + gen, changelog). This applies whether Istio was added by the `update-deps` automator or by this command. A single Sail Operator release can ship multiple new Istio patch versions (e.g., operator 1.31.2 shipping Istio 1.31.2 and 1.31.3).
 - **Version ordering in versions.yaml**: The first entry is the default version. Within each minor series, versions are ordered from newest to oldest. Minor series are ordered from newest to oldest. EOL versions come last.
 - **Chart URLs follow a strict pattern**: `https://istio-release.storage.googleapis.com/charts/<chart>-<version>.tgz` with charts: base, istiod, gateway, cni, ztunnel
 - **The go.mod comment in versions.yaml** (lines 8-12) explains that istio.io/istio and istio.io/api dependencies must match the most recent version - this is critical for correct CRD generation

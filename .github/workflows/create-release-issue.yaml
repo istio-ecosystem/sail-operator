@@ -32,7 +32,7 @@ on:
         required: true
         type: string
       version:
-        description: "Optional VERSION override (default: Makefile.core.mk on the PR merge/base ref). The checklist is titled with this version if it is not released yet, otherwise with the next patch version"
+        description: "Optional VERSION override (default: Makefile.core.mk on the PR merge/base ref). The checklist is titled with the next patch version of it"
         required: false
         type: string
         default: ''
