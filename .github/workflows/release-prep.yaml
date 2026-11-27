@@ -1,0 +1,206 @@
+name: Release preparation
+
+# Manually triggered by the Release Manager on a release-X.Y branch after the
+# new Istio patch version(s) landed in pkg/istioversion/versions.yaml (either
+# via the update-deps automator or the /add-istio-version command).
+# Creates one PR with three commits:
+#   1) Bump VERSION and PREVIOUS_VERSION in Makefile.core.mk
+#   2) Pin istio.io/* Go deps to the latest Istio release tag of the branch and run make gen
+#   3) Collect changelog fragments into CHANGELOG.md via hack/update-changelog.sh
+#
+# Re-running is safe: the prep branch is recreated from release-X.Y and force-pushed,
+# and an already open PR is reused.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target operator VERSION (e.g. 1.31.3). Default: next patch of VERSION in Makefile.core.mk, or VERSION itself while its release checklist issue is open"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: release-prep-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'release-')
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          # PRs pushed with GITHUB_TOKEN do not trigger CI workflows; prefer the bot token when available.
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compute versions
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION_OVERRIDE: ${{ inputs.version }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # VERSION in Makefile.core.mk is the source of truth: on a release branch it holds
+          # the last released version, as it is only bumped by this workflow.
+          CURRENT=$(grep -E '^VERSION \?=' Makefile.core.mk | head -1 | sed -E 's/^VERSION \?=[[:space:]]*//')
+          CURRENT_PREVIOUS=$(grep -E '^PREVIOUS_VERSION \?=' Makefile.core.mk | head -1 | sed -E 's/^PREVIOUS_VERSION \?=[[:space:]]*//')
+          echo "Current VERSION: ${CURRENT}, PREVIOUS_VERSION: ${CURRENT_PREVIOUS}"
+
+          # Exception: a re-run after the prep PR was merged. VERSION is already bumped and
+          # the "Release Sail Operator <VERSION>" checklist is still open, so keep VERSION
+          # and only refresh the pins and changelog (e.g. Istio versions added meanwhile).
+          IN_PROGRESS=$(gh issue list --repo "${REPO}" --state open \
+            --search "in:title \"Release Sail Operator ${CURRENT}\"" --json number,title \
+            --jq ".[] | select(.title == \"Release Sail Operator ${CURRENT}\") | .number" | head -1)
+
+          if [[ -n "${VERSION_OVERRIDE}" ]]; then
+            TARGET="${VERSION_OVERRIDE}"
+          elif [[ -n "${IN_PROGRESS}" ]]; then
+            echo "::notice::Release ${CURRENT} is in progress (checklist #${IN_PROGRESS} is open); keeping VERSION ${CURRENT}"
+            TARGET="${CURRENT}"
+          else
+            TARGET=$(echo "${CURRENT}" | awk -F. '{print $1"."$2"."$3+1}')
+          fi
+          if [[ "${TARGET}" == "${CURRENT}" ]]; then
+            PREVIOUS="${CURRENT_PREVIOUS}"
+          else
+            # The version being replaced is the one OLM upgrades from.
+            PREVIOUS="${CURRENT}"
+          fi
+
+          # Latest stable Istio patch of the branch's own minor (versions.yaml lists newest first).
+          MINOR="${RELEASE_BRANCH#release-}"
+          ISTIO_VERSION=$(grep -E "^[[:space:]]+version: ${MINOR//./\\.}\.[0-9]+$" pkg/istioversion/versions.yaml \
+            | head -1 | sed -E 's/.*version:[[:space:]]*//')
+          if [[ -z "${ISTIO_VERSION}" ]]; then
+            echo "::error::Could not find a stable Istio ${MINOR}.x version in pkg/istioversion/versions.yaml"
+            exit 1
+          fi
+
+          echo "TARGET=${TARGET} PREVIOUS=${PREVIOUS} ISTIO=${ISTIO_VERSION}"
+          {
+            echo "target=${TARGET}"
+            echo "previous=${PREVIOUS}"
+            echo "istio_version=${ISTIO_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure git
+        run: |
+          git config user.name "sail-operator-bot"
+          git config user.email "sail-operator-bot@users.noreply.github.com"
+
+      - name: Commit 1 - bump VERSION and PREVIOUS_VERSION
+        env:
+          TARGET: ${{ steps.ver.outputs.target }}
+          PREVIOUS: ${{ steps.ver.outputs.previous }}
+          BRANCH: ${{ github.ref_name }}-prep-${{ steps.ver.outputs.target }}
+        run: |
+          set -euo pipefail
+          git checkout -B "${BRANCH}"
+          sed -i -E "s/^VERSION \?=.*/VERSION ?= ${TARGET}/" Makefile.core.mk
+          sed -i -E "s/^PREVIOUS_VERSION \?=.*/PREVIOUS_VERSION ?= ${PREVIOUS}/" Makefile.core.mk
+          grep -E '^(VERSION|PREVIOUS_VERSION) \?=' Makefile.core.mk
+          if git diff --quiet; then
+            echo "VERSION/PREVIOUS_VERSION already set; skipping commit"
+          else
+            git commit -s -am "Bump VERSION to ${TARGET}" -m "Set PREVIOUS_VERSION to ${PREVIOUS}."
+          fi
+
+      - name: Commit 2 - pin Istio Go dependencies and run make gen
+        env:
+          ISTIO_VERSION: ${{ steps.ver.outputs.istio_version }}
+        run: |
+          set -euo pipefail
+          # istio/istio tags have no "v" prefix, so Go resolves them to a pseudo-version
+          # of the tagged commit; istio.io/api and istio.io/client-go have regular semver tags.
+          go get "istio.io/istio@${ISTIO_VERSION}" "istio.io/client-go@v${ISTIO_VERSION}" "istio.io/api@v${ISTIO_VERSION}"
+          go mod tidy
+          grep -E 'istio\.io/(istio|client-go|api) ' go.mod
+
+          # Istio tags are annotated; ^{} dereferences them to the tagged commit.
+          ISTIO_SHA=$(git ls-remote https://github.com/istio/istio.git "refs/tags/${ISTIO_VERSION}^{}" | cut -c1-12)
+          if ! grep -qE "istio\.io/istio v0\.0\.0-[0-9]+-${ISTIO_SHA}$" go.mod; then
+            echo "::error::istio.io/istio in go.mod does not point to the ${ISTIO_VERSION} tag commit ${ISTIO_SHA}"
+            exit 1
+          fi
+
+          make gen
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Go dependencies already pinned and generated files up to date; skipping commit"
+          else
+            git commit -s -m "Pin Istio Go dependencies to ${ISTIO_VERSION}" -m "Pin istio.io/istio, istio.io/client-go and istio.io/api to the ${ISTIO_VERSION} release and regenerate with make gen."
+          fi
+
+      - name: Commit 3 - generate changelog
+        env:
+          TARGET: ${{ steps.ver.outputs.target }}
+        run: |
+          set -euo pipefail
+          ./hack/update-changelog.sh "${TARGET}"
+          git add -A CHANGELOG.md changelog/
+          if git diff --cached --quiet; then
+            echo "No changelog fragments; skipping commit"
+          else
+            git commit -s -m "Generate changelog for ${TARGET}"
+          fi
+
+      - name: Push and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GIT_TOKEN || github.token }}
+          TARGET: ${{ steps.ver.outputs.target }}
+          PREVIOUS: ${{ steps.ver.outputs.previous }}
+          ISTIO_VERSION: ${{ steps.ver.outputs.istio_version }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
+          BRANCH: ${{ github.ref_name }}-prep-${{ steps.ver.outputs.target }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git log --oneline "origin/${RELEASE_BRANCH}..HEAD"
+          git diff --stat "origin/${RELEASE_BRANCH}"
+
+          if [[ -z "$(git log --oneline "origin/${RELEASE_BRANCH}..HEAD")" ]]; then
+            echo "::notice::Nothing to do; ${RELEASE_BRANCH} is already prepared for ${TARGET}"
+            exit 0
+          fi
+
+          git push --force origin "${BRANCH}"
+
+          EXISTING_PR=$(gh pr list --repo "${REPO}" --head "${BRANCH}" --base "${RELEASE_BRANCH}" --state open --json url --jq '.[0].url // empty')
+          if [[ -n "${EXISTING_PR}" ]]; then
+            echo "::notice::Updated existing PR ${EXISTING_PR}"
+            exit 0
+          fi
+
+          BODY_FILE=$(mktemp)
+          cat > "${BODY_FILE}" <<EOF
+          Release preparation for Sail Operator **${TARGET}** on \`${RELEASE_BRANCH}\`.
+
+          Commits:
+          1. Bump \`VERSION\` to \`${TARGET}\` and \`PREVIOUS_VERSION\` to \`${PREVIOUS}\`
+          2. Pin \`istio.io/istio\`, \`istio.io/client-go\` and \`istio.io/api\` to Istio \`${ISTIO_VERSION}\` and run \`make gen\`
+          3. Collect changelog fragments into \`CHANGELOG.md\` (\`hack/update-changelog.sh ${TARGET}\`)
+
+          Created by the [Release preparation](https://github.com/${REPO}/actions/workflows/release-prep.yaml) workflow.
+          EOF
+
+          gh label create release --repo "${REPO}" --description "Release checklist / process" --color "0E8A16" >/dev/null 2>&1 || true
+          gh pr create --repo "${REPO}" --base "${RELEASE_BRANCH}" --head "${BRANCH}" \
+            --title "[${RELEASE_BRANCH}] Prepare release ${TARGET}" \
+            --body-file "${BODY_FILE}" \
+            --label release

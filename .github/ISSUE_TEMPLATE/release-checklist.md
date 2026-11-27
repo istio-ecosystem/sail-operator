@@ -1,16 +1,17 @@
 - [ ] Release preparations
-    - Add Istio versions: ADD_ISTIO_PR_URL
-    - Generate changelog by running `hack/update-changelog.sh`, validate and create the PR to the particular release branch (example): https://github.com/istio-ecosystem/sail-operator/pull/2386
-- [ ] Run release GH action
-    - Use the given release branch and set the Draft release checkbox so it's possible to edit the draft release before publishing.
+    - [ ] Add Istio versions: ADD_ISTIO_PR_URL (done automatically via `update-deps` automator on `RELEASE_BRANCH`, or do manually via `/add-istio-version` claude command)
+    - [ ] Run the [Release preparation](REPO_URL/actions/workflows/release-prep.yaml) workflow on `RELEASE_BRANCH` (creates 1 PR with 3 commits: VERSION/PREVIOUS_VERSION bump, pin Istio Go deps + `make gen`, changelog via `hack/update-changelog.sh`). Review and merge.
+- [ ] Run the [Release workflow](REPO_URL/actions/workflows/release.yaml) GH action
+    - Use `RELEASE_BRANCH` and set the Draft release checkbox so it's possible to edit the draft release before publishing.
 - [ ] Verify the operator was published to the operator hub
     - https://github.com/k8s-operatorhub/community-operators
     - https://github.com/redhat-openshift-ecosystem/community-operators-prod
 - [ ] Test fresh installation and upgrade from the previous version from the operator hub.
-- [ ] Edit the GH release notes draft in tag section
+- [ ] Edit the draft in [GH releases](REPO_URL/releases)
     - The release notes should be prepared (from CHANGELOG.md generated in the first step by `hack/update-changelog.sh`). Check it and update if needed
     - If the release notes are huge and were created incorrectly, use compare to see differences between versions and rewrite release notes. Remove non-important changes as tests, documentations and automation commits
 - [ ] Publish the tag
-- [ ] Trigger Publish Helm artifact GH workflow and review the created PR. Note that the release notes must be published already.
-- [ ] Test the installation using the helm chart by following the [documentation](https://github.com/istio-ecosystem/sail-operator/tree/main/chart). You will need a fresh cluster, as there are some conflicts if the Sail Operator was installed earlier. Or you can try to remove the sail CRDs and cluster roles.
+- [ ] Trigger the [Publish Helm artifact](REPO_URL/actions/workflows/helm.yaml) GH workflow and review the created PR. Note that the release notes must be published already. (done by Release preparation workflow)
+    - [ ] The PR contains test gating, make sure all tests passed before merge.
 - [ ] Announce in #sail-operator channel in Istio Slack
+- [ ] Close this issue. While it is open, the release is treated as in progress: the release preparation workflow keeps the current VERSION and newly added Istio versions are folded into this release.
