@@ -462,6 +462,55 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 	}
 }
 
+func TestMapPodToReconcileRequest(t *testing.T) {
+	testCases := []struct {
+		name        string
+		labels      map[string]string
+		annotations map[string]string
+		phase       corev1.PodPhase
+		expected    []reconcile.Request
+	}{
+		{
+			name:     "running pod with rev label",
+			labels:   map[string]string{"istio.io/rev": "my-rev"},
+			phase:    corev1.PodRunning,
+			expected: []reconcile.Request{{Name: "my-rev"}},
+		},
+		{
+			name:        "running pod with injected rev annotation",
+			annotations: map[string]string{"istio.io/rev": "my-rev"},
+			phase:       corev1.PodRunning,
+			expected:    []reconcile.Request{{Name: "my-rev"}},
+		},
+		{
+			name:     "pod without istio labels or annotations",
+			phase:    corev1.PodRunning,
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme, nil)
+
+			pod := &corev1.Pod{
+				Name:        "pod",
+				Namespace:   "test",
+				Labels:      tc.labels,
+				Annotations: tc.annotations,
+				Status:      corev1.PodStatus{Phase: tc.phase},
+			}
+
+			got := r.mapPodToReconcileRequest(context.Background(), pod)
+
+			g := NewWithT(t)
+			g.Expect(got).To(HaveLen(len(tc.expected)))
+			g.Expect(got).To(ContainElements(tc.expected))
+		})
+	}
+}
+
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name          string

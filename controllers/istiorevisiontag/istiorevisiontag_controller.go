@@ -320,21 +320,19 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, tag *v1.IstioR
 
 func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag *v1.IstioRevisionTag) (bool, error) {
 	log := logf.FromContext(ctx)
-	nsList := corev1.NamespaceList{}
-	nsMap := map[string]corev1.Namespace{}
-	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
-		return false, fmt.Errorf("failed to list namespaces: %w", err)
+	nsMap, err := revision.ListNamespacesReferencingRevisions(ctx, r.Client)
+	if err != nil {
+		return false, err
 	}
-	for _, ns := range nsList.Items {
+	for _, ns := range nsMap {
 		if namespaceReferencesRevisionTag(ns, tag) {
 			log.V(2).Info("RevisionTag is referenced by Namespace", "Namespace", ns.Name)
 			return true, nil
 		}
-		nsMap[ns.Name] = ns
 	}
 
 	podList := corev1.PodList{}
-	if err := r.Client.List(ctx, &podList); err != nil { // TODO: can we optimize this by specifying a label selector
+	if err := r.Client.List(ctx, &podList); err != nil {
 		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
@@ -343,7 +341,11 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevisionTag(pod, tag, ns) {
+		// nsMap only contains namespaces that carry an injection label. A pod in any other
+		// namespace maps to the zero-value Namespace (no labels), which podReferencesRevisionTag
+		// treats as a namespace that doesn't reference a revision - the correct behavior.
+		ns := nsMap[pod.Namespace]
+		if podReferencesRevisionTag(pod, tag, ns) {
 			log.V(2).Info("RevisionTag is referenced by Pod", "Pod", client.ObjectKeyFromObject(&pod))
 			return true, nil
 		}

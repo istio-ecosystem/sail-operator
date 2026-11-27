@@ -41,8 +41,10 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
+	corev1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -192,9 +194,32 @@ func main() {
 		TLSOpts:        metricsServerTLSOptions,
 	}
 
+	// The IstioRevision and IstioRevisionTag controllers watch Pods to compute their InUse
+	// condition, which makes controller-runtime cache every Pod in the cluster. Those controllers
+	// only read Pod metadata (labels/annotations) and Status.Phase, so we strip the Spec,
+	// managedFields and the rest of the Status from cached Pods to keep operator memory from
+	// scaling with the cluster-wide Pod count.
+	cacheOptions := cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Pod{}: {
+				Transform: func(obj any) (any, error) {
+					pod, ok := obj.(*corev1.Pod)
+					if !ok {
+						return obj, nil
+					}
+					pod.Spec = corev1.PodSpec{}
+					pod.ManagedFields = nil
+					pod.Status = corev1.PodStatus{Phase: pod.Status.Phase}
+					return pod, nil
+				},
+			},
+		},
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                  scheme.Scheme,
 		Metrics:                 metricsServerOptions,
+		Cache:                   cacheOptions,
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          leaderElectionEnabled,
 		LeaderElectionID:        "sail-operator-lock",

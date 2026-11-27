@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const revName = "istio-revision"
@@ -301,6 +302,53 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,
+	}
+}
+
+func TestMapPodToReconcileRequest(t *testing.T) {
+	testCases := []struct {
+		name     string
+		labels   map[string]string
+		phase    corev1.PodPhase
+		expected []reconcile.Request
+	}{
+		{
+			name:     "running pod referencing a tag",
+			labels:   map[string]string{"istio.io/rev": "my-tag"},
+			phase:    corev1.PodRunning,
+			expected: []reconcile.Request{{Name: "my-tag"}},
+		},
+		{
+			name:     "terminal pod referencing a tag still enqueues",
+			labels:   map[string]string{"istio.io/rev": "my-tag"},
+			phase:    corev1.PodFailed,
+			expected: []reconcile.Request{{Name: "my-tag"}},
+		},
+		{
+			name:     "pod without istio labels",
+			phase:    corev1.PodRunning,
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme, nil)
+
+			pod := &corev1.Pod{
+				Name:      "pod",
+				Namespace: "test",
+				Labels:    tc.labels,
+				Status:    corev1.PodStatus{Phase: tc.phase},
+			}
+
+			got := r.mapPodToReconcileRequest(context.Background(), pod)
+
+			g := NewWithT(t)
+			g.Expect(got).To(HaveLen(len(tc.expected)))
+			g.Expect(got).To(ContainElements(tc.expected))
+		})
 	}
 }
 
