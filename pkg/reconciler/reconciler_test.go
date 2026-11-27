@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -252,6 +253,27 @@ func TestReconcile(t *testing.T) {
 			setup: func(g *WithT, mock *mockReconciler) {
 				mock.reconcileError = apierrors.NewForbidden(schema.GroupResource{}, "foo",
 					fmt.Errorf("cannot set blockOwnerDeletion in this case because cannot find RESTMapping for APIVersion xyz"))
+			},
+			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				//nolint:staticcheck // asserts the deprecated Requeue that Reconcile sets; see TODO in reconciler.go
+				g.Expect(result).To(Equal(reconcile.Result{Requeue: true}))
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(mock.reconcileInvoked).To(BeTrue())
+				g.Expect(mock.finalizeInvoked).To(BeFalse())
+			},
+		},
+		{
+			name: "requeues when client-go RESTMapper does not yet know about our resources",
+			objects: []client.Object{
+				&v1.Istio{
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
+				},
+			},
+			setup: func(g *WithT, mock *mockReconciler) {
+				mock.reconcileError = &meta.NoKindMatchError{
+					GroupKind: schema.GroupKind{Group: "foo", Kind: "Bar"},
+				}
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				//nolint:staticcheck // asserts the deprecated Requeue that Reconcile sets; see TODO in reconciler.go

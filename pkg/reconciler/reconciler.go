@@ -17,7 +17,6 @@ package reconciler
 import (
 	"context"
 	"reflect"
-	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -98,7 +97,7 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	// RequeueAfter calls Forget and retries at a fixed interval, dropping the rate-limited backoff. Revisit if
 	// controller-runtime grows a non-deprecated rate-limited requeue, or when Requeue is finally removed.
 	switch {
-	case errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping"):
+	case IsRESTMappingError(err):
 		log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // see TODO above
 	case errors.IsConflict(err):

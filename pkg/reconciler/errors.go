@@ -14,7 +14,13 @@
 
 package reconciler
 
-import "errors"
+import (
+	"errors"
+	"strings"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+)
 
 type ValidationError struct {
 	message string
@@ -100,4 +106,29 @@ func NewReferenceNotFoundError(message string, originalError error) ReferenceNot
 func IsReferenceNotFoundError(err error) bool {
 	var e ReferenceNotFoundError
 	return errors.As(err, &e)
+}
+
+// IsRESTMappingError returns true if the error is caused by a missing REST mapping,
+// either from client-go's local RESTMapper (NoResourceMatchError, NoKindMatchError) or from
+// the API server's GC admission plugin rejecting an owner reference when its RESTMapper
+// has not yet synced a newly registered CRD.
+func IsRESTMappingError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if meta.IsNoMatchError(err) {
+		return true
+	}
+	if apierrors.IsForbidden(err) {
+		var statusErr *apierrors.StatusError
+		if errors.As(err, &statusErr) && statusErr.ErrStatus.Details != nil {
+			for _, cause := range statusErr.ErrStatus.Details.Causes {
+				if strings.Contains(cause.Message, "RESTMapping") {
+					return true
+				}
+			}
+		}
+		return strings.Contains(err.Error(), "RESTMapping")
+	}
+	return false
 }
