@@ -15,10 +15,15 @@
 package reconciler
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestNewValidationError(t *testing.T) {
@@ -49,4 +54,45 @@ func TestIsTransientError(t *testing.T) {
 
 	wrappedError := fmt.Errorf("wrapped error: %w", err)
 	assert.True(t, IsTransientError(wrappedError), "expected IsTransientError to return true for a wrapped TransientError")
+}
+
+func TestIsRESTMappingError(t *testing.T) {
+	assert.False(t, IsRESTMappingError(nil))
+	assert.False(t, IsRESTMappingError(errors.New("generic error")))
+	assert.False(t, IsRESTMappingError(apierrors.NewForbidden(schema.GroupResource{}, "foo", errors.New("access denied"))))
+
+	// Local client-go NoKindMatchError
+	noKindErr := &meta.NoKindMatchError{GroupKind: schema.GroupKind{Group: "foo", Kind: "Bar"}}
+	assert.True(t, IsRESTMappingError(noKindErr))
+	assert.True(t, IsRESTMappingError(fmt.Errorf("wrapped: %w", noKindErr)))
+
+	// Local client-go NoResourceMatchError
+	noResErr := &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{Resource: "bars"}}
+	assert.True(t, IsRESTMappingError(noResErr))
+	assert.True(t, IsRESTMappingError(fmt.Errorf("wrapped: %w", noResErr)))
+
+	// Remote GC admission plugin error (HTTP 403 with RESTMapping in error message)
+	gcAdmErr := apierrors.NewForbidden(schema.GroupResource{}, "foo",
+		errors.New("cannot set blockOwnerDeletion in this case because cannot find RESTMapping for APIVersion xyz"))
+	assert.True(t, IsRESTMappingError(gcAdmErr))
+	assert.True(t, IsRESTMappingError(fmt.Errorf("wrapped: %w", gcAdmErr)))
+
+	// Remote GC admission plugin error with status cause details
+	gcCauseErr := &apierrors.StatusError{
+		ErrStatus: metav1.Status{
+			Status: metav1.StatusFailure,
+			Code:   403,
+			Reason: metav1.StatusReasonForbidden,
+			Details: &metav1.StatusDetails{
+				Causes: []metav1.StatusCause{
+					{
+						Type:    metav1.CauseTypeUnexpectedServerResponse,
+						Message: "cannot find RESTMapping for APIVersion xyz",
+					},
+				},
+			},
+		},
+	}
+	assert.True(t, IsRESTMappingError(gcCauseErr))
+	assert.True(t, IsRESTMappingError(fmt.Errorf("wrapped: %w", gcCauseErr)))
 }
