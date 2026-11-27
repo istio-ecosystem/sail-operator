@@ -126,10 +126,19 @@ fi
 # The checklist is only needed when the PR actually added Istio versions, i.e.
 # changed pkg/istioversion/versions.yaml. Most "Automator: Update dependencies"
 # PRs only bump libraries/tools and must not open one.
-# Note: use `gh pr diff --name-only`, not `gh pr view --json files`; the latter
-# caps at 100 files and these PRs regularly change several hundred, which would
-# silently hide versions.yaml and skip the checklist.
-PR_FILES=$(gh pr diff "${PR_URL}" --repo "${REPO}" --name-only)
+# Note: `gh pr diff --name-only` fails with HTTP 406 when the PR touches >300
+# files. Fall back to `List pull request files` API (paginated, handles thousands).
+PR_FILES=""
+if ! PR_FILES=$(gh pr diff "${PR_URL}" --repo "${REPO}" --name-only 2>&1); then
+  if grep -q "too_large\|maximum number of files" <<< "${PR_FILES}"; then
+    echo "PR diff too large (>300 files), falling back to List files API..."
+    PR_NUM=$(sed -E 's|.*/pull/([0-9]+).*|\1|' <<< "${PR_URL}")
+    PR_FILES=$(gh api "repos/${REPO}/pulls/${PR_NUM}/files" --paginate --jq '.[].filename')
+  else
+    echo "${PR_FILES}" >&2
+    exit 1
+  fi
+fi
 if ! grep -qx "pkg/istioversion/versions.yaml" <<< "${PR_FILES}"; then
   echo "PR did not change pkg/istioversion/versions.yaml; no Istio version was added; skipping."
   exit 0
