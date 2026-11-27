@@ -119,16 +119,26 @@ func deleteAllIstioCRDs(ctx context.Context) {
 		return
 	}
 
+	// CRC nodes are small, and the apiextensions cleanup finalizer can leave
+	// these CRDs Terminating for longer than the suite's 3 minute wait.
+	// Once deletion has started, drop the finalizers so the next poll sees them gone.
 	Eventually(func(g Gomega) {
 		for _, name := range names {
-			_, err := dynamicClient.Resource(crdGVR).Get(ctx, name, metav1.GetOptions{})
+			got, err := dynamicClient.Resource(crdGVR).Get(ctx, name, metav1.GetOptions{})
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			g.Expect(err).NotTo(HaveOccurred(), "unexpected error getting CRD %s", name)
+			if got.GetDeletionTimestamp() != nil && len(got.GetFinalizers()) > 0 {
+				_, patchErr := dynamicClient.Resource(crdGVR).Patch(
+					ctx, name, types.MergePatchType, []byte(`{"metadata":{"finalizers":[]}}`), metav1.PatchOptions{})
+				if patchErr != nil && !apierrors.IsNotFound(patchErr) {
+					g.Expect(patchErr).NotTo(HaveOccurred(), "clear finalizers on terminating CRD %s", name)
+				}
+			}
 			g.Expect(false).To(BeTrue(), "CRD %s still exists (may still be terminating)", name)
 		}
-	}).Should(Succeed())
+	}).WithTimeout(6 * time.Minute).Should(Succeed())
 }
 
 func createAllIstioCRDs(ctx context.Context) {
