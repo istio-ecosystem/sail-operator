@@ -68,6 +68,19 @@ func ReadBytes(data []byte) error {
 	return decodeProperties(p)
 }
 
+func ReadLabels(labelsFile string) (map[string]string, error) {
+	p, err := properties.LoadFile(labelsFile, properties.UTF8)
+	if err != nil {
+		return nil, err
+	}
+	labels := make(map[string]string, len(p.Keys()))
+	for _, k := range p.Keys() {
+		val, _ := p.Get(k)
+		labels[k] = strings.Trim(val, `"`)
+	}
+	return labels, nil
+}
+
 func decodeProperties(p *properties.Properties) error {
 	return decodePropertiesInto(p, &Config)
 }

@@ -17,19 +17,43 @@ package analyze
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	model "github.com/prometheus/client_model/go"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
+
+const (
+	testOperatorName   = "test-operator"
+	testDeploymentName = "test-deployment"
+)
+
+// testLabels mimics the downward API labels the operator Deployment exposes through the labels file.
+// It carries the two keys the recorder reads plus an unrelated one, so that we can tell apart "label is propagated" from "label is hard-coded".
+func testLabels() map[string]string {
+	return map[string]string{
+		operatorNameLabel:              testOperatorName,
+		deploymentNameLabel:            testDeploymentName,
+		"app.kubernetes.io/managed-by": constants.ManagedByLabelValue,
+		"app.kubernetes.io/name":       testOperatorName,
+	}
+}
 
 func createScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
@@ -39,6 +63,9 @@ func createScheme(t *testing.T) *runtime.Scheme {
 	}
 	if err := v1.AddToScheme(scheme); err != nil {
 		t.Fatalf("failed to add v1 scheme: %v", err)
+	}
+	if err := monitoringv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add monitoringv1 scheme: %v", err)
 	}
 	return scheme
 }
@@ -65,12 +92,73 @@ func TestListMetrics(t *testing.T) {
 	foundMap := make(map[string]bool)
 	for _, m := range metricsList {
 		foundMap[m.Name] = true
+		if m.Help == "" {
+			t.Errorf("metric %q has an empty Help string", m.Name)
+		}
+		if m.Type == "" {
+			t.Errorf("metric %q has an empty Type", m.Name)
+		}
 	}
 
 	for _, expected := range metricDescription {
 		if !foundMap[expected.Name] {
 			t.Errorf("expected metric name %q to be in ListMetrics output", expected.Name)
 		}
+	}
+}
+
+// TestOperatorAndDeploymentName covers the downward API label lookups,
+// including the fallbacks used when the labels file is missing.
+func TestOperatorAndDeploymentName(t *testing.T) {
+	tests := []struct {
+		name               string
+		labels             map[string]string
+		wantOperatorName   string
+		wantDeploymentName string
+	}{
+		{
+			name:               "nil labels fall back to the defaults",
+			labels:             nil,
+			wantOperatorName:   defaultOperatorName,
+			wantDeploymentName: defaultDeploymentName,
+		},
+		{
+			name:               "empty labels fall back to the defaults",
+			labels:             map[string]string{},
+			wantOperatorName:   defaultOperatorName,
+			wantDeploymentName: defaultDeploymentName,
+		},
+		{
+			name:               "empty label values fall back to the defaults",
+			labels:             map[string]string{operatorNameLabel: "", deploymentNameLabel: ""},
+			wantOperatorName:   defaultOperatorName,
+			wantDeploymentName: defaultDeploymentName,
+		},
+		{
+			name:               "labels from the downward API win",
+			labels:             testLabels(),
+			wantOperatorName:   testOperatorName,
+			wantDeploymentName: testDeploymentName,
+		},
+		{
+			name:               "vendor labels from the downward API win",
+			labels:             map[string]string{operatorNameLabel: "service-mesh-operator", deploymentNameLabel: "deployment-operator"},
+			wantOperatorName:   "service-mesh-operator",
+			wantDeploymentName: "deployment-operator",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{}, tt.labels)
+
+			if got := recorder.getOperatorName(); got != tt.wantOperatorName {
+				t.Errorf("getOperatorName() = %q, want %q", got, tt.wantOperatorName)
+			}
+			if got := recorder.getDeploymentName(); got != tt.wantDeploymentName {
+				t.Errorf("getDeploymentName() = %q, want %q", got, tt.wantDeploymentName)
+			}
+		})
 	}
 }
 
@@ -113,68 +201,28 @@ func TestRecordMetrics(t *testing.T) {
 				Namespace: "default",
 			},
 		},
-
-		// Sidecar namespaces
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "sidecar-ns-1",
-				Labels: map[string]string{"istio-injection": "enabled"},
-			},
-		},
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "sidecar-ns-2",
-				Labels: map[string]string{"istio.io/rev": "canary"},
-			},
-		},
-
-		// Ambient namespaces
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "ambient-ns-1",
-				Labels: map[string]string{"istio.io/dataplane-mode": "ambient"},
-			},
-		},
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "ambient-ns-2",
-				Labels: map[string]string{"istio.io/use-waypoint": "waypoint"},
-			},
-		},
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "ambient-ns-3",
-				Labels: map[string]string{"istio.io/use-waypoint": "waypoint", "istio.io/ingress-use-waypoint": "ingress-waypoint"},
-			},
-		},
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(initObjects...).Build()
-	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{})
+	recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{}, testLabels())
 
 	ctx := context.Background()
 	recorder.recordMetrics(ctx)
 
-	// Assert GaugeVec metrics
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
-		t.Errorf("expected IstioVersionTotal for v1.30.0 to be 1, got %f", val)
+	// Assert GaugeVec metrics. recordMetrics collapses patch versions to their vX.Y form.
+	if val := getGaugeValue(t, IstioVersionCurrent.WithLabelValues("v1.30")); val != 1 {
+		t.Errorf("expected IstioVersionCurrent for v1.30 to be 1, got %f", val)
 	}
-	if val := getGaugeValue(t, IstioVersionTotal.WithLabelValues("v1.31.0")); val != 2 {
-		t.Errorf("expected IstioVersionTotal for v1.31.0 to be 2, got %f", val)
+	if val := getGaugeValue(t, IstioVersionCurrent.WithLabelValues("v1.31")); val != 2 {
+		t.Errorf("expected IstioVersionCurrent for v1.31 to be 2, got %f", val)
 	}
-	if val := getGaugeValue(t, ZTunnelVersionTotal.WithLabelValues("v1.30.0")); val != 1 {
-		t.Errorf("expected ZTunnelVersionTotal for v1.30.0 to be 1, got %f", val)
+	if val := getGaugeValue(t, ZTunnelVersionCurrent.WithLabelValues("v1.30")); val != 1 {
+		t.Errorf("expected ZTunnelVersionCurrent for v1.30 to be 1, got %f", val)
 	}
 
 	// Assert Gauge metrics
-	if val := getGaugeValue(t, SidecarProxyTotal); val != 1 {
-		t.Errorf("expected SidecarProxyTotal to be 1, got %f", val)
-	}
-	if val := getGaugeValue(t, SidecarNamespaceTotal); val != 2 {
-		t.Errorf("expected SidecarNamespaceTotal to be 2, got %f", val)
-	}
-	if val := getGaugeValue(t, AmbientNamespaceTotal); val != 3 {
-		t.Errorf("expected AmbientNamespaceTotal to be 3, got %f", val)
+	if val := getGaugeValue(t, SidecarProxyCurrent); val != 1 {
+		t.Errorf("expected SidecarProxyCurrent to be 1, got %f", val)
 	}
 }
 
@@ -182,7 +230,7 @@ func TestMetricsRecorder_StartStop(t *testing.T) {
 	scheme := createScheme(t)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{})
+	recorder := NewMetricsRecorder(10*time.Millisecond, fakeClient, config.ReconcilerConfig{}, testLabels())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -241,7 +289,7 @@ func TestEnsureNamespaceLabel(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(initObjs...).Build()
 			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
 				OperatorNamespace: tt.operatorNamespace,
-			})
+			}, testLabels())
 
 			ctx := context.Background()
 			err := recorder.EnsureNamespaceLabel(ctx)
@@ -267,6 +315,455 @@ func TestEnsureNamespaceLabel(t *testing.T) {
 						t.Errorf("expected existing labels to be preserved")
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestBuildServiceMonitor(t *testing.T) {
+	tests := []struct {
+		name              string
+		operatorNamespace string
+	}{
+		{
+			name:              "openshift-operators namespace",
+			operatorNamespace: "openshift-operators",
+		},
+		{
+			name:              "custom namespace",
+			operatorNamespace: "sail-operator",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{
+				OperatorNamespace: tt.operatorNamespace,
+			}, testLabels())
+
+			// the operator's own labels, plus the selector label Prometheus matches on
+			wantLabels := testLabels()
+			wantLabels["release"] = "prometheus"
+
+			expected := &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testOperatorName + metricsMonitorSuffix,
+					Namespace: tt.operatorNamespace,
+					Labels:    wantLabels,
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{
+						MatchLabels: map[string]string{deploymentNameLabel: testDeploymentName},
+					},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port:            "https",
+						Path:            "/metrics",
+						Scheme:          new(monitoringv1.SchemeHTTPS),
+						Interval:        monitoringv1.Duration("30s"),
+						HonorLabels:     true,
+						BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+								TLSConfig: &monitoringv1.TLSConfig{
+									TLSFilesConfig: monitoringv1.TLSFilesConfig{
+										CAFile: serviceCAFile,
+									},
+									SafeTLSConfig: monitoringv1.SafeTLSConfig{
+										ServerName: new(fmt.Sprintf("%s%s.%s.svc", testDeploymentName, metricsServiceSuffix, tt.operatorNamespace)),
+									},
+								},
+							},
+						},
+					}},
+				},
+			}
+
+			if diff := cmp.Diff(expected, recorder.buildServiceMonitor()); diff != "" {
+				t.Errorf("buildServiceMonitor() mismatch (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+// TestBuildServiceMonitorDefaults covers the fallback names used when the operator's downward API labels are missing.
+func TestBuildServiceMonitorDefaults(t *testing.T) {
+	const customNamespace = "custom-namespace"
+
+	recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{OperatorNamespace: customNamespace}, nil)
+	sm := recorder.buildServiceMonitor()
+
+	if got, want := sm.Name, defaultOperatorName+metricsMonitorSuffix; got != want {
+		t.Errorf("expected ServiceMonitor name %q, got %q", want, got)
+	}
+	// With no labels to copy, the Prometheus selector label must still be set.
+	if diff := cmp.Diff(map[string]string{"release": "prometheus"}, sm.Labels); diff != "" {
+		t.Errorf("ServiceMonitor labels mismatch (-expected +actual):\n%s", diff)
+	}
+	if got, want := sm.Spec.Selector.MatchLabels[deploymentNameLabel], defaultDeploymentName; got != want {
+		t.Errorf("expected selector %s=%q, got %q", deploymentNameLabel, want, got)
+	}
+
+	wantServerName := fmt.Sprintf("%s%s.%s.svc", defaultDeploymentName, metricsServiceSuffix, customNamespace)
+	serverName := sm.Spec.Endpoints[0].TLSConfig.ServerName
+	if serverName == nil || *serverName != wantServerName {
+		t.Errorf("expected TLS ServerName %q, got %v", wantServerName, serverName)
+	}
+}
+
+func TestEnsureServiceMonitor(t *testing.T) {
+	const operatorNamespace = "sail-operators"
+	staleServerName := fmt.Sprintf("%s%s.%s.svc", testDeploymentName, metricsServiceSuffix, "openshift-operators")
+
+	staleServiceMonitor := func(name string) *monitoringv1.ServiceMonitor {
+		return &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name + metricsMonitorSuffix,
+				Namespace: operatorNamespace,
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{deploymentNameLabel: "old-operator"},
+				},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port:   "https",
+					Path:   "/metrics",
+					Scheme: new(monitoringv1.SchemeHTTPS),
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{
+								TLSFilesConfig: monitoringv1.TLSFilesConfig{CAFile: serviceCAFile},
+								SafeTLSConfig: monitoringv1.SafeTLSConfig{
+									ServerName: new(staleServerName),
+								},
+							},
+						},
+					},
+				}},
+			},
+		}
+	}
+
+	vendorLabels := map[string]string{
+		operatorNameLabel:   "service-mesh-operator",
+		deploymentNameLabel: "deployment-operator",
+	}
+
+	tests := []struct {
+		name             string
+		labels           map[string]string
+		existing         *monitoringv1.ServiceMonitor
+		interceptorFuncs interceptor.Funcs
+		expectError      bool
+		expectMonitor    bool
+	}{
+		{
+			name:          "creates ServiceMonitor when it does not exist",
+			labels:        testLabels(),
+			expectMonitor: true,
+		},
+		{
+			name:          "creates ServiceMonitor with the default names when labels are missing",
+			labels:        nil,
+			expectMonitor: true,
+		},
+		{
+			name:          "creates ServiceMonitor named after a vendor operator",
+			labels:        vendorLabels,
+			expectMonitor: true,
+		},
+		{
+			name:          "patches existing ServiceMonitor that is out of date",
+			labels:        testLabels(),
+			existing:      staleServiceMonitor(testOperatorName),
+			expectMonitor: true,
+		},
+		{
+			name:          "adopts a stale ServiceMonitor belonging to the same vendor operator",
+			labels:        vendorLabels,
+			existing:      staleServiceMonitor("service-mesh-operator"),
+			expectMonitor: true,
+		},
+		{
+			name:   "returns error when the prometheus-operator CRDs are not installed",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return &meta.NoKindMatchError{
+						GroupKind:        schema.GroupKind{Group: monitoringv1.SchemeGroupVersion.Group, Kind: monitoringv1.ServiceMonitorsKind},
+						SearchedVersions: []string{monitoringv1.SchemeGroupVersion.Version},
+					}
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:   "returns error when Get fails",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return fmt.Errorf("simulated get error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:   "returns error when Create fails",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return fmt.Errorf("simulated create error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:   "ignores AlreadyExists error on create",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return apierrors.NewAlreadyExists(
+						schema.GroupResource{Group: monitoringv1.SchemeGroupVersion.Group, Resource: monitoringv1.ServiceMonitorName},
+						obj.GetName())
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := createScheme(t)
+
+			builder := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(tt.interceptorFuncs)
+			if tt.existing != nil {
+				builder = builder.WithObjects(tt.existing)
+			}
+			fakeClient := builder.Build()
+
+			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
+				OperatorNamespace: operatorNamespace,
+			}, tt.labels)
+
+			ctx := context.Background()
+			err := recorder.EnsureServiceMonitor(ctx)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("EnsureServiceMonitor() error = %v, expectError %v", err, tt.expectError)
+			}
+
+			if !tt.expectMonitor {
+				return
+			}
+
+			desired := recorder.buildServiceMonitor()
+			actual := &monitoringv1.ServiceMonitor{}
+			if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), actual); err != nil {
+				t.Fatalf("failed to get ServiceMonitor: %v", err)
+			}
+
+			if diff := cmp.Diff(desired.Spec, actual.Spec); diff != "" {
+				t.Errorf("ServiceMonitor spec mismatch (-desired +actual):\n%s", diff)
+			}
+			// the stale labels of an adopted monitor are replaced wholesale, not merged
+			if diff := cmp.Diff(desired.Labels, actual.Labels); diff != "" {
+				t.Errorf("ServiceMonitor labels mismatch (-desired +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestBuildPrometheusRule(t *testing.T) {
+	const operatorNamespace = "sail-operators"
+
+	tests := []struct {
+		name             string
+		labels           map[string]string
+		wantOperatorName string
+		wantLabels       map[string]string
+	}{
+		{
+			name:             "labels from the downward API",
+			labels:           testLabels(),
+			wantOperatorName: testOperatorName,
+			wantLabels:       testLabels(),
+		},
+		{
+			name:             "missing labels fall back to the default operator name",
+			labels:           nil,
+			wantOperatorName: defaultOperatorName,
+			wantLabels:       make(map[string]string),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := NewMetricsRecorder(1*time.Second, nil, config.ReconcilerConfig{
+				OperatorNamespace: operatorNamespace,
+			}, tt.labels)
+
+			rule := recorder.buildPrometheusRule()
+
+			if got, want := rule.Name, tt.wantOperatorName+"-metrics-rules"; got != want {
+				t.Errorf("expected PrometheusRule name %q, got %q", want, got)
+			}
+			if got := rule.Namespace; got != operatorNamespace {
+				t.Errorf("expected PrometheusRule namespace %q, got %q", operatorNamespace, got)
+			}
+			if diff := cmp.Diff(tt.wantLabels, rule.Labels); diff != "" {
+				t.Errorf("PrometheusRule labels mismatch (-expected +actual):\n%s", diff)
+			}
+
+			if len(rule.Spec.Groups) != 1 {
+				t.Fatalf("expected 1 rule group, got %d", len(rule.Spec.Groups))
+			}
+			group := rule.Spec.Groups[0]
+			if got, want := group.Name, tt.wantOperatorName+".namespaces"; got != want {
+				t.Errorf("expected rule group name %q, got %q", want, got)
+			}
+
+			// the two namespace counts are recorded in Prometheus instead of being listed by the operator
+			want := []string{
+				tt.wantOperatorName + "_sidecar_namespace_current",
+				tt.wantOperatorName + "_ambient_namespace_current",
+			}
+			var records []string
+			for _, r := range group.Rules {
+				records = append(records, r.Record)
+				if r.Expr.StrVal == "" {
+					t.Errorf("recording rule %q has an empty expression", r.Record)
+				}
+			}
+			if diff := cmp.Diff(want, records); diff != "" {
+				t.Errorf("recording rules mismatch (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestEnsureRecordingRules(t *testing.T) {
+	const operatorNamespace = "sail-operators"
+
+	stalePrometheusRule := func(name string) *monitoringv1.PrometheusRule {
+		return &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name + "-metrics-rules",
+				Namespace: operatorNamespace,
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name:  "stale.namespaces",
+					Rules: []monitoringv1.Rule{{Record: "stale_namespace_current"}},
+				}},
+			},
+		}
+	}
+
+	tests := []struct {
+		name             string
+		labels           map[string]string
+		existing         *monitoringv1.PrometheusRule
+		interceptorFuncs interceptor.Funcs
+		expectError      bool
+		expectRule       bool
+	}{
+		{
+			name:       "creates PrometheusRule when it does not exist",
+			labels:     testLabels(),
+			expectRule: true,
+		},
+		{
+			name:       "creates PrometheusRule with the default name when labels are missing",
+			labels:     nil,
+			expectRule: true,
+		},
+		{
+			name:       "patches an existing PrometheusRule that is out of date",
+			labels:     testLabels(),
+			existing:   stalePrometheusRule(testOperatorName),
+			expectRule: true,
+		},
+		{
+			name:   "returns error when Get fails",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return fmt.Errorf("simulated get error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:   "returns error when Create fails",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return fmt.Errorf("simulated create error")
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:   "ignores AlreadyExists error on create",
+			labels: testLabels(),
+			interceptorFuncs: interceptor.Funcs{
+				Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					return apierrors.NewAlreadyExists(
+						schema.GroupResource{Group: monitoringv1.SchemeGroupVersion.Group, Resource: monitoringv1.PrometheusRuleName},
+						obj.GetName())
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := createScheme(t)
+
+			builder := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(tt.interceptorFuncs)
+			if tt.existing != nil {
+				builder = builder.WithObjects(tt.existing)
+			}
+			fakeClient := builder.Build()
+
+			recorder := NewMetricsRecorder(1*time.Second, fakeClient, config.ReconcilerConfig{
+				OperatorNamespace: operatorNamespace,
+			}, tt.labels)
+
+			ctx := context.Background()
+			err := recorder.EnsureRecordingRules(ctx)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("EnsureRecordingRules() error = %v, expectError %v", err, tt.expectError)
+			}
+
+			if !tt.expectRule {
+				return
+			}
+
+			desired := recorder.buildPrometheusRule()
+			actual := &monitoringv1.PrometheusRule{}
+			if err := fakeClient.Get(ctx, client.ObjectKeyFromObject(desired), actual); err != nil {
+				t.Fatalf("failed to get PrometheusRule: %v", err)
+			}
+
+			if diff := cmp.Diff(desired.Spec, actual.Spec); diff != "" {
+				t.Errorf("PrometheusRule spec mismatch (-desired +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestMapVersions(t *testing.T) {
+	tests := []struct {
+		version string
+		want    string
+	}{
+		{version: "v1.30.0", want: "v1.30"},
+		{version: "v1.31-latest", want: "v1.31"},
+		{version: "latest", want: "latest"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			if got := mapVersions(tt.version); got != tt.want {
+				t.Errorf("mapVersions(%q) = %q, want %q", tt.version, got, tt.want)
 			}
 		})
 	}

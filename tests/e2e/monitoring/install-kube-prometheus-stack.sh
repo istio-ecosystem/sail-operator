@@ -54,11 +54,11 @@ if helm status "${PROM_RELEASE}" -n "${PROM_NAMESPACE}" &>/dev/null; then
   exit 0
 fi
 
-# KinD setup applies only the ServiceMonitor CRD (for OLM metrics). Helm 4 server-side
+# KinD setup applies a subset of the monitoring CRDs (ServiceMonitor, PrometheusRule) for OLM metrics. Helm 4 server-side
 # apply then conflicts on that CRD when installing kube-prometheus-stack. Remove it when
 # the chart's Prometheus CRD is not yet present so the chart can install the full set.
 if ! kubectl get crd prometheuses.monitoring.coreos.com &>/dev/null; then
-  kubectl delete crd servicemonitors.monitoring.coreos.com --ignore-not-found --wait --timeout="${WAIT_TIMEOUT}"
+  kubectl delete crd servicemonitors.monitoring.coreos.com prometheusrules.monitoring.coreos.com --ignore-not-found --wait --timeout="${WAIT_TIMEOUT}"
 fi
 
 # Admission webhooks require a certgen Job that talks to the webhook Service. On KinD
