@@ -196,6 +196,27 @@ func TestMergeOverwrite(t *testing.T) {
 			},
 		},
 		{
+			name: "empty override values replace base values",
+			base: map[string]any{
+				"count":   2,
+				"enabled": true,
+				"name":    "base",
+				"items":   []any{"base"},
+			},
+			overrides: map[string]any{
+				"count":   0,
+				"enabled": false,
+				"name":    "",
+				"items":   []any{},
+			},
+			expect: map[string]any{
+				"count":   0,
+				"enabled": false,
+				"name":    "",
+				"items":   []any{},
+			},
+		},
+		{
 			name: "mismatched types",
 			base: map[string]any{
 				"key1": map[string]any{
@@ -225,6 +246,82 @@ func TestMergeOverwrite(t *testing.T) {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
 		})
+	}
+}
+
+func TestMergeOverwriteDoesNotMutateInputs(t *testing.T) {
+	base := map[string]any{
+		"pilot": map[string]any{
+			"replicaCount": 1,
+			"env": map[string]any{
+				"A": "base",
+			},
+		},
+		"lists": []any{"base", map[string]any{"from": "base"}},
+	}
+	overrides := map[string]any{
+		"pilot": map[string]any{
+			"replicaCount": 3,
+			"env": map[string]any{
+				"B": "override",
+			},
+		},
+		"extra": map[string]any{
+			"nested": "value",
+		},
+		"lists": []any{"override"},
+	}
+	wantBase := map[string]any{
+		"pilot": map[string]any{
+			"replicaCount": 1,
+			"env": map[string]any{
+				"A": "base",
+			},
+		},
+		"lists": []any{"base", map[string]any{"from": "base"}},
+	}
+	wantOverrides := map[string]any{
+		"pilot": map[string]any{
+			"replicaCount": 3,
+			"env": map[string]any{
+				"B": "override",
+			},
+		},
+		"extra": map[string]any{
+			"nested": "value",
+		},
+		"lists": []any{"override"},
+	}
+	wantResult := map[string]any{
+		"pilot": map[string]any{
+			"replicaCount": 3,
+			"env": map[string]any{
+				"A": "base",
+				"B": "override",
+			},
+		},
+		"extra": map[string]any{
+			"nested": "value",
+		},
+		"lists": []any{"override"},
+	}
+
+	result := MergeOverwrite(base, overrides)
+	if diff := cmp.Diff(wantResult, result); diff != "" {
+		t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+	}
+
+	// Later edits to the result must not leak back into either input.
+	result["pilot"].(map[string]any)["replicaCount"] = 9
+	result["pilot"].(map[string]any)["env"].(map[string]any)["A"] = "changed"
+	result["extra"].(map[string]any)["nested"] = "changed"
+	result["lists"].([]any)[0] = "changed"
+
+	if diff := cmp.Diff(wantBase, base); diff != "" {
+		t.Errorf("base was mutated; diff (-expected, +actual):\n%v", diff)
+	}
+	if diff := cmp.Diff(wantOverrides, overrides); diff != "" {
+		t.Errorf("overrides were mutated; diff (-expected, +actual):\n%v", diff)
 	}
 }
 
