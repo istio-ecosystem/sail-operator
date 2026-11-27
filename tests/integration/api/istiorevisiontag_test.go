@@ -485,16 +485,6 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 	})
 })
 
-func deleteAllIstioRevisionTags(ctx context.Context) {
-	Step("Deleting all IstioRevisionTags")
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevisionTag{}).Should(Succeed())
-	Eventually(func(g Gomega) {
-		list := &v1.IstioRevisionTagList{}
-		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
-		g.Expect(list.Items).To(BeEmpty())
-	}).Should(Succeed())
-}
-
 func deletePod(ctx context.Context, pod *corev1.Pod) {
 	Step("Deleting pod")
 	Eventually(k8sClient.Delete).WithArguments(ctx, pod).Should(Succeed())
